@@ -6,6 +6,13 @@ Coding Benchmark
 | File | Description |
 |------|-------------|
 | [`arima_model.py`](arima_model.py) | ARIMA(2,0,2)-GARCH(1,1) forecaster on log-returns, walk-forward 1-step backtest. |
+| [`sarima_model.py`](sarima_model.py) | Seasonal ARIMA(1,1,1)(1,0,1)[5] on prices, walk-forward 1-step backtest. |
+| [`prophet_model.py`](prophet_model.py) | Prophet additive regression (weekly + yearly seasonality), fit-once batch forecast. |
+| [`lstm_model.py`](lstm_model.py) | LSTM(64) over a 30-step look-back window, walk-forward 1-step backtest. |
+
+Each model file is self-contained and shares the same CLI
+(`--ticker / --start / --end / --test-ratio / --next-step / --plot`).
+The `requirements.txt` covers all of them.
 
 ---
 
