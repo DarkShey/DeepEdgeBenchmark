@@ -14,6 +14,20 @@ Each model file is self-contained and shares the same CLI
 (`--ticker / --start / --end / --test-ratio / --next-step / --plot`).
 The `requirements.txt` covers all of them.
 
+### Visual comparison
+
+[`run_benchmark.py`](run_benchmark.py) runs all four models on one asset and
+renders a single figure: forecasts overlaid on the actual price, plus a metrics
+table (best RMSE / Directional Accuracy highlighted).
+
+```bash
+python run_benchmark.py                       # SPY, 2023-2024 (default)
+python run_benchmark.py --ticker BTC-USD      # different asset
+python run_benchmark.py --start 2020-01-01 --end 2024-12-31   # full window (slow)
+```
+
+![Benchmark comparison](benchmark_visual.png)
+
 ---
 
 ## How to get the code from GitHub and run it locally
