@@ -242,6 +242,9 @@ class RegimeAgent:
             index=features.index,
         )
 
+        df["sigma_t"]    = features["sigma_t"].values
+        df["vol_of_vol"] = features["sigma_t"].rolling(20).std().values
+
         # ── 4. BOCPD changepoint_prob (passe complète sur tout l'historique) ───
         returns = prices["Close"].pct_change().dropna()
         signal = self._bocpd._to_signal(returns)
@@ -255,16 +258,23 @@ class RegimeAgent:
         """Construit le HTML complet avec Plotly (CDN)."""
 
         close = prices["Close"].reindex(df.index).ffill()
-        dates_str = [str(d.date()) for d in df.index]
+        dates_str  = [str(d.date()) for d in df.index]
         close_vals = [round(float(v), 2) if not np.isnan(v) else None for v in close]
-        cp_vals = [round(float(v), 4) for v in df["changepoint_prob"]]
-        regimes = df["regime"].tolist()
+        cp_vals    = [round(float(v), 4) for v in df["changepoint_prob"]]
+        sigma_vals = [round(float(v), 4) if not np.isnan(v) else None for v in df["sigma_t"]]
+        vov_vals   = [round(float(v), 4) if not np.isnan(v) else None for v in df["vol_of_vol"]]
+        regimes    = df["regime"].tolist()
 
         first_date = df.index[0]
-        last_date = df.index[-1]
+        last_date  = df.index[-1]
 
-        # ── Blocs de régime (rectangles de fond) ──────────────────────────────
-        shapes_price, shapes_cp = [], []
+        # ── Distribution des régimes (donut) ──────────────────────────────────
+        n_total = len(df)
+        rc = df["regime"].value_counts()
+        dist_vals = [round(rc.get(r, 0) / n_total * 100, 1) for r in ["calm", "trending", "stress"]]
+
+        # ── Rectangles de fond (régimes) pour les 3 graphiques temporels ──────
+        shapes_price, shapes_vol, shapes_cp = [], [], []
         i = 0
         while i < len(regimes):
             j, r = i, regimes[i]
@@ -272,7 +282,7 @@ class RegimeAgent:
                 j += 1
             col = _REGIME_BG[r]
             x0, x1 = dates_str[i], dates_str[j - 1]
-            for lst in (shapes_price, shapes_cp):
+            for lst in (shapes_price, shapes_vol, shapes_cp):
                 lst.append({
                     "type": "rect", "xref": "x", "yref": "paper",
                     "x0": x0, "x1": x1, "y0": 0, "y1": 1,
@@ -281,7 +291,7 @@ class RegimeAgent:
             i = j
 
         # ── Événements MARKET_EVENTS ───────────────────────────────────────────
-        event_shapes, event_annotations = [], []
+        event_annotations = []
         sorted_events = [
             (d, lbl, cat)
             for d, (lbl, cat) in sorted(MARKET_EVENTS.items())
@@ -289,12 +299,13 @@ class RegimeAgent:
         ]
         for k, (date_str, label, cat) in enumerate(sorted_events):
             col = _EVENT_COLORS.get(cat, "#888")
-            for lst in (shapes_price, shapes_cp):
-                lst.append({
-                    "type": "line", "xref": "x", "yref": "paper",
-                    "x0": date_str, "x1": date_str, "y0": 0, "y1": 1,
-                    "line": {"color": col, "width": 1.2, "dash": "dot"},
-                })
+            line_shape = {
+                "type": "line", "xref": "x", "yref": "paper",
+                "x0": date_str, "x1": date_str, "y0": 0, "y1": 1,
+                "line": {"color": col, "width": 1.2, "dash": "dot"},
+            }
+            for lst in (shapes_price, shapes_vol, shapes_cp):
+                lst.append(line_shape)
             ypos = 0.96 if k % 2 == 0 else 0.84
             event_annotations.append({
                 "x": date_str, "y": ypos,
@@ -320,6 +331,18 @@ class RegimeAgent:
             }
             for r in ["calm", "trending", "stress"]
         ]
+        sigma_trace = {
+            "type": "scatter", "x": dates_str, "y": sigma_vals,
+            "mode": "lines", "line": {"color": "#9b59b6", "width": 1.5},
+            "name": "σₜ GARCH (%)", "showlegend": True,
+        }
+        vov_trace = {
+            "type": "scatter", "x": dates_str, "y": vov_vals,
+            "mode": "lines",
+            "line": {"color": "#e67e22", "width": 1.2, "dash": "dot"},
+            "fill": "tozeroy", "fillcolor": "rgba(230,126,34,0.10)",
+            "name": "Vol-of-Vol (rolling 20j)", "showlegend": True,
+        }
         cp_trace = {
             "type": "scatter", "x": dates_str, "y": cp_vals,
             "mode": "lines",
@@ -334,6 +357,16 @@ class RegimeAgent:
             "line": {"color": "#e74c3c", "width": 1, "dash": "dash"},
             "name": "seuil 0.5", "showlegend": True,
         }
+        dist_trace = {
+            "type": "pie",
+            "labels": ["Calme", "Tendanciel", "Stress"],
+            "values": dist_vals,
+            "marker": {"colors": ["#27ae60", "#2980b9", "#e74c3c"]},
+            "hole": 0.42,
+            "textinfo": "label+percent",
+            "textfont": {"size": 11, "color": "#ecf0f1"},
+            "showlegend": False,
+        }
 
         # ── Table des événements ──────────────────────────────────────────────
         events_for_table = [
@@ -342,10 +375,13 @@ class RegimeAgent:
         ]
 
         # ── Sérialisation JSON ─────────────────────────────────────────────────
-        j_price_data = json.dumps([price_trace] + regime_traces)
-        j_cp_data    = json.dumps([cp_trace, threshold_trace])
-        j_shapes_p   = json.dumps(shapes_price)
-        j_shapes_cp  = json.dumps(shapes_cp)
+        j_price_data  = json.dumps([price_trace] + regime_traces)
+        j_vol_data    = json.dumps([sigma_trace, vov_trace])
+        j_cp_data     = json.dumps([cp_trace, threshold_trace])
+        j_dist_data   = json.dumps([dist_trace])
+        j_shapes_p    = json.dumps(shapes_price)
+        j_shapes_vol  = json.dumps(shapes_vol)
+        j_shapes_cp   = json.dumps(shapes_cp)
         j_annotations = json.dumps(event_annotations)
         j_events      = json.dumps(events_for_table)
 
@@ -356,7 +392,7 @@ class RegimeAgent:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DEITA — Moteur de Régime BTC-USD</title>
+<title>DEITA &#8212; Moteur de R&#233;gime BTC-USD</title>
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
@@ -369,6 +405,7 @@ h1{{text-align:center;font-size:1.35rem;letter-spacing:1px;margin-bottom:3px}}
 .li{{display:flex;align-items:center;gap:5px;font-size:.8rem}}
 .dot{{width:11px;height:11px;border-radius:2px;flex-shrink:0}}
 .sep{{width:1px;height:18px;background:#2c3e50;margin:0 4px}}
+.row2{{display:grid;grid-template-columns:280px 1fr;gap:14px;margin-bottom:14px}}
 table{{width:100%;border-collapse:collapse;font-size:.76rem}}
 thead th{{color:#7f8c8d;text-align:left;padding:4px 10px;border-bottom:1px solid #1c2a3a;white-space:nowrap}}
 tbody td{{padding:3px 10px;border-bottom:1px solid #151d2b}}
@@ -377,8 +414,8 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
 </style>
 </head>
 <body>
-<h1>DEITA — Moteur de Régime BTC-USD</h1>
-<p class="sub">Historique {str(first_date.date())} → {str(last_date.date())} &nbsp;·&nbsp; HMM 2 états + seuil ADX 25 + BOCPD (Adams &amp; MacKay 2007)</p>
+<h1>DEITA &#8212; Moteur de R&#233;gime BTC-USD</h1>
+<p class="sub">Historique {str(first_date.date())} &#8594; {str(last_date.date())} &nbsp;&middot;&nbsp; HMM 2 &#233;tats + seuil ADX 25 + BOCPD (Adams &amp; MacKay 2007)</p>
 
 <div class="legend">
   <div class="li"><div class="dot" style="background:#27ae60"></div>Calme</div>
@@ -387,27 +424,38 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
   <div class="sep"></div>
   <div class="li"><div class="dot" style="background:#e67e22"></div>Crypto</div>
   <div class="li"><div class="dot" style="background:#e74c3c"></div>Macro</div>
-  <div class="li"><div class="dot" style="background:#2980b9"></div>Monétaire</div>
-  <div class="li"><div class="dot" style="background:#8e44ad"></div>Géopolitique</div>
+  <div class="li"><div class="dot" style="background:#2980b9"></div>Mon&#233;taire</div>
+  <div class="li"><div class="dot" style="background:#8e44ad"></div>G&#233;opolitique</div>
 </div>
 
 <div class="card">
-  <div class="card-label">Prix BTC-USD (USD, échelle log) — fond coloré par régime détecté</div>
-  <div id="chart-price" style="height:400px"></div>
+  <div class="card-label">Prix BTC-USD (USD, &#233;chelle log) &#8212; fond color&#233; par r&#233;gime d&#233;tect&#233;</div>
+  <div id="chart-price" style="height:360px"></div>
 </div>
 
 <div class="card">
-  <div class="card-label">Probabilité de changement de régime — BOCPD · P(run ≤ 3j) · seuil 0.5</div>
-  <div id="chart-cp" style="height:160px"></div>
+  <div class="card-label">Volatilit&#233; conditionnelle GARCH(1,1) &middot; &#963;<sub>t</sub> (violet) et Vol-of-Vol rolling 20j (orange)</div>
+  <div id="chart-vol" style="height:140px"></div>
 </div>
 
 <div class="card">
-  <div class="card-label">Événements de marché référencés</div>
-  <table><thead><tr><th>Date</th><th>Événement</th><th>Catégorie</th></tr></thead>
-  <tbody id="evt-body"></tbody></table>
+  <div class="card-label">Probabilit&#233; de changement de r&#233;gime &#8212; BOCPD &middot; P(run &#8804; 3j) &middot; seuil 0.5</div>
+  <div id="chart-cp" style="height:120px"></div>
 </div>
 
-<footer>DEITA Benchmark · généré le {generated_on}</footer>
+<div class="row2">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-label">Distribution des r&#233;gimes &#8212; {str(first_date.date())} &#8594; {str(last_date.date())}</div>
+    <div id="chart-dist" style="height:230px"></div>
+  </div>
+  <div class="card" style="margin-bottom:0;overflow-y:auto;max-height:270px">
+    <div class="card-label">&#201;v&#233;nements de march&#233; r&#233;f&#233;renc&#233;s</div>
+    <table><thead><tr><th>Date</th><th>&#201;v&#233;nement</th><th>Cat&#233;gorie</th></tr></thead>
+    <tbody id="evt-body"></tbody></table>
+  </div>
+</div>
+
+<footer>DEITA Benchmark &middot; g&#233;n&#233;r&#233; le {generated_on}</footer>
 
 <script>
 const BG='#16213e', GRID='rgba(255,255,255,0.05)', FONT={{family:'Segoe UI,sans-serif',color:'#ecf0f1',size:11}};
@@ -415,7 +463,7 @@ const baseLayout={{paper_bgcolor:BG,plot_bgcolor:BG,font:FONT,hovermode:'x unifi
   legend:{{bgcolor:'rgba(0,0,0,0)',font:{{size:10}}}},
   xaxis:{{gridcolor:GRID,zerolinecolor:GRID,type:'date',rangeslider:{{visible:false}}}}}};
 
-// ── Graphique prix ───────────────────────────────────────────────────────────
+// ── Prix ──────────────────────────────────────────────────────────────────────
 Plotly.newPlot('chart-price',
   {j_price_data},
   Object.assign({{}},baseLayout,{{
@@ -426,27 +474,47 @@ Plotly.newPlot('chart-price',
   }}),
   {{responsive:true,displayModeBar:false}});
 
-// ── Graphique BOCPD ──────────────────────────────────────────────────────────
+// ── Volatilité ────────────────────────────────────────────────────────────────
+Plotly.newPlot('chart-vol',
+  {j_vol_data},
+  Object.assign({{}},baseLayout,{{
+    margin:{{l:60,r:18,t:8,b:38}},
+    shapes:{j_shapes_vol},
+    yaxis:{{title:'Vol (%)',gridcolor:GRID}},
+  }}),
+  {{responsive:true,displayModeBar:false}});
+
+// ── BOCPD ─────────────────────────────────────────────────────────────────────
 Plotly.newPlot('chart-cp',
   {j_cp_data},
   Object.assign({{}},baseLayout,{{
     margin:{{l:60,r:18,t:8,b:38}},
     shapes:{j_shapes_cp},
-    yaxis:{{title:'P(changement)',gridcolor:GRID,range:[0,1.05],dtick:0.25}},
+    yaxis:{{title:'P(chgt)',gridcolor:GRID,range:[0,1.05],dtick:0.25}},
   }}),
   {{responsive:true,displayModeBar:false}});
 
-// ── Synchronisation X (zoom/pan) ─────────────────────────────────────────────
-document.getElementById('chart-price').on('plotly_relayout',function(e){{
-  if(e['xaxis.range[0]']!==undefined)
-    Plotly.relayout('chart-cp',{{'xaxis.range[0]':e['xaxis.range[0]'],'xaxis.range[1]':e['xaxis.range[1]']}});
-}});
-document.getElementById('chart-cp').on('plotly_relayout',function(e){{
-  if(e['xaxis.range[0]']!==undefined)
-    Plotly.relayout('chart-price',{{'xaxis.range[0]':e['xaxis.range[0]'],'xaxis.range[1]':e['xaxis.range[1]']}});
+// ── Distribution ──────────────────────────────────────────────────────────────
+Plotly.newPlot('chart-dist',
+  {j_dist_data},
+  {{paper_bgcolor:BG,plot_bgcolor:BG,font:FONT,margin:{{l:10,r:10,t:10,b:10}}}},
+  {{responsive:true,displayModeBar:false}});
+
+// ── Sync X : zoom/pan li&#233;s sur les 3 graphiques temporels ───────────────────
+let _sync=false;
+function syncRange(src,r0,r1){{
+  if(_sync)return; _sync=true;
+  ['chart-price','chart-vol','chart-cp'].filter(id=>id!==src).forEach(id=>{{
+    Plotly.relayout(id,{{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
+  }}); _sync=false;
+}}
+['chart-price','chart-vol','chart-cp'].forEach(id=>{{
+  document.getElementById(id).on('plotly_relayout',e=>{{
+    if(e['xaxis.range[0]']!==undefined) syncRange(id,e['xaxis.range[0]'],e['xaxis.range[1]']);
+  }});
 }});
 
-// ── Table des événements ─────────────────────────────────────────────────────
+// ── Table &#233;v&#233;nements ─────────────────────────────────────────────────────────
 const evts={j_events};
 const tbody=document.getElementById('evt-body');
 evts.forEach(e=>{{
