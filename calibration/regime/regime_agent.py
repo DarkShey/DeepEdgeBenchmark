@@ -535,7 +535,7 @@ if __name__ == "__main__":
     import os
 
     # Ajout de la racine du projet au path si nécessaire
-    root = Path(__file__).resolve().parents[3]
+    root = Path(__file__).resolve().parents[2]
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
