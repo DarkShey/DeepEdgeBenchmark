@@ -10,7 +10,7 @@ Couvre les 3 demandes du tuteur (cf. BRIEF_dashboard_multiasset.md §0) :
   - largeur des régimes (segment_regimes / regime_width_stats)
   - moyenne des régimes à 4 échelles (zoom temporel + donut recalculé côté JS, cf.
     BRIEF_dashboard_v3_corrections.md — pas de fonction Python dédiée)
-  - vol comme déclencheur de changement de régime (vol_regime_leadlag / vol_spike_hit_rate)
+  - vol comme déclencheur de changement de régime (vol_spike_hit_rate_by_lag / vol_spike_hit_rate)
   - vol comme déclencheur de corrélation inter-actifs (rolling_cross_correlation /
     stress_conditioned_correlation)
 """
@@ -76,32 +76,42 @@ def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
 
 # ── 4.3 Vol comme déclencheur de changement de régime ───────────────────────────
 
-def vol_regime_leadlag(df: pd.DataFrame, max_lag: int = 10) -> pd.DataFrame:
+def vol_spike_hit_rate_by_lag(df: pd.DataFrame, max_lag: int = 10, quantile: float = 0.75) -> pd.DataFrame:
     """
-    Teste si sigma_t (vol GARCH) précède les changements de régime.
+    Teste si sigma_t (vol GARCH) précède les changements de régime, décliné par décalage exact.
 
-    regime_change[t] = 1 si df['regime'][t] != df['regime'][t-1], sinon 0.
-    Pour lag = 0..max_lag :
-        corr(lag) = pearson( sigma_t.shift(lag), regime_change )   [dropna avant corrélation]
-    Interprétation : un pic de corrélation à lag > 0 signifie que la vol d'il y a `lag` jours est
-    corrélée avec un changement de régime aujourd'hui → la vol est un signal avancé (déclencheur).
-    Un pic à lag = 0 signifie une relation contemporaine (moins intéressant causalement).
+    Remplace une première version basée sur une corrélation de Pearson entre sigma_t décalé et
+    regime_change (0/1) : cette corrélation s'est révélée illisible en pratique — regime_change
+    ne vaut 1 que sur une poignée de jours (les changements de régime) parmi des milliers de jours
+    "calmes" à 0, donc le signal des vrais changements de régime se noie dans une corrélation
+    globale sur toute la série (valeurs quasi nulles pour les 4 actifs malgré des hit-rates très
+    différents). En restreignant la mesure aux seuls jours de changement de régime (comme
+    vol_spike_hit_rate), le signal redevient lisible.
 
-    Retourne un DataFrame [lag, corr].
+    Pour chaque lag = 0..max_lag :
+        hit_rate(lag) = % des jours de changement de régime pour lesquels sigma_t, exactement
+        `lag` jours avant, dépassait le quantile `quantile` de sa distribution glissante sur 60j.
+
+    Retourne un DataFrame [lag, hit_rate], hit_rate dans [0, 1].
     """
-    regime_change = (df["regime"] != df["regime"].shift(1)).astype(float)
+    rolling_q = df["sigma_t"].rolling(60).quantile(quantile)
+    spike = df["sigma_t"] > rolling_q
+
+    regime_change = df["regime"] != df["regime"].shift(1)
     if len(regime_change) > 0:
-        regime_change.iloc[0] = 0.0
+        regime_change.iloc[0] = False
+
+    change_idx = regime_change[regime_change].index
+    n_changes = len(change_idx)
 
     rows = []
     for lag in range(0, max_lag + 1):
-        shifted = df["sigma_t"].shift(lag)
-        paired = pd.concat([shifted, regime_change], axis=1).dropna()
-        if len(paired) > 1 and paired.iloc[:, 0].std() > 0 and paired.iloc[:, 1].std() > 0:
-            corr = float(paired.iloc[:, 0].corr(paired.iloc[:, 1]))
-        else:
-            corr = 0.0
-        rows.append({"lag": lag, "corr": corr})
+        if n_changes == 0:
+            rows.append({"lag": lag, "hit_rate": 0.0})
+            continue
+        spike_shifted = spike.shift(lag)
+        hits = int(spike_shifted.reindex(change_idx).fillna(False).sum())
+        rows.append({"lag": lag, "hit_rate": hits / n_changes})
 
     return pd.DataFrame(rows)
 

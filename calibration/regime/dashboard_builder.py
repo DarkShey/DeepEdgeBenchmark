@@ -87,7 +87,7 @@ def compute_all_analytics(results: dict) -> dict:
     """
     Appelle regime_analytics.* sur les résultats de run_pipeline() :
       - segments + width stats par actif et agrégés
-      - vol_regime_leadlag + vol_spike_hit_rate, par actif
+      - vol_spike_hit_rate_by_lag + vol_spike_hit_rate, par actif
       - rolling_cross_correlation + stress_conditioned_correlation, inter-actifs
     Retourne un dict structuré prêt à sérialiser en JSON pour le template HTML.
     """
@@ -105,7 +105,7 @@ def compute_all_analytics(results: dict) -> dict:
 
         segments = ra.segment_regimes(history)
         width_stats = ra.regime_width_stats(segments)
-        leadlag = ra.vol_regime_leadlag(history, max_lag=10)
+        leadlag = ra.vol_spike_hit_rate_by_lag(history, max_lag=10, quantile=0.75)
         hit_rate = ra.vol_spike_hit_rate(history, lookback=3, quantile=0.75)
 
         per_asset[ticker] = {
@@ -226,7 +226,7 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
             "label": asset["label"],
             "color": asset["color"],
             "lags": [int(v) for v in ll["lag"]],
-            "corr": [_num(v) for v in ll["corr"]],
+            "hit_rate_by_lag": [_num(v) for v in ll["hit_rate"]],
             "hit_rate": _num(hit_rate),
         }
 
@@ -360,7 +360,8 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
   </div>
 
   <div class="card">
-    <div class="card-label">Volatilit&#233; comme d&#233;clencheur de changement de r&#233;gime &#8212; corr&#233;lation d&#233;cal&#233;e &#963;<sub>t</sub> / changement de r&#233;gime (lag 0&#8211;10j)</div>
+    <div class="card-label">Volatilit&#233; comme d&#233;clencheur de changement de r&#233;gime &#8212; % des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol, par d&#233;calage (lag 0&#8211;10j)</div>
+    <p class="chart-note">Pour chaque d&#233;calage (lag), % des jours de changement de r&#233;gime o&#249; &#963;<sub>t</sub> &#233;tait, exactement `lag` jours avant, au-dessus de son 75<sup>e</sup> percentile glissant (60j) &#8212; ligne pointill&#233;e = 25%, le taux attendu par pur hasard. Une barre nettement au-dessus de cette ligne &#224; un lag donn&#233; = signal avanc&#233; exploitable &#224; ce d&#233;calage.</p>
     <div class="grid2x2" id="leadlag-grid"></div>
   </div>
 
@@ -631,11 +632,14 @@ function initComparisonTab() {{
       <div class="hitrate-label">des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol (3j)</div>
       <div id="chart-leadlag-${{a.ticker}}" style="height:180px"></div>`;
     grid.appendChild(wrap);
-    Plotly.newPlot(`chart-leadlag-${{a.ticker}}`, [{{
-      type:'bar', x:ll.lags, y:ll.corr, marker:{{color:a.color}},
-    }}], Object.assign({{}},baseLayout(),{{margin:{{l:40,r:10,t:8,b:30}},
+    Plotly.newPlot(`chart-leadlag-${{a.ticker}}`, [
+      {{type:'bar', x:ll.lags, y:ll.hit_rate_by_lag.map(v=>v*100), marker:{{color:a.color}},
+        name:'hit-rate', hovertemplate:'lag %{{x}}j : %{{y:.0f}}%<extra></extra>'}},
+      {{type:'scatter', mode:'lines', x:[0,10], y:[25,25], line:{{color:'#7f8c8d',width:1,dash:'dash'}},
+        name:'hasard (25%)', hoverinfo:'skip'}},
+    ], Object.assign({{}},baseLayout(),{{margin:{{l:40,r:10,t:8,b:30}}, showlegend:false,
       xaxis:{{title:'lag (jours)',dtick:1,type:'linear'}},
-      yaxis:{{title:'corr',gridcolor:GRID,range:[-1,1]}}}}), {{responsive:true,displayModeBar:false}});
+      yaxis:{{title:'% pr&#233;c&#233;d&#233;s d\\'un pic',gridcolor:GRID,range:[0,100]}}}}), {{responsive:true,displayModeBar:false}});
   }});
 
   const cc = COMPARISON.cross_correlation;
