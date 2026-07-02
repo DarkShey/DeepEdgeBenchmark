@@ -238,7 +238,7 @@ avec le bouton "Année" actif par défaut).
 - Les 3 checkboxes régime (Calme/Tendanciel/Stress) restent telles quelles (v2 §2).
 - Les événements de marché restent toujours visibles, sans checkbox catégorie (v2 §2).
 - La palette de couleurs régime (vert/ambre/rouge) et catégories d'événements reste telle quelle
-  (v2 §3) — ce n'est pas remise en cause par ce ticket, sauf indication contraire du tuteur.
+  (v2 §3) — ce n'est pas remise en cause par ce ticket, sauf changement de consigne.
 - L'onglet Comparaison (largeur des régimes, corrélation décalée vol/régime, corrélation glissante
   inter-actifs, tableau stress/calme) reste inchangé (v2 §4).
 

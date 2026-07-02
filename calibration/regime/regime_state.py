@@ -13,9 +13,9 @@ class RegimeState:
 
     # ── Produit par HMM (ce module) ──────────────────────────────────────────
     probs: Dict[str, float]
-    # Distribution a posteriori sur les états. Clés exactes : "calm", "trending", "stress".
+    # Distribution a posteriori sur les états. Clés exactes : calm, bull, bear, stress.
     # Somme = 1.0 à 1e-6 près.
-    # Exemple : {"calm": 0.65, "trending": 0.10, "stress": 0.25}
+    # Exemple : {"calm": 0.55, "bull": 0.10, "bear": 0.10, "stress": 0.25}
 
     vol_bucket: int
     # Entier 0, 1 ou 2.
@@ -37,7 +37,7 @@ class RegimeState:
     # toutes les données utilisées sont strictement antérieures à as_of.
 
     version: str
-    # Identifiant de version de l'algorithme. Valeur fixe : "hmm-garch-adx-v1"
+    # Identifiant de version de l'algorithme. Valeur fixe : "hmm-garch-adx-v2"
 
     # ── Complété par BOCPD (Kyrio) — valeurs par défaut ──────────────────────
     changepoint_prob: float = 0.0
@@ -57,8 +57,8 @@ class RegimeState:
         Vérifie la cohérence interne du RegimeState.
         Lève ValueError si une contrainte est violée.
         """
-        if set(self.probs.keys()) != {"calm", "trending", "stress"}:
-            raise ValueError(f"probs doit contenir exactement calm/trending/stress, got {set(self.probs.keys())}")
+        if set(self.probs.keys()) != {"calm", "bull", "bear", "stress"}:
+            raise ValueError(f"probs doit contenir exactement calm/bull/bear/stress, got {set(self.probs.keys())}")
         if abs(sum(self.probs.values()) - 1.0) > 1e-5:
             raise ValueError(f"probs ne somme pas à 1 : {sum(self.probs.values())}")
         if self.vol_bucket not in (0, 1, 2):

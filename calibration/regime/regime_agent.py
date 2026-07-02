@@ -56,21 +56,24 @@ _EVENT_COLORS = {
 }
 
 _REGIME_BG = {
-    "calm":     "rgba(39, 174, 96, 0.18)",
-    "trending": "rgba(41, 128, 185, 0.18)",
-    "stress":   "rgba(231, 76, 60, 0.22)",
+    "calm":   "rgba(39, 174, 96, 0.18)",
+    "bull":   "rgba(241, 196, 15, 0.18)",
+    "bear":   "rgba(74, 105, 189, 0.18)",
+    "stress": "rgba(231, 76, 60, 0.22)",
 }
 
 _REGIME_HEX = {
-    "calm":     "#27ae60",
-    "trending": "#2980b9",
-    "stress":   "#e74c3c",
+    "calm":   "#27ae60",
+    "bull":   "#f1c40f",
+    "bear":   "#4a69bd",
+    "stress": "#e74c3c",
 }
 
 _REGIME_LABELS = {
-    "calm":     "Calme",
-    "trending": "Tendanciel",
-    "stress":   "Stress",
+    "calm":   "Calme",
+    "bull":   "Haussier",
+    "bear":   "Baissier",
+    "stress": "Stress",
 }
 
 
@@ -160,7 +163,7 @@ class RegimeAgent:
         Contenu du HTML
         ---------------
         - Prix BTC-USD (échelle log) avec fond coloré par régime détecté
-          (vert = calme, bleu = tendanciel, rouge = stress)
+          (vert = calme, ambre = haussier, indigo = baissier, rouge = stress)
         - Marqueurs verticaux pointillés des événements MARKET_EVENTS avec étiquettes
         - Courbe changepoint_prob (BOCPD) en sous-graphe avec seuil 0.5
         - Fichier HTML autonome (Plotly via CDN, pas de serveur nécessaire)
@@ -204,13 +207,13 @@ class RegimeAgent:
         pour classer l'ensemble de l'historique. Réservé à la visualisation.
 
         Retourne un DataFrame indexé comme prices avec les colonnes :
-            regime (str), p_calm, p_trending, p_stress, vol_bucket, changepoint_prob
+            regime (str), p_calm, p_bull, p_bear, p_stress, vol_bucket, changepoint_prob
         """
         # ── 1. Features + passe HMM ────────────────────────────────────────────
         features = self._hmm._compute_features(prices)
         features = features.dropna()
 
-        X_scaled = self._hmm._scaler.transform(features)
+        X_scaled = self._hmm._scaler.transform(features[RegimeHMM.HMM_FEATURE_COLS])
         probs_matrix = self._hmm._hmm.predict_proba(X_scaled)  # shape (n, 2)
 
         stress_idx = next(
@@ -220,9 +223,13 @@ class RegimeAgent:
         p_non_stress = 1.0 - p_stress
 
         adx = features["adx"].values
+        di_diff = features["di_diff_smooth"].values
         thresh = RegimeHMM.ADX_TRENDING_THRESHOLD
-        p_trending = np.where(adx > thresh, p_non_stress, 0.0)
-        p_calm = np.where(adx <= thresh, p_non_stress, 0.0)
+        is_trending = adx > thresh
+
+        p_calm = np.where(~is_trending, p_non_stress, 0.0)
+        p_bull = np.where(is_trending & (di_diff >= 0), p_non_stress, 0.0)
+        p_bear = np.where(is_trending & (di_diff < 0), p_non_stress, 0.0)
 
         # ── 2. vol_bucket ──────────────────────────────────────────────────────
         q33, q66 = self._hmm._vol_thresholds
@@ -230,16 +237,17 @@ class RegimeAgent:
         vol_bucket = np.where(sigma_t < q33, 0, np.where(sigma_t < q66, 1, 2))
 
         # ── 3. Régime dominant (argmax) ────────────────────────────────────────
-        stacked = np.stack([p_calm, p_trending, p_stress], axis=1)
+        stacked = np.stack([p_calm, p_bull, p_bear, p_stress], axis=1)
         idx = np.argmax(stacked, axis=1)
-        _map = {0: "calm", 1: "trending", 2: "stress"}
+        _map = {0: "calm", 1: "bull", 2: "bear", 3: "stress"}
         regimes = [_map[int(i)] for i in idx]
 
         df = pd.DataFrame(
             {
                 "regime":     regimes,
                 "p_calm":     p_calm,
-                "p_trending": p_trending,
+                "p_bull":     p_bull,
+                "p_bear":     p_bear,
                 "p_stress":   p_stress,
                 "vol_bucket": vol_bucket.astype(int),
             },
@@ -275,7 +283,7 @@ class RegimeAgent:
         # ── Distribution des régimes (donut) ──────────────────────────────────
         n_total = len(df)
         rc = df["regime"].value_counts()
-        dist_vals = [round(rc.get(r, 0) / n_total * 100, 1) for r in ["calm", "trending", "stress"]]
+        dist_vals = [round(rc.get(r, 0) / n_total * 100, 1) for r in ["calm", "bull", "bear", "stress"]]
 
         # ── Rectangles de fond (régimes) pour les 3 graphiques temporels ──────
         shapes_price, shapes_vol, shapes_cp = [], [], []
@@ -333,7 +341,7 @@ class RegimeAgent:
                 "marker": {"color": _REGIME_HEX[r], "size": 10, "symbol": "square"},
                 "name": _REGIME_LABELS[r], "showlegend": True,
             }
-            for r in ["calm", "trending", "stress"]
+            for r in ["calm", "bull", "bear", "stress"]
         ]
         sigma_trace = {
             "type": "scatter", "x": dates_str, "y": sigma_vals,
@@ -363,9 +371,9 @@ class RegimeAgent:
         }
         dist_trace = {
             "type": "pie",
-            "labels": ["Calme", "Tendanciel", "Stress"],
+            "labels": ["Calme", "Haussier", "Baissier", "Stress"],
             "values": dist_vals,
-            "marker": {"colors": ["#27ae60", "#2980b9", "#e74c3c"]},
+            "marker": {"colors": ["#27ae60", "#f1c40f", "#4a69bd", "#e74c3c"]},
             "hole": 0.42,
             "textinfo": "label+percent",
             "textfont": {"size": 11, "color": "#ecf0f1"},
@@ -423,7 +431,8 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
 
 <div class="legend">
   <div class="li"><div class="dot" style="background:#27ae60"></div>Calme</div>
-  <div class="li"><div class="dot" style="background:#2980b9"></div>Tendanciel</div>
+  <div class="li"><div class="dot" style="background:#f1c40f"></div>Haussier</div>
+  <div class="li"><div class="dot" style="background:#4a69bd"></div>Baissier</div>
   <div class="li"><div class="dot" style="background:#e74c3c"></div>Stress</div>
   <div class="sep"></div>
   <div class="li"><div class="dot" style="background:#e67e22"></div>Crypto</div>

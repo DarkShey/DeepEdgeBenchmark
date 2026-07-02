@@ -2,7 +2,7 @@
 
 **Projet :** DEITA — Moteur de Régime
 **Contexte :** suite du travail livré dans `calibration/regime/` (RegimeHMM + RegimeBOCPD + RegimeAgent,
-7/7 tests verts). Ce brief couvre les 3 points demandés par le tuteur pour la séance du jour, plus la
+7/7 tests verts). Ce brief couvre les 3 points à traiter pour la séance du jour, plus la
 refonte du dashboard HTML demandée par Maéva pour les présenter proprement.
 **Ce fichier est une spécification, pas du code** — à donner tel quel à Claude Code pour exécution.
 **Fichiers existants à ne PAS modifier** (déjà testés, interface figée) : `regime_state.py`,
@@ -12,7 +12,7 @@ qui n'est couverte par aucun test).
 
 ---
 
-## 0. Les 3 demandes du tuteur (reformulées et opérationnalisées)
+## 0. Les 3 objectifs de la séance (reformulés et opérationnalisés)
 
 | # | Demande brute | Interprétation opérationnelle |
 |---|---|---|
@@ -30,7 +30,7 @@ logique** (RegimeHMM + RegimeBOCPD, mêmes hyperparamètres, aucune modification
 | Actif demandé | Ticker Yahoo Finance retenu | Classe | Justification |
 |---|---|---|---|
 | Bitcoin (déjà en place) | `BTC-USD` | crypto | inchangé |
-| ETH | `ETH-USD` | crypto | Le tuteur a dit "ETH", pas "ETF" — ce sont deux choses différentes (voir encadré ci-dessous). Dans une liste Crypto/Index/US Bond/ETH, ETH = Ethereum, la 2ᵉ crypto par capitalisation, cohérent avec BTC. |
+| ETH | `ETH-USD` | crypto | La consigne mentionne "ETH", pas "ETF" — ce sont deux choses différentes (voir encadré ci-dessous). Dans une liste Crypto/Index/US Bond/ETH, ETH = Ethereum, la 2ᵉ crypto par capitalisation, cohérent avec BTC. |
 | Un indice actions (S&P500) | `SPY` (ETF qui réplique le S&P 500) | index | `SPY` a un historique Volume propre et fiable sur Yahoo (contrairement à `^GSPC` dont le volume est moins standardisé), et c'est déjà le ticker par défaut de `run_benchmark.py` dans ce repo — cohérence avec l'existant. |
 | Un exemple pertinent d'obligation US | `TLT` (iShares 20+ Year Treasury Bond ETF) | bond | Les obligations longue duration sont celles qui montrent le plus clairement des régimes de marché distincts (calme pendant les périodes de taux stables, stress/trending pendant les cycles de hausse de taux type 2022). Une obligation courte durée (ex. `SHY`) serait trop plate pour que le HMM détecte quoi que ce soit d'intéressant. Alternative de repli si `TLT` pose un problème de données : `IEF` (7-10 ans). |
 
@@ -247,7 +247,7 @@ def vol_regime_leadlag(df: pd.DataFrame, max_lag: int = 10) -> pd.DataFrame:
 
 def vol_spike_hit_rate(df: pd.DataFrame, lookback: int = 3, quantile: float = 0.75) -> float:
     """
-    Statistique simple et lisible pour le tuteur, en complément de la corrélation décalée :
+    Statistique simple et lisible, en complément de la corrélation décalée :
     % des changements de régime précédés (dans les `lookback` jours précédents) d'un sigma_t
     dépassant le quantile `quantile` de sa distribution glissante sur 60 jours.
     Retourne un float dans [0, 1].
@@ -459,11 +459,11 @@ Exécution : `pytest calibration/regime/test_regime_analytics.py -v`
 
 - `TLT` retenu comme "exemple pertinent d'obligation US" plutôt que `IEF`/`SHY`/`^TNX` — car c'est
   l'ETF obligataire le plus liquide et le plus volatile, donc celui où les régimes seront les plus
-  visibles. À changer facilement (un seul paramètre dans `assets.py`) si le tuteur préfère un autre
-  proxy obligataire.
+  visibles. À changer facilement (un seul paramètre dans `assets.py`) si un autre proxy obligataire
+  s'avère préférable.
 - Fenêtre commune 2018–aujourd'hui pour les 4 actifs (au lieu de 2017/2014 pour BTC) — sacrifie un
   peu d'historique BTC pour permettre une comparaison inter-actifs statistiquement propre.
 - "Corrélation" (point 1) interprétée comme corrélation de rendements inter-actifs conditionnée au
   régime/stress (contagion), en complément de la corrélation décalée vol → changement de régime
-  (causalité/anticipation). Si le tuteur voulait dire autre chose par "et/ou corrél", clarifier avec
-  lui avant l'implémentation du §4.4.
+  (causalité/anticipation). Si l'intention derrière "et/ou corrél" était différente, clarifier
+  avant l'implémentation du §4.4.

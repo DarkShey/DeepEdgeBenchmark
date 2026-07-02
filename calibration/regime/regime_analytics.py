@@ -2,19 +2,24 @@
 regime_analytics.py — Analyses statistiques sur les historiques de régime DEITA
 
 Fonctions pures consommant les DataFrames déjà produits par
-RegimeAgent.predict_history() (colonnes : regime, p_calm, p_trending, p_stress,
+RegimeAgent.predict_history() (colonnes : regime, p_calm, p_bull, p_bear, p_stress,
 vol_bucket, sigma_t, vol_of_vol, changepoint_prob, indexé par date). Aucune fonction
 ne télécharge de données ni ne fait tourner le HMM/BOCPD.
 
-Couvre les 3 demandes du tuteur (cf. BRIEF_dashboard_multiasset.md §0) :
+Couvre les objectifs des séances du 02/07 (cf. BRIEF_dashboard_multiasset.md §0 et
+BRIEF_dashboard_v6_corrections.md §3) :
   - largeur des régimes (segment_regimes / regime_width_stats)
   - moyenne des régimes à 4 échelles (zoom temporel + donut recalculé côté JS, cf.
     BRIEF_dashboard_v3_corrections.md — pas de fonction Python dédiée)
-  - vol comme déclencheur de changement de régime (vol_spike_hit_rate — statistique descriptive
-    simple, cf. note de prudence affichée dans le dashboard : pas de test de significativité)
+  - vol comme signal avancé d'un changement de régime (regime_transition_vol_profile —
+    étude d'événement : profil moyen de sigma_t autour des transitions de régime, remplace
+    l'ancienne corrélation décalée vol/régime trop agrégée, cf. BRIEF v6 §3)
   - vol comme déclencheur de corrélation inter-actifs (rolling_cross_correlation /
-    stress_conditioned_correlation), avec test de significativité (fisher_r_critical /
-    correlation_significance) pour distinguer un vrai effet du bruit d'échantillonnage
+    pairwise_stress_calm_correlation), avec test de significativité (fisher_r_critical /
+    correlation_significance) pour distinguer un vrai effet du bruit d'échantillonnage. Chaque
+    paire est conditionnée sur son propre sous-échantillon stress/calme (cf.
+    BRIEF_dashboard_v9_corrections.md §2) — pas sur un mask global exigeant une condition
+    simultanée sur tous les actifs du jeu de données, qui écrase artificiellement l'échantillon.
 """
 
 import itertools
@@ -69,7 +74,7 @@ def segment_regimes(df: pd.DataFrame) -> pd.DataFrame:
 def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
     """
     Groupby(regime) sur n_days_calendar : count, mean, median, std, min, max.
-    Une ligne par régime (calm/trending/stress).
+    Une ligne par régime (calm/bull/bear/stress).
     """
     stats = segments.groupby("regime")["n_days_calendar"].agg(
         ["count", "mean", "median", "std", "min", "max"]
@@ -77,36 +82,74 @@ def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
     return stats.reset_index()
 
 
-# ── 4.3 Vol comme déclencheur de changement de régime ───────────────────────────
+# ── 4.3 Vol comme signal avancé d'un changement de régime (étude d'événement) ───
 
-def vol_spike_hit_rate(df: pd.DataFrame, lookback: int = 3, quantile: float = 0.75) -> float:
+def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment: str = "start",
+                                   only_into: str | None = None) -> pd.DataFrame:
     """
-    % des changements de régime précédés (dans les `lookback` jours précédents) d'un sigma_t
-    dépassant le quantile `quantile` de sa distribution glissante sur 60 jours.
-    Retourne un float dans [0, 1].
+    Étude d'événement : profil moyen de sigma_t autour des transitions de régime.
 
-    ATTENTION — statistique descriptive simple, pas un test de significativité : l'échantillon
-    d'événements (changements de régime) est faible par actif (quelques dizaines sur plusieurs
-    années), donc l'incertitude d'échantillonnage sur ce pourcentage est large et non quantifiée
-    ici. De plus, le régime "stress" est en partie défini par sigma_t élevée dans RegimeHMM, donc
-    une partie du lien mesuré est mécanique (par construction) plutôt que prédictive. À utiliser
-    comme indication exploratoire pour le tuteur, pas comme signal de trading validé.
+    alignment : "start" (jour 0 = premier jour du nouveau régime) ou "end" (jour 0 = dernier
+    jour de l'ancien régime, juste avant la transition).
+    only_into : si fourni (ex. "stress"), ne considère que les transitions VERS ce régime
+    (ex. "à quoi ressemble la vol juste avant qu'on bascule en stress ?"). Si None, toutes les
+    transitions sont poolées ensemble. Pour alignment="start", c'est le régime du segment qui
+    COMMENCE à l'événement qui est testé ; pour alignment="end", c'est le régime du segment
+    SUIVANT (celui vers lequel on transitionne après la fin du segment courant).
+    window : nombre de jours de trading de part et d'autre de l'événement.
+
+    Pour chaque segment de segment_regimes (sauf le premier segment de l'historique en
+    alignment="start", ou le dernier en alignment="end" — ils n'ont pas d'événement "avant"/
+    "après" dans les données), extraire sigma_t sur [event_pos - window, event_pos + window] en
+    position entière (iloc), aligné sur un axe rel_day = -window..+window. Si la fenêtre déborde
+    des bornes du DataFrame, le segment est ignoré (pas de padding artificiel). Les événements
+    retenus sont ensuite empilés et moyennés (et écart-type) colonne par colonne (= jour relatif
+    par jour relatif) pour obtenir le profil moyen.
+
+    Retourne un DataFrame [rel_day, mean_sigma, std_sigma, n_events].
     """
-    rolling_q = df["sigma_t"].rolling(60).quantile(quantile)
-    spike = df["sigma_t"] > rolling_q
+    if alignment not in ("start", "end"):
+        raise ValueError(f"alignment doit être 'start' ou 'end', got {alignment!r}")
 
-    regime_change = df["regime"] != df["regime"].shift(1)
-    if len(regime_change) > 0:
-        regime_change.iloc[0] = False
+    rel_day = np.arange(-window, window + 1)
+    segments = segment_regimes(df)
+    n_segments = len(segments)
 
-    spike_recent = spike.shift(1).rolling(lookback, min_periods=1).max().fillna(0).astype(bool)
+    if n_segments < 2:
+        return pd.DataFrame({"rel_day": rel_day, "mean_sigma": np.nan, "std_sigma": np.nan, "n_events": 0})
 
-    n_changes = int(regime_change.sum())
-    if n_changes == 0:
-        return 0.0
+    if alignment == "start":
+        # le tout premier segment n'a pas de "avant" dans les données -> exclu
+        candidate_positions = range(1, n_segments)
+        event_dates = segments["start"]
+        regime_at_event = segments["regime"]
+    else:
+        # le tout dernier segment n'a pas de "après" dans les données -> exclu
+        candidate_positions = range(0, n_segments - 1)
+        event_dates = segments["end"]
+        regime_at_event = segments["regime"].shift(-1)  # régime du segment SUIVANT
 
-    hits = int((regime_change & spike_recent).sum())
-    return hits / n_changes
+    sigma = df["sigma_t"]
+    profiles = []
+    for i in candidate_positions:
+        if only_into is not None and regime_at_event.iloc[i] != only_into:
+            continue
+        pos = df.index.get_loc(event_dates.iloc[i])
+        lo, hi = pos - window, pos + window
+        if lo < 0 or hi >= len(df):
+            continue
+        profiles.append(sigma.iloc[lo:hi + 1].to_numpy())
+
+    if not profiles:
+        return pd.DataFrame({"rel_day": rel_day, "mean_sigma": np.nan, "std_sigma": np.nan, "n_events": 0})
+
+    stacked = np.stack(profiles, axis=0)
+    return pd.DataFrame({
+        "rel_day": rel_day,
+        "mean_sigma": stacked.mean(axis=0),
+        "std_sigma": stacked.std(axis=0),
+        "n_events": stacked.shape[0],
+    })
 
 
 # ── 4.4 Vol comme déclencheur de corrélation inter-actifs ───────────────────────
@@ -165,42 +208,58 @@ def segment_boolean_mask(mask: pd.Series) -> list:
     return segments
 
 
-def stress_conditioned_correlation(returns_by_asset: dict, stress_masks: dict, calm_masks: dict) -> dict:
+def pairwise_stress_calm_correlation(returns_by_asset: dict, stress_masks: dict, calm_masks: dict) -> pd.DataFrame:
     """
-    stress_masks : {ticker: bool série, True si p_stress > 0.5}.
-    calm_masks   : {ticker: bool série, True si regime == "calm"}.
+    Pour chaque paire (a, b), corrélation de Pearson des rendements conditionnée sur deux
+    sous-échantillons SPÉCIFIQUES À LA PAIRE (pas un mask global sur tous les actifs du jeu de
+    données) :
+      - stress_pair = stress_masks[a] OR stress_masks[b]   (au moins l'un des deux stressé)
+      - calm_pair   = calm_masks[a] AND calm_masks[b]       (les deux simultanément calmes)
 
-    "stress" = au moins 1 actif sur 4 en stress (union stress_masks).
-    "calm"   = LES 4 ACTIFS SIMULTANÉMENT en régime calme (intersection stricte calm_masks) —
-               remplace l'ancienne définition "aucun stress" qui laissait passer les jours trending.
+    Justification : exiger qu'un actif sans rapport avec la paire testée (ex. TLT) soit lui aussi
+    calme pour évaluer la corrélation BTC-SPX n'a pas de sens et réduit artificiellement
+    l'échantillon (constaté : 59 jours sur 2134 avec la définition globale à 5 actifs). Chaque
+    paire a maintenant son propre n_stress/n_calm et donc son propre seuil de significativité
+    (fisher_r_critical) — les tailles d'échantillon diffèrent légitimement d'une paire à l'autre.
 
-    Retourne {"stress": corr_matrix, "calm": corr_matrix, "stress_mask": pd.Series, "calm_mask": pd.Series,
-    "n_stress": int, "n_calm": int} — n_stress/n_calm = tailles des sous-échantillons, pour tester la
-    significativité des corrélations (cf. correlation_significance).
+    Retourne un DataFrame, une ligne par paire :
+    [pair, corr_stress, n_stress, r_crit_stress, stress_sig,
+           corr_calm, n_calm, r_crit_calm, calm_sig].
+    Si n_stress ou n_calm <= 3, la corrélation correspondante est NaN (échantillon insuffisant,
+    cf. fisher_r_critical qui retourne déjà None dans ce cas).
     """
     keys = list(returns_by_asset.keys())
-    aligned = pd.concat(returns_by_asset, axis=1, join="inner")
-    aligned.columns = keys
+    rows = []
+    for a, b in itertools.combinations(keys, 2):
+        ra_, rb_ = returns_by_asset[a], returns_by_asset[b]
+        common = ra_.index.intersection(rb_.index)
+        ra_, rb_ = ra_.loc[common], rb_.loc[common]
 
-    union_stress = market_mask_union(stress_masks)
-    intersection_calm = market_mask_intersection(calm_masks)
+        sa = stress_masks[a].reindex(common).fillna(False)
+        sb = stress_masks[b].reindex(common).fillna(False)
+        ca = calm_masks[a].reindex(common).fillna(False)
+        cb = calm_masks[b].reindex(common).fillna(False)
 
-    common_idx = aligned.index.intersection(union_stress.index).intersection(intersection_calm.index)
-    aligned = aligned.loc[common_idx]
-    union_stress = union_stress.reindex(common_idx).fillna(False)
-    intersection_calm = intersection_calm.reindex(common_idx).fillna(False)
+        stress_pair = sa | sb
+        calm_pair = ca & cb
 
-    stress_corr = aligned.loc[union_stress].corr()
-    calm_corr = aligned.loc[intersection_calm].corr()
+        n_stress = int(stress_pair.sum())
+        n_calm = int(calm_pair.sum())
 
-    return {
-        "stress": stress_corr,
-        "calm": calm_corr,
-        "stress_mask": union_stress,
-        "calm_mask": intersection_calm,
-        "n_stress": int(union_stress.sum()),
-        "n_calm": int(intersection_calm.sum()),
-    }
+        corr_stress = float(ra_.loc[stress_pair].corr(rb_.loc[stress_pair])) if n_stress > 3 else float("nan")
+        corr_calm = float(ra_.loc[calm_pair].corr(rb_.loc[calm_pair])) if n_calm > 3 else float("nan")
+
+        r_crit_s = fisher_r_critical(n_stress)
+        r_crit_c = fisher_r_critical(n_calm)
+
+        rows.append({
+            "pair": f"{a}-{b}",
+            "corr_stress": corr_stress, "n_stress": n_stress, "r_crit_stress": r_crit_s,
+            "stress_sig": bool(r_crit_s is not None and corr_stress == corr_stress and abs(corr_stress) > r_crit_s),
+            "corr_calm": corr_calm, "n_calm": n_calm, "r_crit_calm": r_crit_c,
+            "calm_sig": bool(r_crit_c is not None and corr_calm == corr_calm and abs(corr_calm) > r_crit_c),
+        })
+    return pd.DataFrame(rows)
 
 
 # ── 4.5 Significativité statistique des corrélations ────────────────────────────

@@ -1,20 +1,24 @@
 """
 assets.py — Registre des actifs et événements pour le dashboard multi-actifs DEITA
 
-Source unique de vérité pour la liste des actifs (BTC/ETH/SPY/ZN=F), la fenêtre de
+Source unique de vérité pour la liste des actifs (BTC/ETH/SPY/ZN=F/TLT), la fenêtre de
 données commune et les événements de marché affichés sur les graphiques. Consommé
 par dashboard_builder.py et regime_agent.py (import, pas de duplication).
 """
 
-# BRIEF_dashboard_v5_corrections.md : TLT (ETF, allocation variable/opaque selon le tuteur)
-# remplacé par ZN=F (futures CME sur le Treasury Note 10 ans) — le 10 ans est le benchmark
-# mondial des taux et le titre du Trésor US le plus échangé (remarque explicite du tuteur).
+# BRIEF_dashboard_v5_corrections.md : TLT (ETF, allocation variable/opaque) remplacé par ZN=F
+# (futures CME sur le Treasury Note 10 ans) — le 10 ans est le benchmark mondial des taux et
+# le titre du Trésor US le plus échangé.
 # Données vérifiées avant bascule : 2139 jours depuis 2018, volume quasi jamais nul (0.37%).
+# BRIEF_dashboard_v6_corrections.md §1 : TLT remis EN PLUS de ZN=F (pas à sa place) — les deux
+# représentations du marché obligataire US (ETF et futures) cohabitent pour permettre de les
+# comparer directement.
 ASSETS = [
-    {"ticker": "BTC-USD", "label": "Bitcoin",         "short": "BTC", "asset_class": "crypto", "color": "#f7931a"},
-    {"ticker": "ETH-USD", "label": "Ethereum",         "short": "ETH", "asset_class": "crypto", "color": "#627eea"},
-    {"ticker": "SPY",     "label": "S&P 500 (SPY)",    "short": "SPX", "asset_class": "index",  "color": "#2ecc71"},
+    {"ticker": "BTC-USD", "label": "Bitcoin",                 "short": "BTC", "asset_class": "crypto", "color": "#f7931a"},
+    {"ticker": "ETH-USD", "label": "Ethereum",                 "short": "ETH", "asset_class": "crypto", "color": "#627eea"},
+    {"ticker": "SPY",     "label": "S&P 500 (SPY)",            "short": "SPX", "asset_class": "index",  "color": "#2ecc71"},
     {"ticker": "ZN=F",    "label": "US Treasury 10Y Note Futures", "short": "ZN", "asset_class": "bond", "color": "#3498db"},
+    {"ticker": "TLT",     "label": "US Treasury 20+Y (ETF)",   "short": "TLT", "asset_class": "bond",   "color": "#9b59b6"},
 ]
 
 DATA_START = "2018-01-01"
@@ -69,25 +73,29 @@ ASSET_EVENTS = {
     },
 }
 
+# TLT réutilise les mêmes événements que ZN=F : même sous-jacent macro (taux US).
+ASSET_EVENTS["TLT"] = ASSET_EVENTS["ZN=F"]
+
 _REGIME_BG = {
-    "calm":     "rgba(46,204,113,0.24)",   # vert
-    "trending": "rgba(241,196,15,0.22)",   # ambre/or (remplace le bleu, trop proche du fond)
-    "stress":   "rgba(231,76,60,0.26)",    # rouge
+    "calm":  "rgba(46,204,113,0.24)",    # vert
+    "bull":  "rgba(241,196,15,0.22)",    # ambre/or
+    "bear":  "rgba(74,105,189,0.24)",    # bleu ardoise/indigo
+    "stress":"rgba(231,76,60,0.26)",     # rouge
 }
 _REGIME_HEX = {
-    "calm":     "#2ecc71",
-    "trending": "#f1c40f",
-    "stress":   "#e74c3c",
+    "calm": "#2ecc71", "bull": "#f1c40f", "bear": "#4a69bd", "stress": "#e74c3c",
 }
 
 _EVENT_COLORS = {
     "crypto":       "#e67e22",  # orange (inchangé)
     "macro":        "#ff6ec7",  # rose/magenta (était #e74c3c -> collision avec stress)
-    "monetaire":    "#2980b9",  # bleu (libéré, ne collisionne plus avec trending)
+    "monetaire":    "#2980b9",  # bleu (distinct de bull #f1c40f et bear #4a69bd)
     "geopolitique": "#8e44ad",  # violet (inchangé)
 }
 
-_REGIME_LABELS = {"calm": "Calme", "trending": "Tendanciel", "stress": "Stress"}
+_REGIME_LABELS = {
+    "calm": "Calme", "bull": "Haussier", "bear": "Baissier", "stress": "Stress",
+}
 
 
 def events_for_ticker(ticker: str) -> dict:

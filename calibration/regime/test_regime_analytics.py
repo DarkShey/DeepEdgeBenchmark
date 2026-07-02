@@ -6,12 +6,12 @@ from calibration.regime.regime_analytics import (
     fisher_r_critical,
     market_mask_intersection,
     market_mask_union,
+    pairwise_stress_calm_correlation,
+    regime_transition_vol_profile,
     regime_width_stats,
     rolling_cross_correlation,
     segment_boolean_mask,
     segment_regimes,
-    stress_conditioned_correlation,
-    vol_spike_hit_rate,
 )
 
 
@@ -74,13 +74,72 @@ def test_segment_regimes_calendar_vs_trading_days():
     assert stress_seg["n_days_calendar"] > stress_seg["n_days_trading"]
 
 
-def test_vol_spike_hit_rate_bounds():
-    regimes = (["calm"] * 20 + ["stress"] * 10) * 5
-    df = _make_history(regimes)
+def _make_sigma_history(regimes, sigma, start="2020-01-01", freq="D"):
+    """DataFrame minimal (regime, sigma_t) pour tester regime_transition_vol_profile."""
+    idx = pd.date_range(start, periods=len(regimes), freq=freq)
+    return pd.DataFrame({"regime": regimes, "sigma_t": sigma}, index=idx)
 
-    rate = vol_spike_hit_rate(df, lookback=3, quantile=0.75)
 
-    assert 0.0 <= rate <= 1.0
+def test_regime_transition_vol_profile_peak_near_event():
+    window = 5
+    # 3 segments bien espacés : calm(0-29), stress(30-59), calm(60-89) -> 2 transitions,
+    # toutes deux avec une fenêtre complète des deux côtés.
+    regimes = ["calm"] * 30 + ["stress"] * 30 + ["calm"] * 30
+    n = len(regimes)
+    sigma = np.ones(n)
+    # Pic net juste avant la transition calm->stress (pos 30).
+    for offset in range(-3, 1):
+        sigma[30 + offset] = 5.0
+    df = _make_sigma_history(regimes, sigma)
+
+    # only_into="stress" : seule la transition calm->stress (pos 30) est retenue ; la
+    # transition stress->calm (pos 60) va vers "calm", donc exclue.
+    profile = regime_transition_vol_profile(df, window=window, alignment="start", only_into="stress")
+
+    assert (profile["n_events"] == 1).all()
+    peak_rel_day = profile.loc[profile["mean_sigma"].idxmax(), "rel_day"]
+    assert peak_rel_day <= 0, (
+        f"Le pic de vol construit avant la transition doit apparaître à rel_day <= 0, got {peak_rel_day}"
+    )
+
+
+def test_regime_transition_vol_profile_pools_all_transitions_by_default():
+    window = 5
+    regimes = ["calm"] * 30 + ["stress"] * 30 + ["calm"] * 30
+    df = _make_sigma_history(regimes, np.ones(len(regimes)))
+
+    # Sans only_into, les 2 transitions (calm->stress à pos 30, stress->calm à pos 60) sont
+    # poolées ensemble ; seul le tout premier segment de l'historique est exclu (pas de "avant").
+    profile = regime_transition_vol_profile(df, window=window, alignment="start")
+
+    assert (profile["n_events"] == 2).all()
+
+
+def test_regime_transition_vol_profile_excludes_incomplete_window():
+    window = 5
+    # calm(0-2), stress(3-7), calm(8-59) : la transition calm->stress (pos 3, 2e segment de
+    # l'historique — donc pas le tout premier) a une fenêtre "avant" incomplète (3 - 5 < 0) et
+    # doit être ignorée sans padding artificiel. La transition stress->calm (pos 8) a une
+    # fenêtre complète et doit être retenue.
+    regimes = ["calm"] * 3 + ["stress"] * 5 + ["calm"] * 52
+    df = _make_sigma_history(regimes, np.ones(len(regimes)))
+
+    profile = regime_transition_vol_profile(df, window=window, alignment="start")
+
+    assert (profile["n_events"] == 1).all()
+
+
+def test_regime_transition_vol_profile_end_alignment_excludes_last_segment():
+    window = 5
+    # 2 segments seulement : calm(0-29), stress(30-59). En alignment="end", le dernier segment
+    # (stress, qui n'a pas de "après" dans les données) est exclu par construction ; seule la
+    # fin du segment calm (pos 29) est un événement utilisable.
+    regimes = ["calm"] * 30 + ["stress"] * 30
+    df = _make_sigma_history(regimes, np.ones(len(regimes)))
+
+    profile = regime_transition_vol_profile(df, window=window, alignment="end")
+
+    assert (profile["n_events"] == 1).all()
 
 
 def test_segment_boolean_mask_basic():
@@ -117,31 +176,73 @@ def test_market_mask_union_and_intersection():
     assert market_mask_intersection(all_true_first_day).tolist() == [True, False]
 
 
-def test_stress_conditioned_correlation_strict_calm():
-    idx = pd.date_range("2020-01-01", periods=4, freq="D")
+def test_pairwise_stress_calm_correlation_independent_of_third_asset():
+    idx = pd.date_range("2020-01-01", periods=20, freq="D")
+    rng = np.random.RandomState(0)
     returns_by_asset = {
-        "A": pd.Series([0.01, 0.02, -0.01, 0.03], index=idx),
-        "B": pd.Series([0.015, -0.005, 0.02, -0.02], index=idx),
+        "A": pd.Series(rng.normal(0, 0.02, 20), index=idx),
+        "B": pd.Series(rng.normal(0, 0.02, 20), index=idx),
+        "C": pd.Series(rng.normal(0, 0.02, 20), index=idx),
     }
-    # jour 1 (index 1) : A est trending (ni calm ni stress), B est calm.
-    # Ancienne définition ("pas de stress") aurait inclus ce jour dans "calme".
-    # Nouvelle définition stricte (intersection) doit l'exclure.
+    # A et B partagent le même mask stress/calme ; C a un régime totalement indépendant (opposé
+    # dans le temps), sans rapport avec la paire (A, B) testée.
     stress_masks = {
-        "A": pd.Series([False, False, True, False], index=idx),
-        "B": pd.Series([False, False, False, False], index=idx),
+        "A": pd.Series([True] * 5 + [False] * 15, index=idx),
+        "B": pd.Series([True] * 5 + [False] * 15, index=idx),
+        "C": pd.Series([False] * 15 + [True] * 5, index=idx),
     }
     calm_masks = {
-        "A": pd.Series([True, False, False, True], index=idx),
-        "B": pd.Series([True, True, True, True], index=idx),
+        "A": pd.Series([False] * 5 + [True] * 15, index=idx),
+        "B": pd.Series([False] * 5 + [True] * 15, index=idx),
+        "C": pd.Series([True] * 15 + [False] * 5, index=idx),
     }
 
-    result = stress_conditioned_correlation(returns_by_asset, stress_masks, calm_masks)
+    result_with_c = pairwise_stress_calm_correlation(returns_by_asset, stress_masks, calm_masks)
+    row_with_c = result_with_c[result_with_c["pair"] == "A-B"].iloc[0]
 
-    assert result["calm_mask"].tolist() == [True, False, False, True]
-    assert result["stress_mask"].tolist() == [False, False, True, False]
-    assert result["calm_mask"].iloc[1] == False
-    assert result["n_calm"] == 2
-    assert result["n_stress"] == 1
+    returns_without_c = {k: v for k, v in returns_by_asset.items() if k != "C"}
+    stress_without_c = {k: v for k, v in stress_masks.items() if k != "C"}
+    calm_without_c = {k: v for k, v in calm_masks.items() if k != "C"}
+    result_without_c = pairwise_stress_calm_correlation(returns_without_c, stress_without_c, calm_without_c)
+    row_without_c = result_without_c[result_without_c["pair"] == "A-B"].iloc[0]
+
+    # La présence ou non de C dans le dict d'entrée ne doit strictement rien changer au résultat
+    # de la paire (A, B) : preuve que le calcul ne dépend plus des actifs hors paire.
+    assert row_with_c["n_stress"] == row_without_c["n_stress"]
+    assert row_with_c["n_calm"] == row_without_c["n_calm"]
+    assert row_with_c["corr_stress"] == row_without_c["corr_stress"]
+    assert row_with_c["corr_calm"] == row_without_c["corr_calm"]
+
+
+def test_pairwise_stress_calm_correlation_n_specific_to_pair():
+    idx = pd.date_range("2020-01-01", periods=10, freq="D")
+    returns_by_asset = {
+        "A": pd.Series(np.linspace(-0.01, 0.01, 10), index=idx),
+        "B": pd.Series(np.linspace(0.01, -0.01, 10), index=idx),
+        "C": pd.Series(np.linspace(-0.02, 0.02, 10), index=idx),
+    }
+    # A n'est jamais en stress ; B est en stress les 4 premiers jours ; C les 8 premiers jours.
+    stress_masks = {
+        "A": pd.Series([False] * 10, index=idx),
+        "B": pd.Series([True] * 4 + [False] * 6, index=idx),
+        "C": pd.Series([True] * 8 + [False] * 2, index=idx),
+    }
+    calm_masks = {
+        "A": pd.Series([True] * 10, index=idx),
+        "B": pd.Series([False] * 4 + [True] * 6, index=idx),
+        "C": pd.Series([False] * 8 + [True] * 2, index=idx),
+    }
+
+    result = pairwise_stress_calm_correlation(returns_by_asset, stress_masks, calm_masks)
+    n_ab = int(result.loc[result["pair"] == "A-B", "n_stress"].iloc[0])
+    n_ac = int(result.loc[result["pair"] == "A-C", "n_stress"].iloc[0])
+
+    # n_stress(A-B) = OR(stress_A, stress_B) = 4 jours ; n_stress(A-C) = OR(stress_A, stress_C) = 8 jours.
+    # Des valeurs différentes par paire, pas une seule valeur globale partagée (constat qui a
+    # motivé ce patch : l'ancienne définition à 5 actifs donnait un n_stress/n_calm unique).
+    assert n_ab == 4
+    assert n_ac == 8
+    assert n_ab != n_ac
 
 
 def test_fisher_r_critical_decreases_with_n():

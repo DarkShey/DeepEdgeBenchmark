@@ -1,16 +1,15 @@
 """
-dashboard_builder.py — Dashboard multi-actifs DEITA (BTC/ETH/SPY/ZN=F)
+dashboard_builder.py — Dashboard multi-actifs DEITA (BTC/ETH/SPY/ZN=F/TLT)
 
-Orchestre RegimeAgent (RegimeHMM + RegimeBOCPD) sur les 4 actifs de assets.py,
+Orchestre RegimeAgent (RegimeHMM + RegimeBOCPD) sur les 5 actifs de assets.py,
 calcule les analyses de regime_analytics.py, et génère un dashboard HTML unique
-à 5 onglets (4 actifs + comparaison). Aucune modification du moteur de régime :
-RegimeHMM/RegimeBOCPD/RegimeAgent sont appelés tels quels, 4 fois.
+à 6 onglets (5 actifs + comparaison). Aucune modification du moteur de régime :
+RegimeHMM/RegimeBOCPD/RegimeAgent sont appelés tels quels, 5 fois.
 
 Exécution :
     python -m calibration.regime.dashboard_builder
 """
 
-import itertools
 import json
 import math
 from datetime import datetime
@@ -41,6 +40,20 @@ def _num(v):
     """float JSON-safe : NaN/inf -> None."""
     f = float(v)
     return None if (math.isnan(f) or math.isinf(f)) else round(f, 4)
+
+
+def _vol_before_after(profile_df: pd.DataFrame) -> dict:
+    """
+    Réduit un profil d'étude d'événement (21 points, rel_day -10..10) à 2 chiffres :
+    moyenne de mean_sigma sur rel_day < 0 ("avant") et sur rel_day >= 0 ("après", jour de
+    transition inclus). Retourne aussi le delta en % et le nombre d'événements sous-jacents.
+    """
+    before = profile_df.loc[profile_df["rel_day"] < 0, "mean_sigma"]
+    after = profile_df.loc[profile_df["rel_day"] >= 0, "mean_sigma"]
+    avant = float(before.mean()) if before.notna().any() else None
+    apres = float(after.mean()) if after.notna().any() else None
+    delta_pct = ((apres - avant) / avant * 100) if (avant and apres and avant != 0) else None
+    return {"avant": avant, "apres": apres, "delta_pct": delta_pct}
 
 
 # ── 1. Pipeline de calcul ────────────────────────────────────────────────────────
@@ -87,14 +100,24 @@ def compute_all_analytics(results: dict) -> dict:
     """
     Appelle regime_analytics.* sur les résultats de run_pipeline() :
       - segments + width stats par actif et agrégés
-      - vol_spike_hit_rate, par actif (statistique descriptive simple, cf. §note dans le HTML —
-        pas de test de significativité, échantillon d'événements limité par actif)
-      - rolling_cross_correlation + stress_conditioned_correlation, inter-actifs
+      - regime_transition_vol_profile, par actif (étude d'événement : profil moyen de sigma_t
+        autour des transitions de régime — toutes transitions et transitions vers stress
+        uniquement, cf. BRIEF_dashboard_v6_corrections.md §3)
+      - rolling_cross_correlation (rendements/volatilité/volume/swing), inter-actifs
+        (cf. BRIEF_dashboard_v6_corrections.md §4)
+      - pairwise_stress_calm_correlation, une paire à la fois, conditionnée sur elle-même
+        (cf. BRIEF_dashboard_v9_corrections.md §2 — remplace l'ancien mask global à 5 actifs)
+      - market_stress_majority : jours où au moins 3 des 5 actifs sont en stress (indicateur de
+        marché large, purement visuel, cf. BRIEF_dashboard_v9_corrections.md §3b — distinct du
+        test rigoureux par paire ci-dessus)
     Retourne un dict structuré prêt à sérialiser en JSON pour le template HTML.
     """
     per_asset = {}
     all_segments = []
     returns_by_asset = {}
+    sigma_by_asset = {}
+    volume_by_asset = {}
+    swing_by_asset = {}
     stress_masks = {}
     calm_masks = {}
 
@@ -106,16 +129,16 @@ def compute_all_analytics(results: dict) -> dict:
 
         segments = ra.segment_regimes(history)
         width_stats = ra.regime_width_stats(segments)
-        hit_rate = ra.vol_spike_hit_rate(history, lookback=3, quantile=0.75)
-        # nombre de transitions = nombre de segments - 1 (le 1er segment n'est pas un "changement",
-        # cohérent avec regime_change.iloc[0] = False dans vol_spike_hit_rate).
-        n_regime_changes = max(0, len(segments) - 1)
+        profile_all = ra.regime_transition_vol_profile(history, window=10, alignment="start")
+        profile_into_stress = ra.regime_transition_vol_profile(
+            history, window=10, alignment="start", only_into="stress"
+        )
 
         per_asset[ticker] = {
             "segments": segments,
             "width_stats": width_stats,
-            "hit_rate": hit_rate,
-            "n_regime_changes": n_regime_changes,
+            "profile_all": profile_all,
+            "profile_into_stress": profile_into_stress,
         }
 
         tagged = segments.copy()
@@ -124,19 +147,33 @@ def compute_all_analytics(results: dict) -> dict:
 
         returns = prices["Close"].pct_change().dropna()
         returns_by_asset[short] = returns
+        sigma_by_asset[short] = history["sigma_t"].reindex(returns.index)
+        volume_by_asset[short] = (prices["Volume"] / prices["Volume"].rolling(30).mean()).reindex(returns.index)
+        swing_by_asset[short] = ((prices["High"] - prices["Low"]) / prices["Close"]).reindex(returns.index)
         stress_masks[short] = (history["p_stress"] > 0.5).reindex(returns.index).fillna(False)
         calm_masks[short] = (history["regime"] == "calm").reindex(returns.index).fillna(False)
 
     combined_segments = pd.concat(all_segments, ignore_index=True)
-    cross_correlation = ra.rolling_cross_correlation(returns_by_asset, window=63)
-    stress_conditioned = ra.stress_conditioned_correlation(returns_by_asset, stress_masks, calm_masks)
+    cross_correlation = {
+        "returns": ra.rolling_cross_correlation(returns_by_asset, window=63),
+        "volatility": ra.rolling_cross_correlation(sigma_by_asset, window=63),
+        "volume": ra.rolling_cross_correlation(volume_by_asset, window=63),
+        "swing": ra.rolling_cross_correlation(swing_by_asset, window=63),
+    }
+    pairwise_stress_calm = ra.pairwise_stress_calm_correlation(returns_by_asset, stress_masks, calm_masks)
+
+    # Indicateur de marché large (purement visuel, cf. docstring ci-dessus) : au moins 3 des 5
+    # actifs en stress le même jour. À ne pas confondre avec le test par paire (pairwise_stress_calm).
+    stress_count = pd.concat(stress_masks, axis=1).sum(axis=1)
+    market_stress_majority = stress_count >= 3
 
     return {
         "per_asset": per_asset,
         "comparison": {
             "combined_segments": combined_segments,
             "cross_correlation": cross_correlation,
-            "stress_conditioned": stress_conditioned,
+            "pairwise_stress_calm": pairwise_stress_calm,
+            "market_stress_majority": market_stress_majority,
         },
     }
 
@@ -206,9 +243,10 @@ def _asset_tab_payload(asset: dict, prices: pd.DataFrame, history: pd.DataFrame,
 def _comparison_payload(results: dict, analytics: dict) -> dict:
     combined = analytics["comparison"]["combined_segments"]
     cross_corr = analytics["comparison"]["cross_correlation"]
-    stress_cond = analytics["comparison"]["stress_conditioned"]
+    pairwise = analytics["comparison"]["pairwise_stress_calm"]
+    market_stress_majority = analytics["comparison"]["market_stress_majority"]
 
-    # ── Box plot largeur des régimes (4 actifs x 3 régimes) ────────────────────────
+    # ── Box plot largeur des régimes (5 actifs x 4 régimes) ────────────────────────
     box_traces = []
     for asset in ASSETS:
         sub = combined[combined["asset"] == asset["short"]]
@@ -219,63 +257,63 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
             "y": [int(v) for v in sub["n_days_calendar"]],
         })
 
-    # ── Hit-rates vol -> changement de régime (statistique descriptive, cf. note HTML) ──────
-    hit_rates = {}
+    # ── Vol avant/après un changement de régime (résumé lisible de l'étude d'événement,
+    # cf. BRIEF_dashboard_v7_corrections.md — le calcul sous-jacent, regime_transition_vol_profile,
+    # ne change pas, seul ce résumé à 2 chiffres est nouveau) ──────────────────────
+    vol_before_after = {}
     for asset in ASSETS:
         ticker = asset["ticker"]
-        hit_rates[ticker] = {
+        profile_all = analytics["per_asset"][ticker]["profile_all"]
+        profile_stress = analytics["per_asset"][ticker]["profile_into_stress"]
+        vol_before_after[asset["short"]] = {
             "label": asset["label"],
-            "color": asset["color"],
-            "hit_rate": _num(analytics["per_asset"][ticker]["hit_rate"]),
-            "n_regime_changes": analytics["per_asset"][ticker]["n_regime_changes"],
+            "all": _vol_before_after(profile_all),
+            "into_stress": _vol_before_after(profile_stress),
+            "n_all": int(profile_all["n_events"].iloc[0]) if len(profile_all) else 0,
+            "n_stress": int(profile_stress["n_events"].iloc[0]) if len(profile_stress) else 0,
         }
 
-    # ── Corrélation glissante inter-actifs + bandes de stress marché (union des 4 actifs) ──
-    cc_dates = [str(d.date()) for d in cross_corr.index]
-    cc_series = {
-        col: [_num(v) if not (isinstance(v, float) and np.isnan(v)) else None for v in cross_corr[col]]
-        for col in cross_corr.columns
-    }
+    # ── Corrélation glissante inter-actifs (rendements/volatilité/volume/swing) ────────────
+    cross_correlation_payload = {}
+    for signal, corr_df in cross_corr.items():
+        series = {
+            col: [_num(v) if not (isinstance(v, float) and np.isnan(v)) else None for v in corr_df[col]]
+            for col in corr_df.columns
+        }
+        cross_correlation_payload[signal] = {"dates": [str(d.date()) for d in corr_df.index], "series": series}
 
-    market_stress = stress_cond["stress_mask"]
+    # Fond de stress = indicateur de marché large (au moins 3 des 5 actifs en stress le même
+    # jour), purement visuel — distinct du test rigoureux par paire du tableau ci-dessous
+    # (cf. BRIEF_dashboard_v9_corrections.md §3b).
     stress_bands = [
         {"x0": str(s["start"].date()), "x1": str(s["end"].date())}
-        for s in ra.segment_boolean_mask(market_stress)
+        for s in ra.segment_boolean_mask(market_stress_majority)
     ]
 
-    # ── Tableau récapitulatif corrélation stress vs calme (6 paires) ───────────────
-    # + test de significativité (transformation de Fisher) pour distinguer un vrai effet
-    # du bruit d'échantillonnage — cf. BRIEF_dashboard_v4_corrections.md §1.
-    r_crit_stress = ra.fisher_r_critical(stress_cond["n_stress"])
-    r_crit_calm = ra.fisher_r_critical(stress_cond["n_calm"])
-
-    pairs_table = []
-    shorts = [a["short"] for a in ASSETS]
-    for a, b in itertools.combinations(shorts, 2):
-        s_val = stress_cond["stress"].loc[a, b] if a in stress_cond["stress"].index else float("nan")
-        c_val = stress_cond["calm"].loc[a, b] if a in stress_cond["calm"].index else float("nan")
-        s_ok = not (isinstance(s_val, float) and np.isnan(s_val))
-        c_ok = not (isinstance(c_val, float) and np.isnan(c_val))
-        pairs_table.append({
-            "pair": f"{a}-{b}",
-            "stress": _num(s_val) if s_ok else None,
-            "calm": _num(c_val) if c_ok else None,
-            "stress_sig": bool(r_crit_stress is not None and s_ok and abs(s_val) > r_crit_stress),
-            "calm_sig": bool(r_crit_calm is not None and c_ok and abs(c_val) > r_crit_calm),
-        })
+    # ── Tableau récapitulatif corrélation stress vs calme, par paire ───────────────
+    # Chaque paire a son propre n_stress/n_calm et son propre seuil de significativité (Fisher) —
+    # cf. BRIEF_dashboard_v9_corrections.md §2 (remplace l'ancien mask global à 5 actifs).
+    pairs_table = [
+        {
+            "pair": row["pair"],
+            "stress": _num(row["corr_stress"]) if row["corr_stress"] == row["corr_stress"] else None,
+            "n_stress": int(row["n_stress"]),
+            "r_crit_stress": _num(row["r_crit_stress"]) if row["r_crit_stress"] is not None else None,
+            "stress_sig": bool(row["stress_sig"]),
+            "calm": _num(row["corr_calm"]) if row["corr_calm"] == row["corr_calm"] else None,
+            "n_calm": int(row["n_calm"]),
+            "r_crit_calm": _num(row["r_crit_calm"]) if row["r_crit_calm"] is not None else None,
+            "calm_sig": bool(row["calm_sig"]),
+        }
+        for _, row in pairwise.iterrows()
+    ]
 
     return {
         "box_traces": box_traces,
-        "hit_rates": hit_rates,
-        "cross_correlation": {"dates": cc_dates, "series": cc_series},
+        "vol_before_after": vol_before_after,
+        "cross_correlation": cross_correlation_payload,
         "stress_bands": stress_bands,
         "pairs_table": pairs_table,
-        "corr_significance": {
-            "n_stress": stress_cond["n_stress"],
-            "n_calm": stress_cond["n_calm"],
-            "r_crit_stress": _num(r_crit_stress) if r_crit_stress is not None else None,
-            "r_crit_calm": _num(r_crit_calm) if r_crit_calm is not None else None,
-        },
     }
 
 
@@ -341,7 +379,7 @@ h1{{text-align:center;font-size:1.35rem;letter-spacing:1px;margin:14px 0 3px}}
 .dot{{width:11px;height:11px;border-radius:2px;flex-shrink:0}}
 .sep{{width:1px;height:18px;background:#2c3e50;margin:0 4px}}
 .row2{{display:grid;grid-template-columns:280px 1fr;gap:14px;margin-bottom:14px}}
-.grid2x2{{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}}
+.grid2x2{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}}
 table{{width:100%;border-collapse:collapse;font-size:.76rem}}
 thead th{{color:#7f8c8d;text-align:left;padding:4px 10px;border-bottom:1px solid #1c2a3a;white-space:nowrap}}
 tbody td{{padding:3px 10px;border-bottom:1px solid #151d2b}}
@@ -350,6 +388,16 @@ tbody td{{padding:3px 10px;border-bottom:1px solid #151d2b}}
 .scale-btn{{background:#0f0f1a;color:#95a5a6;border:1px solid #1c2a3a;border-radius:4px;
   padding:3px 10px;font-size:.72rem;cursor:pointer}}
 .scale-btn.active{{background:#2980b9;color:#fff}}
+.cc-btn{{background:#0f0f1a;color:#95a5a6;border:1px solid #1c2a3a;border-radius:4px;
+  padding:3px 10px;font-size:.72rem;cursor:pointer}}
+.cc-btn.cc-btn-active{{background:#2980b9;color:#fff}}
+.cc-btn-secondary{{opacity:.65;font-size:.68rem}}
+.cc-btn-secondary:hover,.cc-btn-secondary.cc-btn-active{{opacity:1}}
+.headline-stat{{text-align:center;margin:10px 0 16px}}
+.headline-value{{font-size:2.1rem;font-weight:700}}
+.headline-value.up{{color:#e74c3c}}
+.headline-value.down{{color:#2ecc71}}
+.headline-label{{font-size:.78rem;color:#7f8c8d;margin-top:2px}}
 .scale-label{{font-size:.72rem;color:#7f8c8d;margin-right:2px}}
 .date-pick{{background:#0f0f1a;color:#ecf0f1;border:1px solid #1c2a3a;border-radius:4px;
   padding:2px 6px;font-size:.72rem}}
@@ -363,7 +411,7 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
 </head>
 <body>
 <h1>DEITA &#8212; Dashboard Multi-Actifs</h1>
-<p class="sub">Bitcoin &middot; Ethereum &middot; S&amp;P 500 (SPY) &middot; US Treasury 10Y Note Futures (ZN=F) &nbsp;&middot;&nbsp; HMM 2 &#233;tats + seuil ADX 25 + BOCPD</p>
+<p class="sub">Bitcoin &middot; Ethereum &middot; S&amp;P 500 (SPY) &middot; US Treasury 10Y Note Futures (ZN=F) &middot; US Treasury 20+Y (TLT) &nbsp;&middot;&nbsp; HMM 2 &#233;tats + seuil ADX 25 + DI+/DI- + BOCPD</p>
 
 <div class="tabbar">{tab_buttons}</div>
 
@@ -376,29 +424,54 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
   </div>
 
   <div class="card">
-    <div class="card-label">Volatilit&#233; comme d&#233;clencheur de changement de r&#233;gime</div>
-    <p class="chart-note">Statistique descriptive simple, &#224; lire avec prudence : % des changements de
-      r&#233;gime pr&#233;c&#233;d&#233;s (dans les 3 jours avant) d'un &#963;<sub>t</sub> au-dessus de son 75<sup>e</sup>
-      percentile glissant (60j). <strong>Ce n'est pas un test de significativit&#233;</strong> — l'&#233;chantillon
-      d'&#233;v&#233;nements par actif est faible (voir "n=" sous chaque chiffre), et le r&#233;gime <em>stress</em> est
-      lui-m&#234;me d&#233;fini en partie par &#963;<sub>t</sub> &#233;lev&#233;e dans le mod&#232;le HMM, donc une partie du lien est
-      m&#233;canique plut&#244;t que pr&#233;dictive. &#192; prendre comme indication exploratoire, pas comme signal de
-      trading valid&#233;.</p>
-    <div class="grid2x2" id="leadlag-grid"></div>
+    <div class="card-label">La volatilit&#233; augmente-t-elle avant ou apr&#232;s un passage en stress&nbsp;?</div>
+    <p class="chart-note">Variation de la volatilit&#233; moyenne entre les 10 jours qui pr&#233;c&#232;dent un
+      basculement vers le r&#233;gime stress et les 10 jours qui suivent (jour du changement inclus).
+      Valeurs en variation relative (%) pour rester comparables entre crypto et obligations, dont les
+      niveaux de volatilit&#233; absolus n'ont rien &#224; voir.</p>
+
+    <div class="headline-stat">
+      <div class="headline-value" id="vol-headline-value">&#8212;</div>
+      <div class="headline-label" id="vol-headline-label"></div>
+    </div>
+
+    <div id="chart-vol-before-after" style="height:280px"></div>
+
+    <details style="margin-top:8px">
+      <summary>Voir les valeurs brutes (&#963;&#8339; moyen, avant/apr&#232;s, par actif)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>Avant</th><th>Apr&#232;s</th><th>Variation</th><th>n transitions</th></tr></thead>
+        <tbody id="vol-before-after-table"></tbody></table>
+      </div>
+    </details>
   </div>
 
   <div class="card">
     <div class="card-label">Corr&#233;lation glissante inter-actifs (63j)</div>
-    <p class="chart-note">Corr&#233;lation de Pearson glissante (fen&#234;tre 63 jours, rendements journaliers). BTC = Bitcoin, ETH = Ethereum, SPX = S&amp;P 500 (SPY), ZN = US Treasury 10Y Note Futures (ZN=F), le benchmark mondial des taux. Fond rouge = jours o&#249; au moins un des 4 actifs est en r&#233;gime de stress (p_stress &gt; 0.5).</p>
+    <div class="scale-sel">
+      <button class="cc-btn cc-btn-active" data-signal="returns">Rendements</button>
+      <button class="cc-btn" data-signal="volatility">Volatilit&#233;</button>
+      <span class="sep"></span>
+      <button class="cc-btn cc-btn-secondary" data-signal="volume">Volume</button>
+      <button class="cc-btn cc-btn-secondary" data-signal="swing">Swing</button>
+    </div>
+    <p class="chart-note">Corr&#233;lation de Pearson glissante (fen&#234;tre 63 jours). BTC-ETH et ZN-TLT (deux
+      proxys du m&#234;me sous-jacent chacun) sont masqu&#233;es par d&#233;faut &#8212; cliquez sur leur entr&#233;e dans la
+      l&#233;gende pour les r&#233;afficher. Fond rouge = jours o&#249; au moins 3 des 5 actifs sont en r&#233;gime stress
+      (indicateur de march&#233; large, &#224; but visuel). Le test statistique rigoureux de contagion, propre &#224;
+      chaque paire, est dans le tableau ci-dessous &#8212; les deux ne se recouvrent pas n&#233;cessairement.</p>
+    <p class="chart-note">Rendements = co-mouvement des prix. Volatilit&#233; = les actifs deviennent-ils risqu&#233;s en m&#234;me
+      temps&nbsp;? Volume = panique/attention de march&#233; partag&#233;e&nbsp;? Swing = amplitude journali&#232;re
+      (High-Low)/Close, mesure brute non liss&#233;e, compl&#233;mentaire &#224; la volatilit&#233; GARCH.</p>
     <div id="chart-crosscorr" style="height:320px"></div>
   </div>
 
   <div class="card">
     <div class="card-label">Corr&#233;lation moyenne inter-actifs &#8212; stress vs calme (hypoth&#232;se de contagion)</div>
-    <p class="chart-note">Corr&#233;lation moyenne des rendements journaliers entre chaque paire d'actifs, calcul&#233;e s&#233;par&#233;ment sur deux sous-&#233;chantillons de jours : Stress = au moins 1 actif sur 4 en r&#233;gime stress ce jour-l&#224;. Calme = les 4 actifs simultan&#233;ment en r&#233;gime calme ce jour-l&#224;. Hypoth&#232;se test&#233;e : la corr&#233;lation inter-actifs augmente en p&#233;riode de stress (contagion).</p>
-    <table><thead><tr><th>Paire</th><th>Corr&#233;lation (stress)</th><th>Corr&#233;lation (calme)</th></tr></thead>
+    <p class="chart-note">Corr&#233;lation moyenne des rendements journaliers entre chaque paire d'actifs, calcul&#233;e s&#233;par&#233;ment sur deux sous-&#233;chantillons de jours SP&#201;CIFIQUES &#192; LA PAIRE (pas un mask global sur les 5 actifs) : Stress = au moins l'un des deux actifs de la paire en r&#233;gime stress ce jour-l&#224;. Calme = les deux actifs de la paire simultan&#233;ment en r&#233;gime calme ce jour-l&#224;. Hypoth&#232;se test&#233;e : la corr&#233;lation entre deux actifs augmente en p&#233;riode de stress (contagion).</p>
+    <table><thead><tr><th>Paire</th><th>Corr. (stress)</th><th>n</th><th>Corr. (calme)</th><th>n</th></tr></thead>
     <tbody id="pairs-body"></tbody></table>
-    <p class="chart-note" id="corr-sig-note"></p>
+    <p class="chart-note">* = significatif &#224; 95% (test de Fisher, seuil propre &#224; chaque colonne car n diff&#232;re par paire). Survolez une valeur pour voir le seuil exact.</p>
   </div>
 </div>
 
@@ -430,7 +503,7 @@ const TABS = {{}};
 ASSETS.forEach(a => {{
   TABS[a.ticker] = {{
     initialized:false,
-    state:{{regimes:{{calm:true,trending:true,stress:true}}, cats:{{crypto:true,macro:true,monetaire:true,geopolitique:true}}, scale:'annee'}},
+    state:{{regimes:{{calm:true,bull:true,bear:true,stress:true}}, cats:{{crypto:true,macro:true,monetaire:true,geopolitique:true}}, scale:'annee'}},
     currentXRange:[TAB_DATA[a.ticker].first_date, TAB_DATA[a.ticker].last_date],
     _programmatic:false,
   }};
@@ -490,20 +563,21 @@ function refreshTab(tabId) {{
 // ── Composition des r&#233;gimes : donut recalcul&#233; sur la fen&#234;tre visible ──────────────
 function updateComposition(tabId) {{
   const d = TAB_DATA[tabId], range = TABS[tabId].currentXRange;
-  let nCalm = 0, nTrend = 0, nStress = 0, total = 0;
+  let nCalm = 0, nBull = 0, nBear = 0, nStress = 0, total = 0;
   for (let i = 0; i < d.dates.length; i++) {{
     if (d.dates[i] >= range[0] && d.dates[i] <= range[1]) {{
       total++;
       if (d.regimes[i] === 'calm') nCalm++;
-      else if (d.regimes[i] === 'trending') nTrend++;
+      else if (d.regimes[i] === 'bull') nBull++;
+      else if (d.regimes[i] === 'bear') nBear++;
       else nStress++;
     }}
   }}
   const pct = v => total ? v / total * 100 : 0;
   const trace = {{
-    type:'pie', labels:['Calme','Tendanciel','Stress'],
-    values:[pct(nCalm), pct(nTrend), pct(nStress)],
-    marker:{{colors:[REGIME_HEX.calm, REGIME_HEX.trending, REGIME_HEX.stress]}},
+    type:'pie', labels:['Calme','Haussier','Baissier','Stress'],
+    values:[pct(nCalm), pct(nBull), pct(nBear), pct(nStress)],
+    marker:{{colors:[REGIME_HEX.calm, REGIME_HEX.bull, REGIME_HEX.bear, REGIME_HEX.stress]}},
     hole:0.42, textinfo:'label+percent', textfont:{{size:11,color:'#ecf0f1'}}, showlegend:false,
   }};
   Plotly.react(`chart-dist-${{SHORT_OF[tabId]}}`, [trace], {{
@@ -555,7 +629,7 @@ function initAssetTab(tabId) {{
 
   const priceTrace = {{type:'scatter',x:d.dates,y:d.close,mode:'lines',
     line:{{color:'#ecf0f1',width:1.5}},name:d.label,showlegend:true}};
-  const regimeTraces = ['calm','trending','stress'].map(r => ({{
+  const regimeTraces = ['calm','bull','bear','stress'].map(r => ({{
     type:'scatter',x:[null],y:[null],mode:'markers',
     marker:{{color:REGIME_HEX[r],size:10,symbol:'square'}},name:REGIME_LABELS[r],showlegend:true}}));
 
@@ -652,50 +726,116 @@ function initComparisonTab() {{
   }}));
   Plotly.newPlot('chart-box', boxData, Object.assign({{}},baseLayout(),{{
     boxmode:'group', margin:{{l:60,r:18,t:8,b:38}},
-    xaxis:{{type:'category',categoryarray:['calm','trending','stress'],
-      ticktext:['Calme','Tendanciel','Stress'],tickvals:['calm','trending','stress']}},
+    xaxis:{{type:'category',categoryarray:['calm','bull','bear','stress'],
+      ticktext:['Calme','Haussier','Baissier','Stress'],tickvals:['calm','bull','bear','stress']}},
     yaxis:{{title:'Dur&#233;e (jours calendaires)',gridcolor:GRID}},
   }}), {{responsive:true,displayModeBar:false}});
 
-  const grid = document.getElementById('leadlag-grid');
-  ASSETS.forEach(a => {{
-    const hr = COMPARISON.hit_rates[a.ticker];
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <div class="hitrate-label">${{hr.label}}</div>
-      <div class="hitrate">${{(hr.hit_rate*100).toFixed(0)}}%</div>
-      <div class="hitrate-label">des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol (3j)<br>(n=${{hr.n_regime_changes}} changements observ&#233;s)</div>`;
-    grid.appendChild(wrap);
-  }});
+  // ── Vol avant/apr&#232;s un passage en stress (chiffre cl&#233; + barres divergentes) ──────────
+  function renderVolBeforeAfter() {{
+    const shorts = ASSETS.map(a => a.short);
+    let rows = shorts.map((s,i) => ({{
+      short: s,
+      label: ASSETS[i].label,
+      color: ASSETS[i].color,
+      ...COMPARISON.vol_before_after[s].into_stress,
+    }}));
 
-  const cc = COMPARISON.cross_correlation;
-  const palette = ['#f7931a','#627eea','#2ecc71','#3498db','#e67e22','#9b59b6'];
-  const ccTraces = Object.keys(cc.series).map((col,i) => ({{
-    type:'scatter', mode:'lines', x:cc.dates, y:cc.series[col], name:col,
-    line:{{width:1.5,color:palette[i % palette.length]}},
-  }}));
+    // Trier par amplitude de variation, du plus fort au plus faible (barres divergentes lisibles)
+    rows = rows.filter(r => r.delta_pct !== null).sort((a,b) => b.delta_pct - a.delta_pct);
+
+    // ── Chiffre clé en tête : moyenne des deltas ────────────────────────────────
+    const avgDelta = rows.reduce((s,r) => s + r.delta_pct, 0) / rows.length;
+    const headlineEl = document.getElementById('vol-headline-value');
+    const labelEl = document.getElementById('vol-headline-label');
+    headlineEl.textContent = `${{avgDelta >= 0 ? '+' : ''}}${{avgDelta.toFixed(1)}}%`;
+    headlineEl.className = 'headline-value ' + (avgDelta >= 0 ? 'up' : 'down');
+    labelEl.textContent = avgDelta >= 0
+      ? "La vol est plus forte APRÈS le passage en stress : elle suit la crise, elle ne l'annonce pas."
+      : "La vol est plus forte AVANT le passage en stress : un signal d'alerte utile.";
+
+    // ── Barres divergentes horizontales, une valeur par actif (couleur = actif, cf. l&#233;gende ci-dessus) ──
+    const trace = {{
+      type:'bar', orientation:'h',
+      x: rows.map(r => r.delta_pct),
+      y: rows.map(r => r.short),
+      marker: {{color: rows.map(r => r.color)}},
+      text: rows.map(r => `${{r.delta_pct >= 0 ? '+' : ''}}${{r.delta_pct.toFixed(1)}}%`),
+      textposition: 'outside',
+      cliponaxis: false,
+      hovertemplate: '%{{y}} : %{{x:.1f}}%<extra></extra>',
+    }};
+    Plotly.newPlot('chart-vol-before-after', [trace], Object.assign({{}}, baseLayout(), {{
+      margin: {{l:70,r:50,t:10,b:34}},
+      xaxis: {{title:'Variation de volatilit&#233;, apr&#232;s vs avant (%)',gridcolor:GRID,zeroline:true,zerolinewidth:2,zerolinecolor:'#566573'}},
+      yaxis: {{type:'category',gridcolor:GRID,categoryorder:'array',categoryarray:rows.map(r => r.short).slice().reverse(),automargin:true}},
+      showlegend: false,
+    }}), {{responsive:true,displayModeBar:false}});
+
+    // ── Détail brut dans la table repliable ──────────────────────────────────────
+    const tbody = document.getElementById('vol-before-after-table');
+    tbody.innerHTML = '';
+    shorts.forEach(s => {{
+      const d = COMPARISON.vol_before_after[s].into_stress;
+      const n = COMPARISON.vol_before_after[s].n_stress;
+      const tr = document.createElement('tr');
+      const fmt = v => v !== null ? v.toFixed(3) : '&#8212;';
+      tr.innerHTML = `<td>${{s}}</td><td>${{fmt(d.avant)}}</td><td>${{fmt(d.apres)}}</td>` +
+        `<td>${{d.delta_pct !== null ? (d.delta_pct>=0?'+':'')+d.delta_pct.toFixed(1)+'%' : '&#8212;'}}</td><td>${{n}}</td>`;
+      tbody.appendChild(tr);
+    }});
+  }}
+
+  renderVolBeforeAfter();
+
+  // ── Corr&#233;lation glissante inter-actifs (s&#233;lecteur rendements/vol/volume/swing) ─────────
+  const CC_PALETTE = ['#f7931a','#627eea','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c','#e74c3c','#f1c40f','#95a5a6'];
+  const CC_AXIS_TITLES = {{
+    returns: 'Corr&#233;lation rendements (63j)',
+    volatility: 'Corr&#233;lation volatilit&#233; &#963;&#8339; (63j)',
+    volume: 'Corr&#233;lation volume relatif (63j)',
+    swing: 'Corr&#233;lation swing (63j)',
+  }};
+  const CC_INTRA_CLASS = new Set(['BTC-ETH', 'ZN-TLT']);
+  function buildCcTraces(signal) {{
+    const cc = COMPARISON.cross_correlation[signal];
+    return Object.keys(cc.series).map((col,i) => ({{
+      type:'scatter', mode:'lines', x:cc.dates, y:cc.series[col], name:col,
+      line:{{width:1.5,color:CC_PALETTE[i % CC_PALETTE.length]}},
+      visible: CC_INTRA_CLASS.has(col) ? 'legendonly' : true,
+    }}));
+  }}
   const stressShapes = COMPARISON.stress_bands.map(b => ({{
     type:'rect',xref:'x',yref:'paper',x0:b.x0,x1:b.x1,y0:0,y1:1,
     fillcolor:'rgba(231,76,60,0.14)',line:{{width:0}},layer:'below'}}));
-  Plotly.newPlot('chart-crosscorr', ccTraces, Object.assign({{}},baseLayout(),{{
-    margin:{{l:50,r:18,t:8,b:38}}, shapes:stressShapes,
-    yaxis:{{title:'Corr&#233;lation (63j)',gridcolor:GRID,range:[-1,1]}},
-  }}), {{responsive:true,displayModeBar:false}});
-
-  const pbody = document.getElementById('pairs-body');
-  const fmtSig = (v, sig) => v === null ? '&#8212;'
-    : `${{v.toFixed(3)}}${{sig ? ' <span class="sig-star" title="Significatif &#224; 95%">*</span>' : ''}}`;
-  COMPARISON.pairs_table.forEach(p => {{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${{p.pair}}</td><td>${{fmtSig(p.stress, p.stress_sig)}}</td><td>${{fmtSig(p.calm, p.calm_sig)}}</td>`;
-    pbody.appendChild(tr);
+  function ccLayout(signal) {{
+    return Object.assign({{}},baseLayout(),{{
+      margin:{{l:50,r:18,t:8,b:38}}, shapes:stressShapes,
+      yaxis:{{title:CC_AXIS_TITLES[signal],gridcolor:GRID,range:[-1,1]}},
+    }});
+  }}
+  let ccSignal = 'returns';
+  Plotly.newPlot('chart-crosscorr', buildCcTraces(ccSignal), ccLayout(ccSignal),
+    {{responsive:true,displayModeBar:false}});
+  document.querySelectorAll('.cc-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.cc-btn').forEach(b => b.classList.remove('cc-btn-active'));
+      btn.classList.add('cc-btn-active');
+      ccSignal = btn.dataset.signal;
+      Plotly.react('chart-crosscorr', buildCcTraces(ccSignal), ccLayout(ccSignal));
+    }});
   }});
 
-  const sig = COMPARISON.corr_significance;
-  document.getElementById('corr-sig-note').innerHTML =
-    `* = corr&#233;lation significativement diff&#233;rente de 0 au seuil de confiance 95% ` +
-    `(test de Fisher). Stress : n=${{sig.n_stress}} jours, seuil |r| &gt; ${{sig.r_crit_stress!==null ? sig.r_crit_stress.toFixed(3) : '&#8212;'}}. ` +
-    `Calme : n=${{sig.n_calm}} jours, seuil |r| &gt; ${{sig.r_crit_calm!==null ? sig.r_crit_calm.toFixed(3) : '&#8212;'}}.`;
+  const pbody = document.getElementById('pairs-body');
+  const fmtSig = (v, sig, rcrit) => v === null ? '&#8212;'
+    : `<span title="seuil |r| > ${{rcrit !== null ? rcrit.toFixed(3) : '&#8212;'}}">${{v.toFixed(3)}}${{sig ? '<span class="sig-star">*</span>' : ''}}</span>`;
+  COMPARISON.pairs_table.forEach(p => {{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${{p.pair}}</td>` +
+      `<td>${{fmtSig(p.stress, p.stress_sig, p.r_crit_stress)}}</td><td>${{p.n_stress}}</td>` +
+      `<td>${{fmtSig(p.calm, p.calm_sig, p.r_crit_calm)}}</td><td>${{p.n_calm}}</td>`;
+    pbody.appendChild(tr);
+  }});
 }}
 
 // ── D&#233;marrage ──────────────────────────────────────────────────────────────────
@@ -717,7 +857,8 @@ def _asset_panel_html(asset: dict, first_date: str, last_date: str) -> str:
 <div class="tab-panel{active}" data-tab="{ticker}">
   <div class="legend">
     <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="calm" checked><div class="dot" style="background:{_REGIME_HEX['calm']}"></div>Calme</div>
-    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="trending" checked><div class="dot" style="background:{_REGIME_HEX['trending']}"></div>Tendanciel</div>
+    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="bull" checked><div class="dot" style="background:{_REGIME_HEX['bull']}"></div>Haussier</div>
+    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="bear" checked><div class="dot" style="background:{_REGIME_HEX['bear']}"></div>Baissier</div>
     <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="stress" checked><div class="dot" style="background:{_REGIME_HEX['stress']}"></div>Stress</div>
     <div class="sep"></div>
     <div class="li"><input type="checkbox" class="cat-cb-{dom}" value="crypto" checked><div class="dot" style="background:{_EVENT_COLORS['crypto']}"></div>Crypto</div>

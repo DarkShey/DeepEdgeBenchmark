@@ -1,10 +1,10 @@
 # Corrections v5 — Dashboard Multi-Actifs DEITA (retour du 02/07/2026, suite)
 
-**Remarque du tuteur (1) :** TLT est un ETF (un fonds qui détient un panier d'obligations du Trésor
+**Remarque (1) :** TLT est un ETF (un fonds qui détient un panier d'obligations du Trésor
 américain, avec une allocation qui peut varier sans qu'on sache précisément comment), pas une
 obligation elle-même — donc pas un vrai "US Bond" au sens strict.
 
-**Remarque du tuteur (2), qui tranche le choix ci-dessous :** *"The most traded U.S. bond is the
+**Remarque (2), qui tranche le choix ci-dessous :** *"The most traded U.S. bond is the
 U.S. 10-year Treasury note. It serves as the primary global benchmark for interest rates and
 drives the highest daily trading volume. The 2-year, 5-year, and 30-year Treasuries are also
 heavily traded, particularly on the CME Group Treasury Futures market."*
@@ -15,14 +15,14 @@ heavily traded, particularly on the CME Group Treasury Futures market."*
 30 ans (`ZB=F`) ni par la dette française. Justification :
 
 - Le 10 ans est **le benchmark mondial des taux d'intérêt** et le titre du Trésor US le plus
-  échangé, avec le plus gros volume quotidien (indication directe du tuteur) — c'est l'instrument
+  échangé, avec le plus gros volume quotidien (cf. remarque (2) ci-dessus) — c'est l'instrument
   obligataire le plus liquide et le plus représentatif du marché, donc le choix le plus rigoureux
   du point de vue "quel actif représente le mieux le marché obligataire US".
 - C'est un **contrat futures**, pas un ETF : un engagement à terme directement sur le sous-jacent
   obligataire, utilisé par les acteurs du marché obligataire lui-même (traders taux, desks de
   couverture) — pas "l'obligation physique" (ça reste un dérivé), mais nettement plus proche d'un
   "vrai bond" qu'un fonds indiciel packagé pour particuliers comme TLT, et sans le problème
-  d'allocation variable et opaque relevé par le tuteur sur TLT.
+  d'allocation variable et opaque relevé plus haut sur TLT.
 - Bonne compatibilité avec le pipeline existant : contrairement aux indices de taux (`^TNX`, qui
   cotent un pourcentage et non un prix, et n'ont pas de vrai volume), les futures CME ont un
   historique quotidien Open/High/Low/Close/**Volume** exploitable tel quel par `RegimeHMM`
@@ -31,8 +31,8 @@ heavily traded, particularly on the CME Group Treasury Futures market."*
   Une obligation plus courte réagit moins fortement aux mouvements de taux qu'une obligation
   longue (duration ∝ sensibilité au taux) — on doit donc s'attendre à des régimes de stress moins
   extrêmes/moins fréquents sur `ZN=F` que ce qu'on observait sur `TLT`. C'est un changement
-  légitime (le tuteur priorise "l'instrument le plus représentatif du marché" sur "faire coller la
-  duration à l'ancien choix"), mais à mentionner explicitement si le tuteur compare les résultats
+  légitime (on priorise ici "l'instrument le plus représentatif du marché" sur "faire coller la
+  duration à l'ancien choix"), mais à mentionner explicitement si on compare les résultats
   avant/après changement de ticker.
 - La piste "dette française" reste écartée pour la même raison qu'en v5 initiale : pas d'instrument
   souverain français avec un historique quotidien OHLCV+Volume fiable et gratuit comparable aux

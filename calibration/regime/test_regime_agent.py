@@ -77,12 +77,13 @@ def test_tc3_ftx_stress(prices):
     assert state.vol_bucket == 2
 
 
-def test_tc4_trending_bull_run(prices):
+def test_tc4_bull_run(prices):
     """
     Oct 2020 – Fév 2021 : BTC de 10k à 60k, tendance haussière forte et persistante.
-    Régime attendu : trending dominant.
-    Critère : probs["trending"] > 0.4 à la mi-décembre 2020.
+    Régime attendu : bull dominant.
+    Critère : probs["bull"] > 0.4 à la mi-décembre 2020.
     Note : seuil à 0.4 (pas 0.5) car stress peut aussi être élevé en phase d'accélération.
+    C'est le cas d'usage qui valide le split bull/bear (BRIEF_dashboard_v6_corrections.md §2).
     """
     model = RegimeHMM()
     model.fit(prices, train_end="2020-09-30")
@@ -90,8 +91,8 @@ def test_tc4_trending_bull_run(prices):
     state = model.predict(prices, as_of=datetime(2020, 12, 15))
     state.validate()
 
-    assert state.probs["trending"] > 0.4, (
-        f"Trending attendu > 0.4 en bull run. Obtenu : {state.probs}"
+    assert state.probs["bull"] > 0.4, (
+        f"Bull attendu > 0.4 en bull run. Obtenu : {state.dominant_regime()} — probs : {state.probs}"
     )
     assert state.probs["calm"] < 0.4, (
         f"Calm doit être faible en bull run. Obtenu : {state.probs['calm']}"
@@ -101,8 +102,8 @@ def test_tc4_trending_bull_run(prices):
 def test_tc5_choppy_consolidation(prices):
     """
     Jan–Août 2019 : consolidation post-bear 2018. BTC range 3500-14000.
-    Régime attendu : calm ou stress (pas trending dominant).
-    Critère strict : probs["trending"] < 0.4.
+    Régime attendu : calm ou stress (pas de tendance dominante).
+    Critère strict : probs["bull"] + probs["bear"] < 0.4.
     """
     model = RegimeHMM()
     model.fit(prices, train_end="2018-12-31")
@@ -110,8 +111,8 @@ def test_tc5_choppy_consolidation(prices):
     state = model.predict(prices, as_of=datetime(2019, 6, 30))
     state.validate()
 
-    assert state.probs["trending"] < 0.4, (
-        f"Trending doit être faible en période choppy. Obtenu : {state.probs}"
+    assert (state.probs["bull"] + state.probs["bear"]) < 0.4, (
+        f"Bull+Bear doit être faible en période choppy. Obtenu : {state.probs}"
     )
 
 
@@ -134,7 +135,7 @@ def test_tc6_point_in_time_constraint(prices):
 
     # Le régime doit avoir changé entre les deux dates
     # (au moins une probabilité doit différer de plus de 0.1)
-    diffs = [abs(state_after.probs[k] - state_before.probs[k]) for k in ("calm", "trending", "stress")]
+    diffs = [abs(state_after.probs[k] - state_before.probs[k]) for k in ("calm", "bull", "bear", "stress")]
     assert max(diffs) > 0.1, (
         "Le régime ne change pas entre jan et avril 2020 — "
         "possible contamination par des données futures ou modèle non discriminant."
@@ -154,7 +155,7 @@ def test_tc7_regimestate_validation():
     # probs ne somme pas à 1
     with pytest.raises(ValueError, match="somme"):
         RegimeState(
-            probs={"calm": 0.5, "trending": 0.5, "stress": 0.5},
+            probs={"calm": 0.5, "bull": 0.3, "bear": 0.2, "stress": 0.5},
             vol_bucket=0, stress_score=0.5, expected_duration_days=10.0,
             as_of=datetime(2024, 1, 1), version="test"
         ).validate()
@@ -162,7 +163,7 @@ def test_tc7_regimestate_validation():
     # vol_bucket invalide
     with pytest.raises(ValueError, match="vol_bucket"):
         RegimeState(
-            probs={"calm": 0.7, "trending": 0.2, "stress": 0.1},
+            probs={"calm": 0.5, "bull": 0.2, "bear": 0.2, "stress": 0.1},
             vol_bucket=3, stress_score=0.1, expected_duration_days=10.0,
             as_of=datetime(2024, 1, 1), version="test"
         ).validate()
@@ -170,7 +171,7 @@ def test_tc7_regimestate_validation():
     # stress_score incohérent avec probs["stress"]
     with pytest.raises(ValueError, match="stress_score"):
         RegimeState(
-            probs={"calm": 0.7, "trending": 0.2, "stress": 0.1},
+            probs={"calm": 0.5, "bull": 0.2, "bear": 0.2, "stress": 0.1},
             vol_bucket=0, stress_score=0.9, expected_duration_days=10.0,
             as_of=datetime(2024, 1, 1), version="test"
         ).validate()
