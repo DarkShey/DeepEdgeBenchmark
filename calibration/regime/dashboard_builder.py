@@ -87,7 +87,8 @@ def compute_all_analytics(results: dict) -> dict:
     """
     Appelle regime_analytics.* sur les résultats de run_pipeline() :
       - segments + width stats par actif et agrégés
-      - vol_spike_hit_rate_by_lag + vol_spike_hit_rate, par actif
+      - vol_spike_hit_rate, par actif (statistique descriptive simple, cf. §note dans le HTML —
+        pas de test de significativité, échantillon d'événements limité par actif)
       - rolling_cross_correlation + stress_conditioned_correlation, inter-actifs
     Retourne un dict structuré prêt à sérialiser en JSON pour le template HTML.
     """
@@ -105,14 +106,16 @@ def compute_all_analytics(results: dict) -> dict:
 
         segments = ra.segment_regimes(history)
         width_stats = ra.regime_width_stats(segments)
-        leadlag = ra.vol_spike_hit_rate_by_lag(history, max_lag=10, quantile=0.75)
         hit_rate = ra.vol_spike_hit_rate(history, lookback=3, quantile=0.75)
+        # nombre de transitions = nombre de segments - 1 (le 1er segment n'est pas un "changement",
+        # cohérent avec regime_change.iloc[0] = False dans vol_spike_hit_rate).
+        n_regime_changes = max(0, len(segments) - 1)
 
         per_asset[ticker] = {
             "segments": segments,
             "width_stats": width_stats,
-            "leadlag": leadlag,
             "hit_rate": hit_rate,
+            "n_regime_changes": n_regime_changes,
         }
 
         tagged = segments.copy()
@@ -216,18 +219,15 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
             "y": [int(v) for v in sub["n_days_calendar"]],
         })
 
-    # ── Grille 2x2 leadlag + hit-rates ──────────────────────────────────────────────
-    leadlag = {}
+    # ── Hit-rates vol -> changement de régime (statistique descriptive, cf. note HTML) ──────
+    hit_rates = {}
     for asset in ASSETS:
         ticker = asset["ticker"]
-        ll = analytics["per_asset"][ticker]["leadlag"]
-        hit_rate = analytics["per_asset"][ticker]["hit_rate"]
-        leadlag[ticker] = {
+        hit_rates[ticker] = {
             "label": asset["label"],
             "color": asset["color"],
-            "lags": [int(v) for v in ll["lag"]],
-            "hit_rate_by_lag": [_num(v) for v in ll["hit_rate"]],
-            "hit_rate": _num(hit_rate),
+            "hit_rate": _num(analytics["per_asset"][ticker]["hit_rate"]),
+            "n_regime_changes": analytics["per_asset"][ticker]["n_regime_changes"],
         }
 
     # ── Corrélation glissante inter-actifs + bandes de stress marché (union des 4 actifs) ──
@@ -257,7 +257,7 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
 
     return {
         "box_traces": box_traces,
-        "leadlag": leadlag,
+        "hit_rates": hit_rates,
         "cross_correlation": {"dates": cc_dates, "series": cc_series},
         "stress_bands": stress_bands,
         "pairs_table": pairs_table,
@@ -360,8 +360,14 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
   </div>
 
   <div class="card">
-    <div class="card-label">Volatilit&#233; comme d&#233;clencheur de changement de r&#233;gime &#8212; % des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol, par d&#233;calage (lag 0&#8211;10j)</div>
-    <p class="chart-note">Pour chaque d&#233;calage (lag), % des jours de changement de r&#233;gime o&#249; &#963;<sub>t</sub> &#233;tait, exactement `lag` jours avant, au-dessus de son 75<sup>e</sup> percentile glissant (60j) &#8212; ligne pointill&#233;e = 25%, le taux attendu par pur hasard. Une barre nettement au-dessus de cette ligne &#224; un lag donn&#233; = signal avanc&#233; exploitable &#224; ce d&#233;calage.</p>
+    <div class="card-label">Volatilit&#233; comme d&#233;clencheur de changement de r&#233;gime</div>
+    <p class="chart-note">Statistique descriptive simple, &#224; lire avec prudence : % des changements de
+      r&#233;gime pr&#233;c&#233;d&#233;s (dans les 3 jours avant) d'un &#963;<sub>t</sub> au-dessus de son 75<sup>e</sup>
+      percentile glissant (60j). <strong>Ce n'est pas un test de significativit&#233;</strong> — l'&#233;chantillon
+      d'&#233;v&#233;nements par actif est faible (voir "n=" sous chaque chiffre), et le r&#233;gime <em>stress</em> est
+      lui-m&#234;me d&#233;fini en partie par &#963;<sub>t</sub> &#233;lev&#233;e dans le mod&#232;le HMM, donc une partie du lien est
+      m&#233;canique plut&#244;t que pr&#233;dictive. &#192; prendre comme indication exploratoire, pas comme signal de
+      trading valid&#233;.</p>
     <div class="grid2x2" id="leadlag-grid"></div>
   </div>
 
@@ -624,22 +630,13 @@ function initComparisonTab() {{
 
   const grid = document.getElementById('leadlag-grid');
   ASSETS.forEach(a => {{
-    const ll = COMPARISON.leadlag[a.ticker];
+    const hr = COMPARISON.hit_rates[a.ticker];
     const wrap = document.createElement('div');
     wrap.innerHTML = `
-      <div class="hitrate-label">${{ll.label}}</div>
-      <div class="hitrate">${{(ll.hit_rate*100).toFixed(0)}}%</div>
-      <div class="hitrate-label">des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol (3j)</div>
-      <div id="chart-leadlag-${{a.ticker}}" style="height:180px"></div>`;
+      <div class="hitrate-label">${{hr.label}}</div>
+      <div class="hitrate">${{(hr.hit_rate*100).toFixed(0)}}%</div>
+      <div class="hitrate-label">des changements de r&#233;gime pr&#233;c&#233;d&#233;s d'un pic de vol (3j)<br>(n=${{hr.n_regime_changes}} changements observ&#233;s)</div>`;
     grid.appendChild(wrap);
-    Plotly.newPlot(`chart-leadlag-${{a.ticker}}`, [
-      {{type:'bar', x:ll.lags, y:ll.hit_rate_by_lag.map(v=>v*100), marker:{{color:a.color}},
-        name:'hit-rate', hovertemplate:'lag %{{x}}j : %{{y:.0f}}%<extra></extra>'}},
-      {{type:'scatter', mode:'lines', x:[0,10], y:[25,25], line:{{color:'#7f8c8d',width:1,dash:'dash'}},
-        name:'hasard (25%)', hoverinfo:'skip'}},
-    ], Object.assign({{}},baseLayout(),{{margin:{{l:40,r:10,t:8,b:30}}, showlegend:false,
-      xaxis:{{title:'lag (jours)',dtick:1,type:'linear'}},
-      yaxis:{{title:'% pr&#233;c&#233;d&#233;s d\\'un pic',gridcolor:GRID,range:[0,100]}}}}), {{responsive:true,displayModeBar:false}});
   }});
 
   const cc = COMPARISON.cross_correlation;

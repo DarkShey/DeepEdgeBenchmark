@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 from calibration.regime.regime_analytics import (
     market_mask_intersection,
@@ -11,7 +10,6 @@ from calibration.regime.regime_analytics import (
     segment_regimes,
     stress_conditioned_correlation,
     vol_spike_hit_rate,
-    vol_spike_hit_rate_by_lag,
 )
 
 
@@ -72,50 +70,6 @@ def test_segment_regimes_calendar_vs_trading_days():
     assert stress_seg["n_days_trading"] == 2
     assert stress_seg["n_days_calendar"] == 4
     assert stress_seg["n_days_calendar"] > stress_seg["n_days_trading"]
-
-
-def test_vol_spike_hit_rate_by_lag_shape():
-    regimes = (["calm"] * 20 + ["stress"] * 10) * 5
-    df = _make_history(regimes)
-
-    result = vol_spike_hit_rate_by_lag(df, max_lag=10, quantile=0.75)
-
-    assert len(result) == 11  # lags 0..10
-    assert list(result["lag"]) == list(range(11))
-    assert result["hit_rate"].between(0, 1).all()
-
-
-def test_vol_spike_hit_rate_by_lag_detects_precursor_spike():
-    # Vol systématiquement élevée exactement 2 jours avant chaque changement de régime.
-    # Chaque régime PERSISTE jusqu'au changement suivant (comme un vrai historique) : sinon,
-    # un simple "spike" d'un jour sur le régime créerait un aller-retour parasite (calm->stress
-    # puis stress->calm dès le lendemain), doublant artificiellement le nombre de changements.
-    # Les changements démarrent à t=90 (après le warmup de la fenêtre glissante de 60j),
-    # pour que le quantile glissant à la date de référence (t-2) ne soit jamais NaN.
-    n = 400
-    idx = pd.date_range("2020-01-01", periods=n, freq="D")
-    change_points = set(range(90, n, 30))
-    sigma_t = np.full(n, 2.0)
-    regimes = []
-    current = "calm"
-    for t in range(n):
-        if t in change_points:
-            current = "stress" if current == "calm" else "calm"
-            sigma_t[t - 2] = 20.0  # pic de vol 2 jours avant le changement
-        regimes.append(current)
-
-    df = pd.DataFrame({
-        "regime": regimes,
-        "p_calm": [0.5] * n, "p_trending": [0.0] * n, "p_stress": [0.5] * n,
-        "sigma_t": sigma_t,
-    }, index=idx)
-
-    result = vol_spike_hit_rate_by_lag(df, max_lag=5, quantile=0.75)
-
-    hit_at_lag2 = result.loc[result["lag"] == 2, "hit_rate"].iloc[0]
-    hit_at_lag0 = result.loc[result["lag"] == 0, "hit_rate"].iloc[0]
-    assert hit_at_lag2 > hit_at_lag0
-    assert hit_at_lag2 == pytest.approx(1.0)
 
 
 def test_vol_spike_hit_rate_bounds():

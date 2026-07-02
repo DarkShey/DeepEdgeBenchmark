@@ -10,7 +10,8 @@ Couvre les 3 demandes du tuteur (cf. BRIEF_dashboard_multiasset.md §0) :
   - largeur des régimes (segment_regimes / regime_width_stats)
   - moyenne des régimes à 4 échelles (zoom temporel + donut recalculé côté JS, cf.
     BRIEF_dashboard_v3_corrections.md — pas de fonction Python dédiée)
-  - vol comme déclencheur de changement de régime (vol_spike_hit_rate_by_lag / vol_spike_hit_rate)
+  - vol comme déclencheur de changement de régime (vol_spike_hit_rate — statistique descriptive
+    simple, cf. note de prudence affichée dans le dashboard : pas de test de significativité)
   - vol comme déclencheur de corrélation inter-actifs (rolling_cross_correlation /
     stress_conditioned_correlation)
 """
@@ -76,52 +77,18 @@ def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
 
 # ── 4.3 Vol comme déclencheur de changement de régime ───────────────────────────
 
-def vol_spike_hit_rate_by_lag(df: pd.DataFrame, max_lag: int = 10, quantile: float = 0.75) -> pd.DataFrame:
-    """
-    Teste si sigma_t (vol GARCH) précède les changements de régime, décliné par décalage exact.
-
-    Remplace une première version basée sur une corrélation de Pearson entre sigma_t décalé et
-    regime_change (0/1) : cette corrélation s'est révélée illisible en pratique — regime_change
-    ne vaut 1 que sur une poignée de jours (les changements de régime) parmi des milliers de jours
-    "calmes" à 0, donc le signal des vrais changements de régime se noie dans une corrélation
-    globale sur toute la série (valeurs quasi nulles pour les 4 actifs malgré des hit-rates très
-    différents). En restreignant la mesure aux seuls jours de changement de régime (comme
-    vol_spike_hit_rate), le signal redevient lisible.
-
-    Pour chaque lag = 0..max_lag :
-        hit_rate(lag) = % des jours de changement de régime pour lesquels sigma_t, exactement
-        `lag` jours avant, dépassait le quantile `quantile` de sa distribution glissante sur 60j.
-
-    Retourne un DataFrame [lag, hit_rate], hit_rate dans [0, 1].
-    """
-    rolling_q = df["sigma_t"].rolling(60).quantile(quantile)
-    spike = df["sigma_t"] > rolling_q
-
-    regime_change = df["regime"] != df["regime"].shift(1)
-    if len(regime_change) > 0:
-        regime_change.iloc[0] = False
-
-    change_idx = regime_change[regime_change].index
-    n_changes = len(change_idx)
-
-    rows = []
-    for lag in range(0, max_lag + 1):
-        if n_changes == 0:
-            rows.append({"lag": lag, "hit_rate": 0.0})
-            continue
-        spike_shifted = spike.shift(lag)
-        hits = int(spike_shifted.reindex(change_idx).fillna(False).sum())
-        rows.append({"lag": lag, "hit_rate": hits / n_changes})
-
-    return pd.DataFrame(rows)
-
-
 def vol_spike_hit_rate(df: pd.DataFrame, lookback: int = 3, quantile: float = 0.75) -> float:
     """
-    Statistique simple et lisible pour le tuteur, en complément de la corrélation décalée :
     % des changements de régime précédés (dans les `lookback` jours précédents) d'un sigma_t
     dépassant le quantile `quantile` de sa distribution glissante sur 60 jours.
     Retourne un float dans [0, 1].
+
+    ATTENTION — statistique descriptive simple, pas un test de significativité : l'échantillon
+    d'événements (changements de régime) est faible par actif (quelques dizaines sur plusieurs
+    années), donc l'incertitude d'échantillonnage sur ce pourcentage est large et non quantifiée
+    ici. De plus, le régime "stress" est en partie défini par sigma_t élevée dans RegimeHMM, donc
+    une partie du lien mesuré est mécanique (par construction) plutôt que prédictive. À utiliser
+    comme indication exploratoire pour le tuteur, pas comme signal de trading validé.
     """
     rolling_q = df["sigma_t"].rolling(60).quantile(quantile)
     spike = df["sigma_t"] > rolling_q
