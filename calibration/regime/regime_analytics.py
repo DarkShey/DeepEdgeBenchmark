@@ -13,10 +13,12 @@ Couvre les 3 demandes du tuteur (cf. BRIEF_dashboard_multiasset.md §0) :
   - vol comme déclencheur de changement de régime (vol_spike_hit_rate — statistique descriptive
     simple, cf. note de prudence affichée dans le dashboard : pas de test de significativité)
   - vol comme déclencheur de corrélation inter-actifs (rolling_cross_correlation /
-    stress_conditioned_correlation)
+    stress_conditioned_correlation), avec test de significativité (fisher_r_critical /
+    correlation_significance) pour distinguer un vrai effet du bruit d'échantillonnage
 """
 
 import itertools
+import math
 
 import numpy as np
 import pandas as pd
@@ -30,10 +32,10 @@ def segment_regimes(df: pd.DataFrame) -> pd.DataFrame:
     Retourne un DataFrame avec colonnes : regime, start, end, n_days_trading, n_days_calendar.
 
     IMPORTANT — point de rigueur : utiliser n_days_calendar = (end - start).days + 1 pour toute
-    comparaison INTER-actifs, jamais n_days_trading. BTC/ETH cotent 7j/7, SPY/TLT cotent ~5j/7
-    (hors jours fériés) : comparer des comptages de lignes fausserait la comparaison de largeur
-    de régime entre crypto et actifs traditionnels. n_days_trading reste utile pour des stats
-    intra-actif (ex. "durée moyenne d'un régime stress sur BTC seul").
+    comparaison INTER-actifs, jamais n_days_trading. BTC/ETH cotent 7j/7, SPY/ZN=F cotent ~5j/7
+    (marchés fermés le week-end) : comparer des comptages de lignes fausserait la comparaison de
+    largeur de régime entre crypto et actifs traditionnels. n_days_trading reste utile pour des
+    stats intra-actif (ex. "durée moyenne d'un régime stress sur BTC seul").
     """
     if len(df) == 0:
         return pd.DataFrame(columns=["regime", "start", "end", "n_days_trading", "n_days_calendar"])
@@ -115,7 +117,7 @@ def rolling_cross_correlation(returns_by_asset: dict, window: int = 63) -> pd.Da
     sur les dates communes aux 4 actifs — nécessaire à cause du calendrier crypto vs actions/bonds).
     Calcule la corrélation glissante (fenêtre `window` jours, ex. 63 ≈ 1 trimestre boursier) pour
     chacune des 6 paires uniques parmi les 4 actifs.
-    Retourne un DataFrame indexé par date, colonnes du type "BTC-ETH", "BTC-SPY", "SPY-TLT", etc.
+    Retourne un DataFrame indexé par date, colonnes du type "BTC-ETH", "BTC-SPY", "SPY-ZN", etc.
     """
     keys = list(returns_by_asset.keys())
     aligned = pd.concat(returns_by_asset, axis=1, join="inner")
@@ -172,7 +174,9 @@ def stress_conditioned_correlation(returns_by_asset: dict, stress_masks: dict, c
     "calm"   = LES 4 ACTIFS SIMULTANÉMENT en régime calme (intersection stricte calm_masks) —
                remplace l'ancienne définition "aucun stress" qui laissait passer les jours trending.
 
-    Retourne {"stress": corr_matrix, "calm": corr_matrix, "stress_mask": pd.Series, "calm_mask": pd.Series}.
+    Retourne {"stress": corr_matrix, "calm": corr_matrix, "stress_mask": pd.Series, "calm_mask": pd.Series,
+    "n_stress": int, "n_calm": int} — n_stress/n_calm = tailles des sous-échantillons, pour tester la
+    significativité des corrélations (cf. correlation_significance).
     """
     keys = list(returns_by_asset.keys())
     aligned = pd.concat(returns_by_asset, axis=1, join="inner")
@@ -194,4 +198,30 @@ def stress_conditioned_correlation(returns_by_asset: dict, stress_masks: dict, c
         "calm": calm_corr,
         "stress_mask": union_stress,
         "calm_mask": intersection_calm,
+        "n_stress": int(union_stress.sum()),
+        "n_calm": int(intersection_calm.sum()),
     }
+
+
+# ── 4.5 Significativité statistique des corrélations ────────────────────────────
+
+def fisher_r_critical(n: int, z_crit: float = 1.959964) -> float | None:
+    """
+    Seuil critique |r| au-delà duquel une corrélation de Pearson calculée sur n observations
+    est significativement différente de 0 (test bilatéral, transformation de Fisher).
+    Retourne None si n <= 3 (transformation non définie, échantillon trop petit pour tester).
+    """
+    if n <= 3:
+        return None
+    return math.tanh(z_crit / math.sqrt(n - 3))
+
+
+def correlation_significance(r: float, n: int, z_crit: float = 1.959964) -> dict:
+    """
+    Teste si r (calculé sur n observations) est significativement différent de 0.
+    Retourne {"r_crit": float | None, "significant": bool, "n": int}.
+    """
+    r_crit = fisher_r_critical(n, z_crit)
+    if r_crit is None:
+        return {"r_crit": None, "significant": False, "n": n}
+    return {"r_crit": r_crit, "significant": bool(abs(r) > r_crit), "n": n}

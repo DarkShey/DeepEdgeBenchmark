@@ -1,16 +1,20 @@
 """
 assets.py — Registre des actifs et événements pour le dashboard multi-actifs DEITA
 
-Source unique de vérité pour la liste des actifs (BTC/ETH/SPY/TLT), la fenêtre de
+Source unique de vérité pour la liste des actifs (BTC/ETH/SPY/ZN=F), la fenêtre de
 données commune et les événements de marché affichés sur les graphiques. Consommé
 par dashboard_builder.py et regime_agent.py (import, pas de duplication).
 """
 
+# BRIEF_dashboard_v5_corrections.md : TLT (ETF, allocation variable/opaque selon le tuteur)
+# remplacé par ZN=F (futures CME sur le Treasury Note 10 ans) — le 10 ans est le benchmark
+# mondial des taux et le titre du Trésor US le plus échangé (remarque explicite du tuteur).
+# Données vérifiées avant bascule : 2139 jours depuis 2018, volume quasi jamais nul (0.37%).
 ASSETS = [
     {"ticker": "BTC-USD", "label": "Bitcoin",         "short": "BTC", "asset_class": "crypto", "color": "#f7931a"},
     {"ticker": "ETH-USD", "label": "Ethereum",         "short": "ETH", "asset_class": "crypto", "color": "#627eea"},
     {"ticker": "SPY",     "label": "S&P 500 (SPY)",    "short": "SPX", "asset_class": "index",  "color": "#2ecc71"},
-    {"ticker": "TLT",     "label": "US Treasury 20+Y", "short": "TLT", "asset_class": "bond",   "color": "#3498db"},
+    {"ticker": "ZN=F",    "label": "US Treasury 10Y Note Futures", "short": "ZN", "asset_class": "bond", "color": "#3498db"},
 ]
 
 DATA_START = "2018-01-01"
@@ -59,7 +63,7 @@ ASSET_EVENTS = {
         "2020-03-23": ("Plancher COVID S&P",   "macro"),
         "2022-10-12": ("Plancher bear 2022",   "macro"),
     },
-    "TLT": {
+    "ZN=F": {
         "2022-03-16": ("Début hausses de taux Fed",   "monetaire"),
         "2023-10-19": ("US 10Y touche ~5%",           "monetaire"),
     },

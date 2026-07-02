@@ -1,5 +1,5 @@
 """
-dashboard_builder.py — Dashboard multi-actifs DEITA (BTC/ETH/SPY/TLT)
+dashboard_builder.py — Dashboard multi-actifs DEITA (BTC/ETH/SPY/ZN=F)
 
 Orchestre RegimeAgent (RegimeHMM + RegimeBOCPD) sur les 4 actifs de assets.py,
 calcule les analyses de regime_analytics.py, et génère un dashboard HTML unique
@@ -244,15 +244,24 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
     ]
 
     # ── Tableau récapitulatif corrélation stress vs calme (6 paires) ───────────────
+    # + test de significativité (transformation de Fisher) pour distinguer un vrai effet
+    # du bruit d'échantillonnage — cf. BRIEF_dashboard_v4_corrections.md §1.
+    r_crit_stress = ra.fisher_r_critical(stress_cond["n_stress"])
+    r_crit_calm = ra.fisher_r_critical(stress_cond["n_calm"])
+
     pairs_table = []
     shorts = [a["short"] for a in ASSETS]
     for a, b in itertools.combinations(shorts, 2):
         s_val = stress_cond["stress"].loc[a, b] if a in stress_cond["stress"].index else float("nan")
         c_val = stress_cond["calm"].loc[a, b] if a in stress_cond["calm"].index else float("nan")
+        s_ok = not (isinstance(s_val, float) and np.isnan(s_val))
+        c_ok = not (isinstance(c_val, float) and np.isnan(c_val))
         pairs_table.append({
             "pair": f"{a}-{b}",
-            "stress": _num(s_val) if not (isinstance(s_val, float) and np.isnan(s_val)) else None,
-            "calm": _num(c_val) if not (isinstance(c_val, float) and np.isnan(c_val)) else None,
+            "stress": _num(s_val) if s_ok else None,
+            "calm": _num(c_val) if c_ok else None,
+            "stress_sig": bool(r_crit_stress is not None and s_ok and abs(s_val) > r_crit_stress),
+            "calm_sig": bool(r_crit_calm is not None and c_ok and abs(c_val) > r_crit_calm),
         })
 
     return {
@@ -261,6 +270,12 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
         "cross_correlation": {"dates": cc_dates, "series": cc_series},
         "stress_bands": stress_bands,
         "pairs_table": pairs_table,
+        "corr_significance": {
+            "n_stress": stress_cond["n_stress"],
+            "n_calm": stress_cond["n_calm"],
+            "r_crit_stress": _num(r_crit_stress) if r_crit_stress is not None else None,
+            "r_crit_calm": _num(r_crit_calm) if r_crit_calm is not None else None,
+        },
     }
 
 
@@ -319,6 +334,7 @@ h1{{text-align:center;font-size:1.35rem;letter-spacing:1px;margin:14px 0 3px}}
 .card{{background:#16213e;border-radius:8px;padding:12px 14px;margin-bottom:14px}}
 .card-label{{font-size:.72rem;text-transform:uppercase;letter-spacing:1.2px;color:#566573;margin-bottom:8px}}
 .chart-note{{color:#7f8c8d;font-size:.72rem;margin-bottom:8px}}
+.sig-star{{color:#f39c12;font-weight:700}}
 .legend{{display:flex;gap:16px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;font-size:.8rem}}
 .li{{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}}
 .li input{{accent-color:#2980b9}}
@@ -347,7 +363,7 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
 </head>
 <body>
 <h1>DEITA &#8212; Dashboard Multi-Actifs</h1>
-<p class="sub">Bitcoin &middot; Ethereum &middot; S&amp;P 500 (SPY) &middot; US Treasury 20+Y (TLT) &nbsp;&middot;&nbsp; HMM 2 &#233;tats + seuil ADX 25 + BOCPD</p>
+<p class="sub">Bitcoin &middot; Ethereum &middot; S&amp;P 500 (SPY) &middot; US Treasury 10Y Note Futures (ZN=F) &nbsp;&middot;&nbsp; HMM 2 &#233;tats + seuil ADX 25 + BOCPD</p>
 
 <div class="tabbar">{tab_buttons}</div>
 
@@ -373,7 +389,7 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
 
   <div class="card">
     <div class="card-label">Corr&#233;lation glissante inter-actifs (63j)</div>
-    <p class="chart-note">Corr&#233;lation de Pearson glissante (fen&#234;tre 63 jours, rendements journaliers). BTC = Bitcoin, ETH = Ethereum, SPX = S&amp;P 500 (SPY), TLT = US Treasury 20+ ans (TLT). Fond rouge = jours o&#249; au moins un des 4 actifs est en r&#233;gime de stress (p_stress &gt; 0.5).</p>
+    <p class="chart-note">Corr&#233;lation de Pearson glissante (fen&#234;tre 63 jours, rendements journaliers). BTC = Bitcoin, ETH = Ethereum, SPX = S&amp;P 500 (SPY), ZN = US Treasury 10Y Note Futures (ZN=F), le benchmark mondial des taux. Fond rouge = jours o&#249; au moins un des 4 actifs est en r&#233;gime de stress (p_stress &gt; 0.5).</p>
     <div id="chart-crosscorr" style="height:320px"></div>
   </div>
 
@@ -382,6 +398,7 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
     <p class="chart-note">Corr&#233;lation moyenne des rendements journaliers entre chaque paire d'actifs, calcul&#233;e s&#233;par&#233;ment sur deux sous-&#233;chantillons de jours : Stress = au moins 1 actif sur 4 en r&#233;gime stress ce jour-l&#224;. Calme = les 4 actifs simultan&#233;ment en r&#233;gime calme ce jour-l&#224;. Hypoth&#232;se test&#233;e : la corr&#233;lation inter-actifs augmente en p&#233;riode de stress (contagion).</p>
     <table><thead><tr><th>Paire</th><th>Corr&#233;lation (stress)</th><th>Corr&#233;lation (calme)</th></tr></thead>
     <tbody id="pairs-body"></tbody></table>
+    <p class="chart-note" id="corr-sig-note"></p>
   </div>
 </div>
 
@@ -401,11 +418,19 @@ const baseLayout=()=>({{paper_bgcolor:BG,plot_bgcolor:BG,font:FONT,hovermode:'x 
   legend:{{bgcolor:'rgba(0,0,0,0)',font:{{size:10}}}},
   xaxis:{{gridcolor:GRID,zerolinecolor:GRID,type:'date',rangeslider:{{visible:false}}}}}});
 
+// Un ticker comme "ZN=F" contient un '=' invalide dans un s&#233;lecteur/id CSS non &#233;chapp&#233;
+// (document.querySelectorAll('.regime-cb-ZN=F') l&#232;ve une exception qui casse en silence toute
+// l'interactivit&#233; de l'onglet). SHORT_OF fournit un identifiant DOM s&#251;r (ex. "ZN") pour tout
+// id/class/s&#233;lecteur construit dynamiquement ; tabId (le ticker brut) reste utilis&#233; tel quel
+// pour les acc&#232;s objet (TAB_DATA[tabId], TABS[tabId], ...) et l'attribut data-tab.
+const SHORT_OF = {{}};
+ASSETS.forEach(a => {{ SHORT_OF[a.ticker] = a.short; }});
+
 const TABS = {{}};
 ASSETS.forEach(a => {{
   TABS[a.ticker] = {{
     initialized:false,
-    state:{{regimes:{{calm:true,trending:true,stress:true}}, scale:'annee'}},
+    state:{{regimes:{{calm:true,trending:true,stress:true}}, cats:{{crypto:true,macro:true,monetaire:true,geopolitique:true}}, scale:'annee'}},
     currentXRange:[TAB_DATA[a.ticker].first_date, TAB_DATA[a.ticker].last_date],
     _programmatic:false,
   }};
@@ -433,6 +458,7 @@ function buildShapes(tabId) {{
       fillcolor:REGIME_BG[s.regime],line:{{width:0}},layer:'below'}});
   }});
   d.event_lines.forEach(e => {{
+    if (!st.cats[e.cat]) return;
     shapes.push({{type:'line',xref:'x',yref:'paper',x0:e.x,x1:e.x,y0:0,y1:1,
       line:{{color:e.color,width:1.2,dash:'dot'}}}});
   }});
@@ -442,8 +468,8 @@ function buildShapes(tabId) {{
 function inRange(x, range) {{ return x >= range[0] && x <= range[1]; }}
 
 function buildAnnotations(tabId) {{
-  const d = TAB_DATA[tabId];
-  const visible = d.event_annotations.filter(a => inRange(a.x, TABS[tabId].currentXRange));
+  const d = TAB_DATA[tabId], st = TABS[tabId].state;
+  const visible = d.event_annotations.filter(a => st.cats[a.cat] && inRange(a.x, TABS[tabId].currentXRange));
   if (visible.length > 8) return {{annotations:[], overflow:true}};
   return {{
     annotations: visible.map(a => ({{x:a.x,y:a.y,xref:'x',yref:'paper',text:a.text,showarrow:false,
@@ -454,10 +480,10 @@ function buildAnnotations(tabId) {{
 
 function refreshTab(tabId) {{
   const shapes = buildShapes(tabId);
-  ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{tabId}}`, {{shapes}}));
+  ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{SHORT_OF[tabId]}}`, {{shapes}}));
   const {{annotations, overflow}} = buildAnnotations(tabId);
-  Plotly.relayout(`chart-price-${{tabId}}`, {{annotations}});
-  const msg = document.getElementById(`declutter-${{tabId}}`);
+  Plotly.relayout(`chart-price-${{SHORT_OF[tabId]}}`, {{annotations}});
+  const msg = document.getElementById(`declutter-${{SHORT_OF[tabId]}}`);
   if (msg) msg.style.display = overflow ? 'block' : 'none';
 }}
 
@@ -480,7 +506,7 @@ function updateComposition(tabId) {{
     marker:{{colors:[REGIME_HEX.calm, REGIME_HEX.trending, REGIME_HEX.stress]}},
     hole:0.42, textinfo:'label+percent', textfont:{{size:11,color:'#ecf0f1'}}, showlegend:false,
   }};
-  Plotly.react(`chart-dist-${{tabId}}`, [trace], {{
+  Plotly.react(`chart-dist-${{SHORT_OF[tabId]}}`, [trace], {{
     paper_bgcolor:BG, plot_bgcolor:BG, font:FONT, margin:{{l:10,r:10,t:26,b:10}},
     title:{{text:`${{range[0]}} &#8594; ${{range[1]}} &middot; ${{total}} j`, font:{{size:10,color:'#7f8c8d'}}}},
   }}, {{responsive:true,displayModeBar:false}});
@@ -511,14 +537,14 @@ function applyZoom(tabId, scale, anchorDateStr) {{
     r1 = clampDate(end, d.first_date, d.last_date);
   }}
   TABS[tabId]._programmatic = true;
-  ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{tabId}}`, {{
+  ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{SHORT_OF[tabId]}}`, {{
     'xaxis.range[0]': r0, 'xaxis.range[1]': r1,
   }}));
   TABS[tabId]._programmatic = false;
   TABS[tabId].currentXRange = [r0, r1];
   onRangeChange(tabId);
 
-  const dp = document.getElementById(`datepick-${{tabId}}`);
+  const dp = document.getElementById(`datepick-${{SHORT_OF[tabId]}}`);
   if (dp) dp.disabled = (scale === 'annee');
 }}
 
@@ -533,7 +559,7 @@ function initAssetTab(tabId) {{
     type:'scatter',x:[null],y:[null],mode:'markers',
     marker:{{color:REGIME_HEX[r],size:10,symbol:'square'}},name:REGIME_LABELS[r],showlegend:true}}));
 
-  Plotly.newPlot(`chart-price-${{tabId}}`, [priceTrace].concat(regimeTraces),
+  Plotly.newPlot(`chart-price-${{SHORT_OF[tabId]}}`, [priceTrace].concat(regimeTraces),
     Object.assign({{}},baseLayout(),{{margin:{{l:60,r:18,t:8,b:38}},shapes,annotations:[],
       yaxis:{{title:'Prix (USD)',gridcolor:GRID,tickformat:',.0f',type:'log'}}}}),
     {{responsive:true,displayModeBar:false}});
@@ -543,7 +569,7 @@ function initAssetTab(tabId) {{
   const vovTrace = {{type:'scatter',x:d.dates,y:d.vol_of_vol,mode:'lines',
     line:{{color:'#e67e22',width:1.2,dash:'dot'}},fill:'tozeroy',fillcolor:'rgba(230,126,34,0.10)',
     name:'Vol-of-Vol (20j)',showlegend:true}};
-  Plotly.newPlot(`chart-vol-${{tabId}}`, [sigmaTrace, vovTrace],
+  Plotly.newPlot(`chart-vol-${{SHORT_OF[tabId]}}`, [sigmaTrace, vovTrace],
     Object.assign({{}},baseLayout(),{{margin:{{l:60,r:18,t:8,b:38}},shapes,
       yaxis:{{title:'Vol (%)',gridcolor:GRID}}}}), {{responsive:true,displayModeBar:false}});
 
@@ -551,14 +577,14 @@ function initAssetTab(tabId) {{
     fill:'tozeroy',fillcolor:'rgba(243,156,18,0.12)',name:'changepoint_prob',showlegend:true}};
   const threshTrace = {{type:'scatter',x:[d.dates[0],d.dates[d.dates.length-1]],y:[0.5,0.5],
     mode:'lines',line:{{color:'#e74c3c',width:1,dash:'dash'}},name:'seuil 0.5',showlegend:true}};
-  Plotly.newPlot(`chart-cp-${{tabId}}`, [cpTrace, threshTrace],
+  Plotly.newPlot(`chart-cp-${{SHORT_OF[tabId]}}`, [cpTrace, threshTrace],
     Object.assign({{}},baseLayout(),{{margin:{{l:60,r:18,t:8,b:38}},shapes,
       yaxis:{{title:'P(chgt)',gridcolor:GRID,range:[0,1.05],dtick:0.25}}}}), {{responsive:true,displayModeBar:false}});
 
   updateComposition(tabId);
 
   // ── Table &#233;v&#233;nements ──────────────────────────────────────────────────────
-  const tbody = document.getElementById(`evt-body-${{tabId}}`);
+  const tbody = document.getElementById(`evt-body-${{SHORT_OF[tabId]}}`);
   d.events_table.forEach(e => {{
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${{e.date}}</td><td>${{e.label}}</td><td><span class="tag" style="background:${{e.color}}">${{e.cat}}</span></td>`;
@@ -572,7 +598,7 @@ function initAssetTab(tabId) {{
   // tour et red&#233;clenchaient l'&#233;v&#233;nement en boucle (le garde-fou _syncing, remis &#224; false
   // de fa&#231;on synchrone, n'arrivait pas &#224; bloquer un rebond asynchrone) — page compl&#232;tement
   // gel&#233;e au clic. Une seule source (price) rend un tel cycle structurellement impossible.
-  document.getElementById(`chart-price-${{tabId}}`).on('plotly_relayout', e=>{{
+  document.getElementById(`chart-price-${{SHORT_OF[tabId]}}`).on('plotly_relayout', e=>{{
     if (TABS[tabId]._programmatic) return;  // ignore les relayouts d&#233;clench&#233;s par applyZoom
     if (e['xaxis.range[0]']!==undefined) {{
       // Un drag-zoom natif retourne des bornes avec heure (ex. '2020-07-31 00:22:46.6081') ;
@@ -580,38 +606,41 @@ function initAssetTab(tabId) {{
       // applyZoom (boutons/date picker), utilis&#233;es telles quelles dans les comparaisons de
       // updateComposition/buildAnnotations.
       const r0 = String(e['xaxis.range[0]']).slice(0,10), r1 = String(e['xaxis.range[1]']).slice(0,10);
-      Plotly.relayout(`chart-vol-${{tabId}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
-      Plotly.relayout(`chart-cp-${{tabId}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
+      Plotly.relayout(`chart-vol-${{SHORT_OF[tabId]}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
+      Plotly.relayout(`chart-cp-${{SHORT_OF[tabId]}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
       TABS[tabId].currentXRange = [r0, r1];
       onRangeChange(tabId);
     }}
   }});
 
-  // ── Checkboxes l&#233;gende (r&#233;gimes uniquement) ─────────────────────────────────────
-  document.querySelectorAll(`.regime-cb-${{tabId}}`).forEach(cb => {{
+  // ── Checkboxes l&#233;gende (r&#233;gimes + cat&#233;gories d'&#233;v&#233;nements) ─────────────────────────
+  document.querySelectorAll(`.regime-cb-${{SHORT_OF[tabId]}}`).forEach(cb => {{
     cb.addEventListener('change', () => {{ TABS[tabId].state.regimes[cb.value] = cb.checked; refreshTab(tabId); }});
+  }});
+  document.querySelectorAll(`.cat-cb-${{SHORT_OF[tabId]}}`).forEach(cb => {{
+    cb.addEventListener('change', () => {{ TABS[tabId].state.cats[cb.value] = cb.checked; refreshTab(tabId); }});
   }});
 
   // ── Zoom temporel (boutons Jour/Mois/Trimestre/Ann&#233;e + s&#233;lecteur de date) ──────────
-  document.querySelectorAll(`.scale-btn-${{tabId}}`).forEach(btn => {{
+  document.querySelectorAll(`.scale-btn-${{SHORT_OF[tabId]}}`).forEach(btn => {{
     btn.addEventListener('click', () => {{
-      document.querySelectorAll(`.scale-btn-${{tabId}}`).forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll(`.scale-btn-${{SHORT_OF[tabId]}}`).forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      const dp = document.getElementById(`datepick-${{tabId}}`);
+      const dp = document.getElementById(`datepick-${{SHORT_OF[tabId]}}`);
       applyZoom(tabId, btn.dataset.scale, dp && dp.value ? dp.value : null);
     }});
   }});
-  const dp = document.getElementById(`datepick-${{tabId}}`);
+  const dp = document.getElementById(`datepick-${{SHORT_OF[tabId]}}`);
   dp.addEventListener('change', () => {{
-    const activeBtn = document.querySelector(`.scale-btn-${{tabId}}.active`);
+    const activeBtn = document.querySelector(`.scale-btn-${{SHORT_OF[tabId]}}.active`);
     applyZoom(tabId, activeBtn.dataset.scale, dp.value);
   }});
 }}
 
 function onRangeChange(tabId) {{
   const {{annotations, overflow}} = buildAnnotations(tabId);
-  Plotly.relayout(`chart-price-${{tabId}}`, {{annotations}});
-  const msg = document.getElementById(`declutter-${{tabId}}`);
+  Plotly.relayout(`chart-price-${{SHORT_OF[tabId]}}`, {{annotations}});
+  const msg = document.getElementById(`declutter-${{SHORT_OF[tabId]}}`);
   if (msg) msg.style.display = overflow ? 'block' : 'none';
   updateComposition(tabId);
 }}
@@ -654,12 +683,19 @@ function initComparisonTab() {{
   }}), {{responsive:true,displayModeBar:false}});
 
   const pbody = document.getElementById('pairs-body');
+  const fmtSig = (v, sig) => v === null ? '&#8212;'
+    : `${{v.toFixed(3)}}${{sig ? ' <span class="sig-star" title="Significatif &#224; 95%">*</span>' : ''}}`;
   COMPARISON.pairs_table.forEach(p => {{
     const tr = document.createElement('tr');
-    const fmt = v => v===null ? '&#8212;' : v.toFixed(3);
-    tr.innerHTML = `<td>${{p.pair}}</td><td>${{fmt(p.stress)}}</td><td>${{fmt(p.calm)}}</td>`;
+    tr.innerHTML = `<td>${{p.pair}}</td><td>${{fmtSig(p.stress, p.stress_sig)}}</td><td>${{fmtSig(p.calm, p.calm_sig)}}</td>`;
     pbody.appendChild(tr);
   }});
+
+  const sig = COMPARISON.corr_significance;
+  document.getElementById('corr-sig-note').innerHTML =
+    `* = corr&#233;lation significativement diff&#233;rente de 0 au seuil de confiance 95% ` +
+    `(test de Fisher). Stress : n=${{sig.n_stress}} jours, seuil |r| &gt; ${{sig.r_crit_stress!==null ? sig.r_crit_stress.toFixed(3) : '&#8212;'}}. ` +
+    `Calme : n=${{sig.n_calm}} jours, seuil |r| &gt; ${{sig.r_crit_calm!==null ? sig.r_crit_calm.toFixed(3) : '&#8212;'}}.`;
 }}
 
 // ── D&#233;marrage ──────────────────────────────────────────────────────────────────
@@ -671,55 +707,60 @@ switchTab('{ASSETS[0]["ticker"]}');
 
 def _asset_panel_html(asset: dict, first_date: str, last_date: str) -> str:
     ticker = asset["ticker"]
+    # Identifiant DOM sûr : un ticker comme "ZN=F" contient un '=' invalide dans un id/class/
+    # sélecteur CSS non échappé (cf. commentaire SHORT_OF côté JS). "short" (ex. "ZN") est déjà
+    # garanti alphanumérique par assets.py. `data-tab` garde le ticker brut (simple attribut
+    # HTML, comparé en JS via égalité de chaîne — jamais parsé comme sélecteur CSS).
+    dom = asset["short"]
     active = " active" if asset is ASSETS[0] else ""
     return f"""
 <div class="tab-panel{active}" data-tab="{ticker}">
   <div class="legend">
-    <div class="li"><input type="checkbox" class="regime-cb-{ticker}" value="calm" checked><div class="dot" style="background:{_REGIME_HEX['calm']}"></div>Calme</div>
-    <div class="li"><input type="checkbox" class="regime-cb-{ticker}" value="trending" checked><div class="dot" style="background:{_REGIME_HEX['trending']}"></div>Tendanciel</div>
-    <div class="li"><input type="checkbox" class="regime-cb-{ticker}" value="stress" checked><div class="dot" style="background:{_REGIME_HEX['stress']}"></div>Stress</div>
+    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="calm" checked><div class="dot" style="background:{_REGIME_HEX['calm']}"></div>Calme</div>
+    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="trending" checked><div class="dot" style="background:{_REGIME_HEX['trending']}"></div>Tendanciel</div>
+    <div class="li"><input type="checkbox" class="regime-cb-{dom}" value="stress" checked><div class="dot" style="background:{_REGIME_HEX['stress']}"></div>Stress</div>
     <div class="sep"></div>
-    <div class="li"><div class="dot" style="background:{_EVENT_COLORS['crypto']}"></div>Crypto</div>
-    <div class="li"><div class="dot" style="background:{_EVENT_COLORS['macro']}"></div>Macro</div>
-    <div class="li"><div class="dot" style="background:{_EVENT_COLORS['monetaire']}"></div>Mon&#233;taire</div>
-    <div class="li"><div class="dot" style="background:{_EVENT_COLORS['geopolitique']}"></div>G&#233;opolitique</div>
+    <div class="li"><input type="checkbox" class="cat-cb-{dom}" value="crypto" checked><div class="dot" style="background:{_EVENT_COLORS['crypto']}"></div>Crypto</div>
+    <div class="li"><input type="checkbox" class="cat-cb-{dom}" value="macro" checked><div class="dot" style="background:{_EVENT_COLORS['macro']}"></div>Macro</div>
+    <div class="li"><input type="checkbox" class="cat-cb-{dom}" value="monetaire" checked><div class="dot" style="background:{_EVENT_COLORS['monetaire']}"></div>Mon&#233;taire</div>
+    <div class="li"><input type="checkbox" class="cat-cb-{dom}" value="geopolitique" checked><div class="dot" style="background:{_EVENT_COLORS['geopolitique']}"></div>G&#233;opolitique</div>
   </div>
 
   <div class="card">
     <div class="card-label">Prix {asset["label"]} (USD, &#233;chelle log) &#8212; fond color&#233; par r&#233;gime d&#233;tect&#233;</div>
     <div class="scale-sel">
       <span class="scale-label">Centrer sur</span>
-      <input type="date" id="datepick-{ticker}" class="date-pick" min="{first_date}" max="{last_date}" disabled>
-      <button class="scale-btn scale-btn-{ticker}" data-scale="jour">Jour</button>
-      <button class="scale-btn scale-btn-{ticker}" data-scale="mois">Mois</button>
-      <button class="scale-btn scale-btn-{ticker}" data-scale="trimestre">Trimestre</button>
-      <button class="scale-btn scale-btn-{ticker} active" data-scale="annee">Ann&#233;e</button>
+      <input type="date" id="datepick-{dom}" class="date-pick" min="{first_date}" max="{last_date}" disabled>
+      <button class="scale-btn scale-btn-{dom}" data-scale="jour">Jour</button>
+      <button class="scale-btn scale-btn-{dom}" data-scale="mois">Mois</button>
+      <button class="scale-btn scale-btn-{dom}" data-scale="trimestre">Trimestre</button>
+      <button class="scale-btn scale-btn-{dom} active" data-scale="annee">Ann&#233;e</button>
     </div>
-    <div id="chart-price-{ticker}" style="height:360px"></div>
-    <div class="declutter-msg" id="declutter-{ticker}">Zoomez pour voir les libell&#233;s (trop d'&#233;v&#233;nements visibles)</div>
+    <div id="chart-price-{dom}" style="height:360px"></div>
+    <div class="declutter-msg" id="declutter-{dom}">Zoomez pour voir les libell&#233;s (trop d'&#233;v&#233;nements visibles)</div>
   </div>
 
   <div class="card">
     <div class="card-label">Volatilit&#233; conditionnelle GARCH(1,1) &middot; &#963;<sub>t</sub> (violet) et Vol-of-Vol rolling 20j (orange)</div>
-    <div id="chart-vol-{ticker}" style="height:140px"></div>
+    <div id="chart-vol-{dom}" style="height:140px"></div>
   </div>
 
   <div class="card">
     <div class="card-label">Probabilit&#233; de changement de r&#233;gime &#8212; BOCPD &middot; seuil 0.5</div>
-    <div id="chart-cp-{ticker}" style="height:120px"></div>
+    <div id="chart-cp-{dom}" style="height:120px"></div>
   </div>
 
   <div class="row2">
     <div class="card" style="margin-bottom:0">
       <div class="card-label">Composition moyenne des r&#233;gimes</div>
-      <div id="chart-dist-{ticker}" style="height:230px"></div>
+      <div id="chart-dist-{dom}" style="height:230px"></div>
     </div>
     <div class="card" style="margin-bottom:0">
       <details>
         <summary>&#201;v&#233;nements de march&#233; r&#233;f&#233;renc&#233;s</summary>
         <div style="overflow-y:auto;max-height:230px;margin-top:6px">
           <table><thead><tr><th>Date</th><th>&#201;v&#233;nement</th><th>Cat&#233;gorie</th></tr></thead>
-          <tbody id="evt-body-{ticker}"></tbody></table>
+          <tbody id="evt-body-{dom}"></tbody></table>
         </div>
       </details>
     </div>

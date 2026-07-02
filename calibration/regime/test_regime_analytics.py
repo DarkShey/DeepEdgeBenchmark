@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 
 from calibration.regime.regime_analytics import (
+    correlation_significance,
+    fisher_r_critical,
     market_mask_intersection,
     market_mask_union,
     regime_width_stats,
@@ -138,6 +140,27 @@ def test_stress_conditioned_correlation_strict_calm():
     assert result["calm_mask"].tolist() == [True, False, False, True]
     assert result["stress_mask"].tolist() == [False, False, True, False]
     assert result["calm_mask"].iloc[1] == False
+    assert result["n_calm"] == 2
+    assert result["n_stress"] == 1
+
+
+def test_fisher_r_critical_decreases_with_n():
+    # Seuil plus bas (plus facile d'être significatif) quand n augmente
+    assert fisher_r_critical(10) > fisher_r_critical(1000)
+
+
+def test_fisher_r_critical_none_for_small_n():
+    assert fisher_r_critical(3) is None
+    assert fisher_r_critical(2) is None
+
+
+def test_correlation_significance_basic():
+    # r=0.9 sur 5 observations : pas assez de données pour être sûr, mais tester le mécanisme
+    result_small_n = correlation_significance(0.9, n=5)
+    result_large_n = correlation_significance(0.05, n=10000)
+    assert result_small_n["r_crit"] is not None  # n=5 > 3, le mécanisme doit tourner
+    assert result_large_n["significant"] is True   # petit r mais énorme échantillon -> significatif
+    assert correlation_significance(0.01, n=10)["significant"] is False  # r quasi nul, petit n -> pas significatif
 
 
 def test_rolling_cross_correlation_pairs_count():
