@@ -190,6 +190,10 @@ class RegimeAgent:
         print(f"[RegimeAgent] HTML genere -> {out.resolve()}")
         return str(out.resolve())
 
+    def predict_history(self, prices: pd.DataFrame) -> pd.DataFrame:
+        """Alias public de _predict_history(), sans changement de logique (cf. dashboard_builder.py)."""
+        return self._predict_history(prices)
+
     # ── Méthodes internes ─────────────────────────────────────────────────────
 
     def _predict_history(self, prices: pd.DataFrame) -> pd.DataFrame:
