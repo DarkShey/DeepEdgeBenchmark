@@ -207,7 +207,8 @@ class RegimeAgent:
         pour classer l'ensemble de l'historique. Réservé à la visualisation.
 
         Retourne un DataFrame indexé comme prices avec les colonnes :
-            regime (str), p_calm, p_bull, p_bear, p_stress, vol_bucket, changepoint_prob
+            regime (str), p_calm, p_bull, p_bear, p_stress, vol_bucket, changepoint_prob,
+            sigma_t, vol_of_vol, volume_norm
         """
         # ── 1. Features + passe HMM ────────────────────────────────────────────
         features = self._hmm._compute_features(prices)
@@ -256,6 +257,7 @@ class RegimeAgent:
 
         df["sigma_t"]    = features["sigma_t"].values
         df["vol_of_vol"] = features["sigma_t"].rolling(20).std().values
+        df["volume_norm"] = features["volume_norm"].values
 
         # ── 4. BOCPD changepoint_prob (passe complète sur tout l'historique) ───
         returns = prices["Close"].pct_change().dropna()

@@ -42,20 +42,6 @@ def _num(v):
     return None if (math.isnan(f) or math.isinf(f)) else round(f, 4)
 
 
-def _vol_before_after(profile_df: pd.DataFrame) -> dict:
-    """
-    Réduit un profil d'étude d'événement (21 points, rel_day -10..10) à 2 chiffres :
-    moyenne de mean_sigma sur rel_day < 0 ("avant") et sur rel_day >= 0 ("après", jour de
-    transition inclus). Retourne aussi le delta en % et le nombre d'événements sous-jacents.
-    """
-    before = profile_df.loc[profile_df["rel_day"] < 0, "mean_sigma"]
-    after = profile_df.loc[profile_df["rel_day"] >= 0, "mean_sigma"]
-    avant = float(before.mean()) if before.notna().any() else None
-    apres = float(after.mean()) if after.notna().any() else None
-    delta_pct = ((apres - avant) / avant * 100) if (avant and apres and avant != 0) else None
-    return {"avant": avant, "apres": apres, "delta_pct": delta_pct}
-
-
 # ── 1. Pipeline de calcul ────────────────────────────────────────────────────────
 
 def run_pipeline() -> dict:
@@ -101,31 +87,23 @@ def compute_all_analytics(results: dict) -> dict:
     Appelle regime_analytics.* sur les résultats de run_pipeline() :
       - segments + width stats par actif et agrégés
       - regime_transition_vol_profile, par actif (étude d'événement : profil moyen de sigma_t
-        autour des transitions de régime — toutes transitions et transitions vers stress
-        uniquement, cf. BRIEF_dashboard_v6_corrections.md §3)
-      - rolling_cross_correlation (rendements/volatilité/volume/swing), inter-actifs
-        (cf. BRIEF_dashboard_v6_corrections.md §4)
-      - pairwise_stress_calm_correlation, une paire à la fois, conditionnée sur elle-même
-        (cf. BRIEF_dashboard_v9_corrections.md §2 — remplace l'ancien mask global à 5 actifs)
-      - market_stress_majority : jours où au moins 3 des 5 actifs sont en stress (indicateur de
-        marché large, purement visuel, cf. BRIEF_dashboard_v9_corrections.md §3b — distinct du
-        test rigoureux par paire ci-dessus)
+        autour des transitions de régime — toutes transitions, transitions vers stress
+        uniquement, et profil volume_norm vers stress (préparation question 2, cf.
+        BRIEF_dashboard_v11_corrections.md — pas encore affiché dans ce brief-ci)
+
+    Note (BRIEF_dashboard_v11_corrections.md) : le calcul cross-actifs (rolling_cross_correlation,
+    pairwise_stress_calm_correlation, market_stress_majority) a été retiré d'ici — la page
+    Comparaison ne les affiche plus pour l'instant, mais les fonctions elles-mêmes restent en
+    place et testées dans regime_analytics.py/test_regime_analytics.py.
     Retourne un dict structuré prêt à sérialiser en JSON pour le template HTML.
     """
     per_asset = {}
     all_segments = []
-    returns_by_asset = {}
-    sigma_by_asset = {}
-    volume_by_asset = {}
-    swing_by_asset = {}
-    stress_masks = {}
-    calm_masks = {}
 
     for asset in ASSETS:
         ticker = asset["ticker"]
         short = asset["short"]
         history = results[ticker]["history"]
-        prices = results[ticker]["prices"]
 
         segments = ra.segment_regimes(history)
         width_stats = ra.regime_width_stats(segments)
@@ -133,47 +111,28 @@ def compute_all_analytics(results: dict) -> dict:
         profile_into_stress = ra.regime_transition_vol_profile(
             history, window=10, alignment="start", only_into="stress"
         )
+        profile_into_stress_volume = ra.regime_transition_vol_profile(
+            history, window=10, alignment="start", only_into="stress", column="volume_norm"
+        )
 
         per_asset[ticker] = {
             "segments": segments,
             "width_stats": width_stats,
             "profile_all": profile_all,
             "profile_into_stress": profile_into_stress,
+            "profile_into_stress_volume": profile_into_stress_volume,
         }
 
         tagged = segments.copy()
         tagged["asset"] = short
         all_segments.append(tagged)
 
-        returns = prices["Close"].pct_change().dropna()
-        returns_by_asset[short] = returns
-        sigma_by_asset[short] = history["sigma_t"].reindex(returns.index)
-        volume_by_asset[short] = (prices["Volume"] / prices["Volume"].rolling(30).mean()).reindex(returns.index)
-        swing_by_asset[short] = ((prices["High"] - prices["Low"]) / prices["Close"]).reindex(returns.index)
-        stress_masks[short] = (history["p_stress"] > 0.5).reindex(returns.index).fillna(False)
-        calm_masks[short] = (history["regime"] == "calm").reindex(returns.index).fillna(False)
-
     combined_segments = pd.concat(all_segments, ignore_index=True)
-    cross_correlation = {
-        "returns": ra.rolling_cross_correlation(returns_by_asset, window=63),
-        "volatility": ra.rolling_cross_correlation(sigma_by_asset, window=63),
-        "volume": ra.rolling_cross_correlation(volume_by_asset, window=63),
-        "swing": ra.rolling_cross_correlation(swing_by_asset, window=63),
-    }
-    pairwise_stress_calm = ra.pairwise_stress_calm_correlation(returns_by_asset, stress_masks, calm_masks)
-
-    # Indicateur de marché large (purement visuel, cf. docstring ci-dessus) : au moins 3 des 5
-    # actifs en stress le même jour. À ne pas confondre avec le test par paire (pairwise_stress_calm).
-    stress_count = pd.concat(stress_masks, axis=1).sum(axis=1)
-    market_stress_majority = stress_count >= 3
 
     return {
         "per_asset": per_asset,
         "comparison": {
             "combined_segments": combined_segments,
-            "cross_correlation": cross_correlation,
-            "pairwise_stress_calm": pairwise_stress_calm,
-            "market_stress_majority": market_stress_majority,
         },
     }
 
@@ -229,6 +188,7 @@ def _asset_tab_payload(asset: dict, prices: pd.DataFrame, history: pd.DataFrame,
         "close": [_num(v) if not np.isnan(v) else None for v in close],
         "sigma": [_num(v) if not np.isnan(v) else None for v in history["sigma_t"]],
         "vol_of_vol": [_num(v) if not np.isnan(v) else None for v in history["vol_of_vol"]],
+        "volume_norm": [_num(v) if not np.isnan(v) else None for v in history["volume_norm"]],
         "cp": [_num(v) for v in history["changepoint_prob"]],
         "regimes": regimes,
         "regime_shapes": regime_shapes,
@@ -242,9 +202,6 @@ def _asset_tab_payload(asset: dict, prices: pd.DataFrame, history: pd.DataFrame,
 
 def _comparison_payload(results: dict, analytics: dict) -> dict:
     combined = analytics["comparison"]["combined_segments"]
-    cross_corr = analytics["comparison"]["cross_correlation"]
-    pairwise = analytics["comparison"]["pairwise_stress_calm"]
-    market_stress_majority = analytics["comparison"]["market_stress_majority"]
 
     # ── Box plot largeur des régimes (5 actifs x 4 régimes) ────────────────────────
     box_traces = []
@@ -257,63 +214,49 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
             "y": [int(v) for v in sub["n_days_calendar"]],
         })
 
-    # ── Vol avant/après un changement de régime (résumé lisible de l'étude d'événement,
-    # cf. BRIEF_dashboard_v7_corrections.md — le calcul sous-jacent, regime_transition_vol_profile,
-    # ne change pas, seul ce résumé à 2 chiffres est nouveau) ──────────────────────
-    vol_before_after = {}
+    # ── Étude d'événement : la volatilité annonce-t-elle ou confirme-t-elle un passage en
+    # stress ? (cf. BRIEF_dashboard_v11_corrections.md) — série indexée sur la baseline
+    # pré-événement (-10 à -5j = 0%) + premier jour de réaction significative (indicatif,
+    # pas un test formel : réservé au test de Granger prévu pour la question 4).
+    event_study = {}
     for asset in ASSETS:
         ticker = asset["ticker"]
-        profile_all = analytics["per_asset"][ticker]["profile_all"]
-        profile_stress = analytics["per_asset"][ticker]["profile_into_stress"]
-        vol_before_after[asset["short"]] = {
-            "label": asset["label"],
-            "all": _vol_before_after(profile_all),
-            "into_stress": _vol_before_after(profile_stress),
-            "n_all": int(profile_all["n_events"].iloc[0]) if len(profile_all) else 0,
-            "n_stress": int(profile_stress["n_events"].iloc[0]) if len(profile_stress) else 0,
-        }
+        profile = analytics["per_asset"][ticker]["profile_into_stress"]
+        if profile["n_events"].iloc[0] == 0 or profile["mean_sigma"].isna().all():
+            event_study[asset["short"]] = {
+                "label": asset["label"], "color": asset["color"],
+                "rel_day": profile["rel_day"].tolist(), "sigma_index": [None] * len(profile),
+                "n_events": 0, "first_reaction_day": None,
+            }
+            continue
 
-    # ── Corrélation glissante inter-actifs (rendements/volatilité/volume/swing) ────────────
-    cross_correlation_payload = {}
-    for signal, corr_df in cross_corr.items():
-        series = {
-            col: [_num(v) if not (isinstance(v, float) and np.isnan(v)) else None for v in corr_df[col]]
-            for col in corr_df.columns
-        }
-        cross_correlation_payload[signal] = {"dates": [str(d.date()) for d in corr_df.index], "series": series}
+        baseline_mask = profile["rel_day"].between(-10, -5)
+        baseline = profile.loc[baseline_mask, "mean_sigma"].mean()
+        n_events = int(profile["n_events"].iloc[0])
 
-    # Fond de stress = indicateur de marché large (au moins 3 des 5 actifs en stress le même
-    # jour), purement visuel — distinct du test rigoureux par paire du tableau ci-dessous
-    # (cf. BRIEF_dashboard_v9_corrections.md §3b).
-    stress_bands = [
-        {"x0": str(s["start"].date()), "x1": str(s["end"].date())}
-        for s in ra.segment_boolean_mask(market_stress_majority)
-    ]
+        sigma_index = ((profile["mean_sigma"] / baseline - 1.0) * 100.0)
 
-    # ── Tableau récapitulatif corrélation stress vs calme, par paire ───────────────
-    # Chaque paire a son propre n_stress/n_calm et son propre seuil de significativité (Fisher) —
-    # cf. BRIEF_dashboard_v9_corrections.md §2 (remplace l'ancien mask global à 5 actifs).
-    pairs_table = [
-        {
-            "pair": row["pair"],
-            "stress": _num(row["corr_stress"]) if row["corr_stress"] == row["corr_stress"] else None,
-            "n_stress": int(row["n_stress"]),
-            "r_crit_stress": _num(row["r_crit_stress"]) if row["r_crit_stress"] is not None else None,
-            "stress_sig": bool(row["stress_sig"]),
-            "calm": _num(row["corr_calm"]) if row["corr_calm"] == row["corr_calm"] else None,
-            "n_calm": int(row["n_calm"]),
-            "r_crit_calm": _num(row["r_crit_calm"]) if row["r_crit_calm"] is not None else None,
-            "calm_sig": bool(row["calm_sig"]),
+        # Erreur standard de la moyenne à chaque jour relatif -> seuil de déviation "significative"
+        se = profile["std_sigma"] / np.sqrt(n_events)
+        deviation = (profile["mean_sigma"] - baseline).abs()
+        significant = deviation > se
+        first_reaction_day = None
+        for rel_day, is_sig in zip(profile["rel_day"], significant):
+            if is_sig:
+                first_reaction_day = int(rel_day)
+                break
+
+        event_study[asset["short"]] = {
+            "label": asset["label"], "color": asset["color"],
+            "rel_day": profile["rel_day"].tolist(),
+            "sigma_index": [_num(v) if not np.isnan(v) else None for v in sigma_index],
+            "n_events": n_events,
+            "first_reaction_day": first_reaction_day,
         }
-        for _, row in pairwise.iterrows()
-    ]
 
     return {
         "box_traces": box_traces,
-        "vol_before_after": vol_before_after,
-        "cross_correlation": cross_correlation_payload,
-        "stress_bands": stress_bands,
-        "pairs_table": pairs_table,
+        "event_study": event_study,
     }
 
 
@@ -372,7 +315,6 @@ h1{{text-align:center;font-size:1.35rem;letter-spacing:1px;margin:14px 0 3px}}
 .card{{background:#16213e;border-radius:8px;padding:12px 14px;margin-bottom:14px}}
 .card-label{{font-size:.72rem;text-transform:uppercase;letter-spacing:1.2px;color:#566573;margin-bottom:8px}}
 .chart-note{{color:#7f8c8d;font-size:.72rem;margin-bottom:8px}}
-.sig-star{{color:#f39c12;font-weight:700}}
 .legend{{display:flex;gap:16px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;font-size:.8rem}}
 .li{{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}}
 .li input{{accent-color:#2980b9}}
@@ -388,16 +330,6 @@ tbody td{{padding:3px 10px;border-bottom:1px solid #151d2b}}
 .scale-btn{{background:#0f0f1a;color:#95a5a6;border:1px solid #1c2a3a;border-radius:4px;
   padding:3px 10px;font-size:.72rem;cursor:pointer}}
 .scale-btn.active{{background:#2980b9;color:#fff}}
-.cc-btn{{background:#0f0f1a;color:#95a5a6;border:1px solid #1c2a3a;border-radius:4px;
-  padding:3px 10px;font-size:.72rem;cursor:pointer}}
-.cc-btn.cc-btn-active{{background:#2980b9;color:#fff}}
-.cc-btn-secondary{{opacity:.65;font-size:.68rem}}
-.cc-btn-secondary:hover,.cc-btn-secondary.cc-btn-active{{opacity:1}}
-.headline-stat{{text-align:center;margin:10px 0 16px}}
-.headline-value{{font-size:2.1rem;font-weight:700}}
-.headline-value.up{{color:#e74c3c}}
-.headline-value.down{{color:#2ecc71}}
-.headline-label{{font-size:.78rem;color:#7f8c8d;margin-top:2px}}
 .scale-label{{font-size:.72rem;color:#7f8c8d;margin-right:2px}}
 .date-pick{{background:#0f0f1a;color:#ecf0f1;border:1px solid #1c2a3a;border-radius:4px;
   padding:2px 6px;font-size:.72rem}}
@@ -424,54 +356,19 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
   </div>
 
   <div class="card">
-    <div class="card-label">La volatilit&#233; augmente-t-elle avant ou apr&#232;s un passage en stress&nbsp;?</div>
-    <p class="chart-note">Variation de la volatilit&#233; moyenne entre les 10 jours qui pr&#233;c&#232;dent un
-      basculement vers le r&#233;gime stress et les 10 jours qui suivent (jour du changement inclus).
-      Valeurs en variation relative (%) pour rester comparables entre crypto et obligations, dont les
-      niveaux de volatilit&#233; absolus n'ont rien &#224; voir.</p>
-
-    <div class="headline-stat">
-      <div class="headline-value" id="vol-headline-value">&#8212;</div>
-      <div class="headline-label" id="vol-headline-label"></div>
-    </div>
-
-    <div id="chart-vol-before-after" style="height:280px"></div>
-
+    <div class="card-label">La volatilit&#233; annonce-t-elle ou confirme-t-elle un passage en stress&nbsp;? (&#233;tude d'&#233;v&#233;nement)</div>
+    <p class="chart-note">Volatilit&#233; moyenne autour de chaque entr&#233;e en r&#233;gime stress (jour 0 = jour du
+      basculement), index&#233;e sur la p&#233;riode -10&#224;-5 jours = 0% pour rester comparable entre crypto et
+      obligations. Un losange marque, pour chaque actif, le premier jour o&#249; l'&#233;cart &#224; la p&#233;riode
+      pr&#233;-&#233;v&#233;nement d&#233;passe l'erreur standard &#8212; indicatif, pas un test statistique formel.</p>
+    <div id="chart-event-study" style="height:380px"></div>
     <details style="margin-top:8px">
-      <summary>Voir les valeurs brutes (&#963;&#8339; moyen, avant/apr&#232;s, par actif)</summary>
+      <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
       <div style="overflow-x:auto;margin-top:6px">
-        <table><thead><tr><th>Actif</th><th>Avant</th><th>Apr&#232;s</th><th>Variation</th><th>n transitions</th></tr></thead>
-        <tbody id="vol-before-after-table"></tbody></table>
+        <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n transitions vers stress</th></tr></thead>
+        <tbody id="event-study-table"></tbody></table>
       </div>
     </details>
-  </div>
-
-  <div class="card">
-    <div class="card-label">Corr&#233;lation glissante inter-actifs (63j)</div>
-    <div class="scale-sel">
-      <button class="cc-btn cc-btn-active" data-signal="returns">Rendements</button>
-      <button class="cc-btn" data-signal="volatility">Volatilit&#233;</button>
-      <span class="sep"></span>
-      <button class="cc-btn cc-btn-secondary" data-signal="volume">Volume</button>
-      <button class="cc-btn cc-btn-secondary" data-signal="swing">Swing</button>
-    </div>
-    <p class="chart-note">Corr&#233;lation de Pearson glissante (fen&#234;tre 63 jours). BTC-ETH et ZN-TLT (deux
-      proxys du m&#234;me sous-jacent chacun) sont masqu&#233;es par d&#233;faut &#8212; cliquez sur leur entr&#233;e dans la
-      l&#233;gende pour les r&#233;afficher. Fond rouge = jours o&#249; au moins 3 des 5 actifs sont en r&#233;gime stress
-      (indicateur de march&#233; large, &#224; but visuel). Le test statistique rigoureux de contagion, propre &#224;
-      chaque paire, est dans le tableau ci-dessous &#8212; les deux ne se recouvrent pas n&#233;cessairement.</p>
-    <p class="chart-note">Rendements = co-mouvement des prix. Volatilit&#233; = les actifs deviennent-ils risqu&#233;s en m&#234;me
-      temps&nbsp;? Volume = panique/attention de march&#233; partag&#233;e&nbsp;? Swing = amplitude journali&#232;re
-      (High-Low)/Close, mesure brute non liss&#233;e, compl&#233;mentaire &#224; la volatilit&#233; GARCH.</p>
-    <div id="chart-crosscorr" style="height:320px"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-label">Corr&#233;lation moyenne inter-actifs &#8212; stress vs calme (hypoth&#232;se de contagion)</div>
-    <p class="chart-note">Corr&#233;lation moyenne des rendements journaliers entre chaque paire d'actifs, calcul&#233;e s&#233;par&#233;ment sur deux sous-&#233;chantillons de jours SP&#201;CIFIQUES &#192; LA PAIRE (pas un mask global sur les 5 actifs) : Stress = au moins l'un des deux actifs de la paire en r&#233;gime stress ce jour-l&#224;. Calme = les deux actifs de la paire simultan&#233;ment en r&#233;gime calme ce jour-l&#224;. Hypoth&#232;se test&#233;e : la corr&#233;lation entre deux actifs augmente en p&#233;riode de stress (contagion).</p>
-    <table><thead><tr><th>Paire</th><th>Corr. (stress)</th><th>n</th><th>Corr. (calme)</th><th>n</th></tr></thead>
-    <tbody id="pairs-body"></tbody></table>
-    <p class="chart-note">* = significatif &#224; 95% (test de Fisher, seuil propre &#224; chaque colonne car n diff&#232;re par paire). Survolez une valeur pour voir le seuil exact.</p>
   </div>
 </div>
 
@@ -490,6 +387,12 @@ const BG='#16213e', GRID='rgba(255,255,255,0.05)', FONT={{family:'Segoe UI,sans-
 const baseLayout=()=>({{paper_bgcolor:BG,plot_bgcolor:BG,font:FONT,hovermode:'x unified',
   legend:{{bgcolor:'rgba(0,0,0,0)',font:{{size:10}}}},
   xaxis:{{gridcolor:GRID,zerolinecolor:GRID,type:'date',rangeslider:{{visible:false}}}}}});
+// Ligne de r&#233;f&#233;rence y=1 du panneau volume (volume_norm est un ratio &#224; sa propre moyenne 30j) —
+// constante partag&#233;e entre initAssetTab (trac&#233; initial) et refreshTab (qui recalcule les fonds
+// de r&#233;gime via Plotly.relayout({{shapes}}) et &#233;craserait cette ligne si elle n'&#233;tait pas
+// r&#233;-ajout&#233;e &#224; chaque refresh).
+const VOLUME_REF_LINE = {{type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:1,y1:1,
+  line:{{color:'#2c3e50',width:1,dash:'dot'}}}};
 
 // Un ticker comme "ZN=F" contient un '=' invalide dans un s&#233;lecteur/id CSS non &#233;chapp&#233;
 // (document.querySelectorAll('.regime-cb-ZN=F') l&#232;ve une exception qui casse en silence toute
@@ -554,6 +457,9 @@ function buildAnnotations(tabId) {{
 function refreshTab(tabId) {{
   const shapes = buildShapes(tabId);
   ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{SHORT_OF[tabId]}}`, {{shapes}}));
+  // chart-volume a en plus sa ligne de r&#233;f&#233;rence y=1, propre &#224; ce panneau (cf. VOLUME_REF_LINE) —
+  // il faut la r&#233;-ajouter ici, sinon ce relayout(shapes) la remplacerait par les seuls fonds de r&#233;gime.
+  Plotly.relayout(`chart-volume-${{SHORT_OF[tabId]}}`, {{shapes: shapes.concat([VOLUME_REF_LINE])}});
   const {{annotations, overflow}} = buildAnnotations(tabId);
   Plotly.relayout(`chart-price-${{SHORT_OF[tabId]}}`, {{annotations}});
   const msg = document.getElementById(`declutter-${{SHORT_OF[tabId]}}`);
@@ -611,7 +517,7 @@ function applyZoom(tabId, scale, anchorDateStr) {{
     r1 = clampDate(end, d.first_date, d.last_date);
   }}
   TABS[tabId]._programmatic = true;
-  ['price','vol','cp'].forEach(k => Plotly.relayout(`chart-${{k}}-${{SHORT_OF[tabId]}}`, {{
+  ['price','vol','cp','volume'].forEach(k => Plotly.relayout(`chart-${{k}}-${{SHORT_OF[tabId]}}`, {{
     'xaxis.range[0]': r0, 'xaxis.range[1]': r1,
   }}));
   TABS[tabId]._programmatic = false;
@@ -647,6 +553,24 @@ function initAssetTab(tabId) {{
     Object.assign({{}},baseLayout(),{{margin:{{l:60,r:18,t:8,b:38}},shapes,
       yaxis:{{title:'Vol (%)',gridcolor:GRID}}}}), {{responsive:true,displayModeBar:false}});
 
+  // showlegend:false volontaire : seule trace du panneau (le titre de la carte suffit à la
+  // labelliser), une légende cliquable permettrait de la masquer par un clic accidentel — le
+  // panneau doit rester affiché en permanence, sans mécanisme de désélection.
+  const volumeTrace = {{type:'bar',x:d.dates,y:d.volume_norm,
+    marker:{{color:'#7f8c8d'}},name:'Volume (norm.)',showlegend:false}};
+  // xaxis.range forcé explicitement à [first_date, last_date] : un graphique en barres réserve
+  // par défaut une demi-largeur de barre de marge de chaque côté (contrairement aux graphiques en
+  // lignes prix/vol/BOCPD), ce qui décale légèrement son échelle au premier rendu (avant tout
+  // zoom) si on laisse Plotly l'autodéterminer — vérifié : ~12h de décalage sur chaque bord.
+  // margin.r:144 (au lieu de 18) : avec showlegend:false, la zone de tracé se serait sinon
+  // élargie pour occuper l'espace auparavant réservé à la légende (mesuré à ~144px avant sa
+  // suppression), décalant horizontalement ce panneau par rapport à vol/prix/BOCPD juste
+  // au-dessus/en-dessous — la marge est conservée à l'identique, seule la légende disparaît.
+  Plotly.newPlot(`chart-volume-${{SHORT_OF[tabId]}}`, [volumeTrace],
+    Object.assign({{}},baseLayout(),{{margin:{{l:60,r:144,t:8,b:38}},shapes:shapes.concat([VOLUME_REF_LINE]),
+      xaxis:Object.assign({{}},baseLayout().xaxis,{{range:[d.first_date,d.last_date]}}),
+      yaxis:{{title:'x moyenne 30j',gridcolor:GRID}}}}), {{responsive:true,displayModeBar:false}});
+
   const cpTrace = {{type:'scatter',x:d.dates,y:d.cp,mode:'lines',line:{{color:'#f39c12',width:1.5}},
     fill:'tozeroy',fillcolor:'rgba(243,156,18,0.12)',name:'changepoint_prob',showlegend:true}};
   const threshTrace = {{type:'scatter',x:[d.dates[0],d.dates[d.dates.length-1]],y:[0.5,0.5],
@@ -681,6 +605,7 @@ function initAssetTab(tabId) {{
       // updateComposition/buildAnnotations.
       const r0 = String(e['xaxis.range[0]']).slice(0,10), r1 = String(e['xaxis.range[1]']).slice(0,10);
       Plotly.relayout(`chart-vol-${{SHORT_OF[tabId]}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
+      Plotly.relayout(`chart-volume-${{SHORT_OF[tabId]}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
       Plotly.relayout(`chart-cp-${{SHORT_OF[tabId]}}`, {{'xaxis.range[0]':r0,'xaxis.range[1]':r1}});
       TABS[tabId].currentXRange = [r0, r1];
       onRangeChange(tabId);
@@ -731,110 +656,46 @@ function initComparisonTab() {{
     yaxis:{{title:'Dur&#233;e (jours calendaires)',gridcolor:GRID}},
   }}), {{responsive:true,displayModeBar:false}});
 
-  // ── Vol avant/apr&#232;s un passage en stress (chiffre cl&#233; + barres divergentes) ──────────
-  function renderVolBeforeAfter() {{
-    const shorts = ASSETS.map(a => a.short);
-    let rows = shorts.map((s,i) => ({{
-      short: s,
-      label: ASSETS[i].label,
-      color: ASSETS[i].color,
-      ...COMPARISON.vol_before_after[s].into_stress,
-    }}));
-
-    // Trier par amplitude de variation, du plus fort au plus faible (barres divergentes lisibles)
-    rows = rows.filter(r => r.delta_pct !== null).sort((a,b) => b.delta_pct - a.delta_pct);
-
-    // ── Chiffre clé en tête : moyenne des deltas ────────────────────────────────
-    const avgDelta = rows.reduce((s,r) => s + r.delta_pct, 0) / rows.length;
-    const headlineEl = document.getElementById('vol-headline-value');
-    const labelEl = document.getElementById('vol-headline-label');
-    headlineEl.textContent = `${{avgDelta >= 0 ? '+' : ''}}${{avgDelta.toFixed(1)}}%`;
-    headlineEl.className = 'headline-value ' + (avgDelta >= 0 ? 'up' : 'down');
-    labelEl.textContent = avgDelta >= 0
-      ? "La vol est plus forte APRÈS le passage en stress : elle suit la crise, elle ne l'annonce pas."
-      : "La vol est plus forte AVANT le passage en stress : un signal d'alerte utile.";
-
-    // ── Barres divergentes horizontales, une valeur par actif (couleur = actif, cf. l&#233;gende ci-dessus) ──
-    const trace = {{
-      type:'bar', orientation:'h',
-      x: rows.map(r => r.delta_pct),
-      y: rows.map(r => r.short),
-      marker: {{color: rows.map(r => r.color)}},
-      text: rows.map(r => `${{r.delta_pct >= 0 ? '+' : ''}}${{r.delta_pct.toFixed(1)}}%`),
-      textposition: 'outside',
-      cliponaxis: false,
-      hovertemplate: '%{{y}} : %{{x:.1f}}%<extra></extra>',
+  // ── Étude d'événement : volatilité indexée autour de l'entrée en stress ──────────
+  const es = COMPARISON.event_study;
+  const esTraces = Object.keys(es).map(short => {{
+    const a = es[short];
+    return {{
+      type: 'scatter', mode: 'lines', name: short,
+      x: a.rel_day, y: a.sigma_index,
+      line: {{ color: a.color, width: 2 }},
+      legendgroup: short,
+      hovertemplate: `${{short}} : %{{y:.1f}}%<extra></extra>`,
     }};
-    Plotly.newPlot('chart-vol-before-after', [trace], Object.assign({{}}, baseLayout(), {{
-      margin: {{l:70,r:50,t:10,b:34}},
-      xaxis: {{title:'Variation de volatilit&#233;, apr&#232;s vs avant (%)',gridcolor:GRID,zeroline:true,zerolinewidth:2,zerolinecolor:'#566573'}},
-      yaxis: {{type:'category',gridcolor:GRID,categoryorder:'array',categoryarray:rows.map(r => r.short).slice().reverse(),automargin:true}},
-      showlegend: false,
-    }}), {{responsive:true,displayModeBar:false}});
-
-    // ── Détail brut dans la table repliable ──────────────────────────────────────
-    const tbody = document.getElementById('vol-before-after-table');
-    tbody.innerHTML = '';
-    shorts.forEach(s => {{
-      const d = COMPARISON.vol_before_after[s].into_stress;
-      const n = COMPARISON.vol_before_after[s].n_stress;
-      const tr = document.createElement('tr');
-      const fmt = v => v !== null ? v.toFixed(3) : '&#8212;';
-      tr.innerHTML = `<td>${{s}}</td><td>${{fmt(d.avant)}}</td><td>${{fmt(d.apres)}}</td>` +
-        `<td>${{d.delta_pct !== null ? (d.delta_pct>=0?'+':'')+d.delta_pct.toFixed(1)+'%' : '&#8212;'}}</td><td>${{n}}</td>`;
-      tbody.appendChild(tr);
-    }});
-  }}
-
-  renderVolBeforeAfter();
-
-  // ── Corr&#233;lation glissante inter-actifs (s&#233;lecteur rendements/vol/volume/swing) ─────────
-  const CC_PALETTE = ['#f7931a','#627eea','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c','#e74c3c','#f1c40f','#95a5a6'];
-  const CC_AXIS_TITLES = {{
-    returns: 'Corr&#233;lation rendements (63j)',
-    volatility: 'Corr&#233;lation volatilit&#233; &#963;&#8339; (63j)',
-    volume: 'Corr&#233;lation volume relatif (63j)',
-    swing: 'Corr&#233;lation swing (63j)',
-  }};
-  const CC_INTRA_CLASS = new Set(['BTC-ETH', 'ZN-TLT']);
-  function buildCcTraces(signal) {{
-    const cc = COMPARISON.cross_correlation[signal];
-    return Object.keys(cc.series).map((col,i) => ({{
-      type:'scatter', mode:'lines', x:cc.dates, y:cc.series[col], name:col,
-      line:{{width:1.5,color:CC_PALETTE[i % CC_PALETTE.length]}},
-      visible: CC_INTRA_CLASS.has(col) ? 'legendonly' : true,
-    }}));
-  }}
-  const stressShapes = COMPARISON.stress_bands.map(b => ({{
-    type:'rect',xref:'x',yref:'paper',x0:b.x0,x1:b.x1,y0:0,y1:1,
-    fillcolor:'rgba(231,76,60,0.14)',line:{{width:0}},layer:'below'}}));
-  function ccLayout(signal) {{
-    return Object.assign({{}},baseLayout(),{{
-      margin:{{l:50,r:18,t:8,b:38}}, shapes:stressShapes,
-      yaxis:{{title:CC_AXIS_TITLES[signal],gridcolor:GRID,range:[-1,1]}},
-    }});
-  }}
-  let ccSignal = 'returns';
-  Plotly.newPlot('chart-crosscorr', buildCcTraces(ccSignal), ccLayout(ccSignal),
-    {{responsive:true,displayModeBar:false}});
-  document.querySelectorAll('.cc-btn').forEach(btn => {{
-    btn.addEventListener('click', () => {{
-      document.querySelectorAll('.cc-btn').forEach(b => b.classList.remove('cc-btn-active'));
-      btn.classList.add('cc-btn-active');
-      ccSignal = btn.dataset.signal;
-      Plotly.react('chart-crosscorr', buildCcTraces(ccSignal), ccLayout(ccSignal));
-    }});
   }});
+  const esMarkers = Object.keys(es).map(short => {{
+    const a = es[short];
+    const y = a.rel_day.map(d => d === a.first_reaction_day ? a.sigma_index[a.rel_day.indexOf(d)] : null);
+    return {{
+      type: 'scatter', mode: 'markers', name: short, legendgroup: short, showlegend: false,
+      x: a.rel_day, y: y,
+      marker: {{ color: a.color, size: 11, symbol: 'diamond', line: {{ color: '#fff', width: 1 }} }},
+      hovertemplate: `${{short}} : premi&#232;re r&#233;action au jour %{{x}}<extra></extra>`,
+    }};
+  }});
+  Plotly.newPlot('chart-event-study', [...esTraces, ...esMarkers], Object.assign({{}}, baseLayout(), {{
+    margin: {{ l: 55, r: 18, t: 10, b: 45 }},
+    xaxis: {{ title: 'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
+              gridcolor: GRID, dtick: 1, zeroline: false }},
+    yaxis: {{ title: '&#201;cart de volatilit&#233; vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)',
+              gridcolor: GRID, zeroline: true, zerolinewidth: 2, zerolinecolor: '#566573' }},
+    shapes: [{{ type: 'line', x0: 0, x1: 0, xref: 'x', y0: 0, y1: 1, yref: 'paper',
+               line: {{ color: '#7f8c8d', width: 1, dash: 'dash' }} }}],
+  }}), {{ responsive: true, displayModeBar: false }});
 
-  const pbody = document.getElementById('pairs-body');
-  const fmtSig = (v, sig, rcrit) => v === null ? '&#8212;'
-    : `<span title="seuil |r| > ${{rcrit !== null ? rcrit.toFixed(3) : '&#8212;'}}">${{v.toFixed(3)}}${{sig ? '<span class="sig-star">*</span>' : ''}}</span>`;
-  COMPARISON.pairs_table.forEach(p => {{
+  const esBody = document.getElementById('event-study-table');
+  Object.keys(es).forEach(short => {{
+    const a = es[short];
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${{p.pair}}</td>` +
-      `<td>${{fmtSig(p.stress, p.stress_sig, p.r_crit_stress)}}</td><td>${{p.n_stress}}</td>` +
-      `<td>${{fmtSig(p.calm, p.calm_sig, p.r_crit_calm)}}</td><td>${{p.n_calm}}</td>`;
-    pbody.appendChild(tr);
+    tr.innerHTML = `<td>${{short}}</td>` +
+      `<td>${{a.first_reaction_day !== null ? (a.first_reaction_day >= 0 ? '+' : '') + a.first_reaction_day + ' j' : 'aucun &#233;cart significatif d&#233;tect&#233;'}}</td>` +
+      `<td>${{a.n_events}}</td>`;
+    esBody.appendChild(tr);
   }});
 }}
 
@@ -884,6 +745,11 @@ def _asset_panel_html(asset: dict, first_date: str, last_date: str) -> str:
   <div class="card">
     <div class="card-label">Volatilit&#233; conditionnelle GARCH(1,1) &middot; &#963;<sub>t</sub> (violet) et Vol-of-Vol rolling 20j (orange)</div>
     <div id="chart-vol-{dom}" style="height:140px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Volume normalis&#233; (ratio &#224; la moyenne 30j)</div>
+    <div id="chart-volume-{dom}" style="height:120px"></div>
   </div>
 
   <div class="card">

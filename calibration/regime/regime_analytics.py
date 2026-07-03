@@ -85,10 +85,15 @@ def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
 # ── 4.3 Vol comme signal avancé d'un changement de régime (étude d'événement) ───
 
 def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment: str = "start",
-                                   only_into: str | None = None) -> pd.DataFrame:
+                                   only_into: str | None = None, column: str = "sigma_t") -> pd.DataFrame:
     """
-    Étude d'événement : profil moyen de sigma_t autour des transitions de régime.
+    Étude d'événement : profil moyen d'une colonne (sigma_t par défaut) autour des transitions
+    de régime.
 
+    column : nom de la colonne de df à profiler (ex. "sigma_t" pour la volatilité, "volume_norm"
+    pour le volume normalisé). N'affecte que la source des données ; les colonnes de sortie
+    restent nommées mean_sigma/std_sigma quel que soit `column`, pour limiter le risque de
+    régression sur les appelants existants.
     alignment : "start" (jour 0 = premier jour du nouveau régime) ou "end" (jour 0 = dernier
     jour de l'ancien régime, juste avant la transition).
     only_into : si fourni (ex. "stress"), ne considère que les transitions VERS ce régime
@@ -100,8 +105,8 @@ def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment:
 
     Pour chaque segment de segment_regimes (sauf le premier segment de l'historique en
     alignment="start", ou le dernier en alignment="end" — ils n'ont pas d'événement "avant"/
-    "après" dans les données), extraire sigma_t sur [event_pos - window, event_pos + window] en
-    position entière (iloc), aligné sur un axe rel_day = -window..+window. Si la fenêtre déborde
+    "après" dans les données), extraire la colonne sur [event_pos - window, event_pos + window]
+    en position entière (iloc), aligné sur un axe rel_day = -window..+window. Si la fenêtre déborde
     des bornes du DataFrame, le segment est ignoré (pas de padding artificiel). Les événements
     retenus sont ensuite empilés et moyennés (et écart-type) colonne par colonne (= jour relatif
     par jour relatif) pour obtenir le profil moyen.
@@ -129,7 +134,7 @@ def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment:
         event_dates = segments["end"]
         regime_at_event = segments["regime"].shift(-1)  # régime du segment SUIVANT
 
-    sigma = df["sigma_t"]
+    sigma = df[column]
     profiles = []
     for i in candidate_positions:
         if only_into is not None and regime_at_event.iloc[i] != only_into:
