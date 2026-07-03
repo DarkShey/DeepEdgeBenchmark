@@ -3,7 +3,12 @@ import pandas as pd
 
 from calibration.regime.regime_analytics import (
     correlation_significance,
+    ensure_stationary,
     fisher_r_critical,
+    fisher_r_critical_bonferroni,
+    granger_causality_vol_to_stress,
+    granger_causality_volume_to_stress,
+    lead_lag_cross_correlation,
     market_mask_intersection,
     market_mask_union,
     pairwise_stress_calm_correlation,
@@ -282,3 +287,165 @@ def test_rolling_cross_correlation_pairs_count():
     assert not valid.empty
     for col in result.columns:
         assert result[col].dropna().between(-1, 1).all()
+
+
+def _make_granger_synthetic_data(seed, column, lag=3, linked=True):
+    """
+    Construit un DataFrame synthétique {column, p_stress}.
+    linked=True : p_stress dépend fortement de `column` décalé de `lag` jours (+ bruit faible)
+    -> un vrai lien de Granger existe. linked=False : les deux séries sont indépendantes -> aucun
+    lien ne doit être détecté. Réutilisé pour tester granger_causality_vol_to_stress (column=
+    "sigma_t") et granger_causality_volume_to_stress (column="volume_norm") de façon identique.
+    """
+    rng = np.random.RandomState(seed)
+    n = 500
+    source = rng.uniform(1.0, 5.0, n)
+    if linked:
+        p_stress = np.empty(n)
+        p_stress[lag:] = 0.8 * (source[:-lag] / 5.0) + rng.normal(0, 0.02, n - lag)
+        p_stress[:lag] = rng.uniform(0.1, 0.3, lag)
+    else:
+        p_stress = rng.uniform(0.0, 1.0, n)
+    return pd.DataFrame({column: source, "p_stress": p_stress})
+
+
+def test_granger_causality_vol_to_stress_detects_real_lagged_relationship():
+    df = _make_granger_synthetic_data(seed=0, column="sigma_t", lag=3, linked=True)
+
+    result = granger_causality_vol_to_stress(df, maxlag=5)
+
+    assert set(result.keys()) == {
+        "adf_source_p", "source_differenced", "adf_pstress_p", "pstress_differenced",
+        "p_values", "n_obs",
+    }
+    assert set(result["p_values"].keys()) == set(range(1, 6))
+    assert min(result["p_values"].values()) < 0.01
+
+
+def test_granger_causality_vol_to_stress_no_link_when_independent():
+    # Seuil corrigé pour comparaisons multiples (Bonferroni, 0.05/5 = 0.01) — sinon le test
+    # serait un faux positif à force de scanner 5 lags.
+    df = _make_granger_synthetic_data(seed=1, column="sigma_t", linked=False)
+
+    result = granger_causality_vol_to_stress(df, maxlag=5)
+
+    assert min(result["p_values"].values()) > 0.01
+
+
+def test_granger_causality_volume_to_stress_detects_real_lagged_relationship():
+    # Même construction que pour la vol (Q1), appliquée à volume_norm (Q2) — même rigueur,
+    # même méthode, prouve que le wrapper volume n'est pas câblé sur la mauvaise colonne.
+    df = _make_granger_synthetic_data(seed=0, column="volume_norm", lag=3, linked=True)
+
+    result = granger_causality_volume_to_stress(df, maxlag=5)
+
+    assert set(result.keys()) == {
+        "adf_source_p", "source_differenced", "adf_pstress_p", "pstress_differenced",
+        "p_values", "n_obs",
+    }
+    assert min(result["p_values"].values()) < 0.01
+
+
+def test_granger_causality_volume_to_stress_no_link_when_independent():
+    df = _make_granger_synthetic_data(seed=1, column="volume_norm", linked=False)
+
+    result = granger_causality_volume_to_stress(df, maxlag=5)
+
+    assert min(result["p_values"].values()) > 0.01
+
+
+def test_lead_lag_cross_correlation_detects_b_leading_a():
+    # b(t) précède a(t) de 2 jours : a(t) = b(t-2) + bruit faible -> le pic de |corrélation|
+    # doit être à lag=+2 (convention : lag>0 = b décalée dans le passé corrèle avec a aujourd'hui,
+    # donc b passé explique a présent -> b mène a).
+    rng = np.random.RandomState(0)
+    n = 300
+    idx = pd.date_range("2020-01-01", periods=n, freq="D")
+    b = pd.Series(rng.normal(0, 1, n), index=idx)
+    a_vals = np.empty(n)
+    a_vals[2:] = b.values[:-2] + rng.normal(0, 0.05, n - 2)
+    a_vals[:2] = rng.normal(0, 1, 2)
+    a = pd.Series(a_vals, index=idx)
+
+    result = lead_lag_cross_correlation(a, b, max_lag=5)
+    ccf = result["ccf"]
+
+    peak_row = ccf.loc[ccf["corr"].abs().idxmax()]
+    assert int(peak_row["lag"]) == 2
+    assert peak_row["corr"] > 0.9
+
+
+def test_lead_lag_cross_correlation_detects_a_leading_b():
+    # a(t) précède b(t) de 3 jours : b(t) = a(t-3) + bruit faible -> le pic doit être à lag=-3
+    # (convention symétrique : lag<0 = b décalée dans le futur corrèle avec a aujourd'hui,
+    # donc a présent explique b futur -> a mène b).
+    rng = np.random.RandomState(1)
+    n = 300
+    idx = pd.date_range("2020-01-01", periods=n, freq="D")
+    a = pd.Series(rng.normal(0, 1, n), index=idx)
+    b_vals = np.empty(n)
+    b_vals[3:] = a.values[:-3] + rng.normal(0, 0.05, n - 3)
+    b_vals[:3] = rng.normal(0, 1, 3)
+    b = pd.Series(b_vals, index=idx)
+
+    result = lead_lag_cross_correlation(a, b, max_lag=5)
+    ccf = result["ccf"]
+
+    peak_row = ccf.loc[ccf["corr"].abs().idxmax()]
+    assert int(peak_row["lag"]) == -3
+    assert peak_row["corr"] > 0.9
+
+
+def test_lead_lag_cross_correlation_n_decreases_at_larger_lags():
+    idx = pd.date_range("2020-01-01", periods=100, freq="D")
+    rng = np.random.RandomState(2)
+    a = pd.Series(rng.normal(0, 1, 100), index=idx)
+    b = pd.Series(rng.normal(0, 1, 100), index=idx)
+
+    result = lead_lag_cross_correlation(a, b, max_lag=5)
+    ccf = result["ccf"]
+
+    n_at_lag0 = ccf.loc[ccf["lag"] == 0, "n"].iloc[0]
+    n_at_lag5 = ccf.loc[ccf["lag"] == 5, "n"].iloc[0]
+    assert n_at_lag0 == 100
+    assert n_at_lag5 < n_at_lag0
+
+
+def test_ensure_stationary_leaves_stationary_series_unchanged():
+    # Bruit blanc : déjà stationnaire (ADF rejette la racine unitaire) -> pas de différenciation.
+    rng = np.random.RandomState(0)
+    n = 300
+    idx = pd.date_range("2020-01-01", periods=n, freq="D")
+    series = pd.Series(rng.normal(0, 1, n), index=idx)
+
+    result, adf_p, differenced = ensure_stationary(series)
+
+    assert differenced is False
+    assert adf_p < 0.05
+    assert len(result) == n
+
+
+def test_ensure_stationary_differences_a_random_walk():
+    # Marche aléatoire (cumsum de bruit) : non stationnaire par construction (ADF ne rejette pas
+    # la racine unitaire) -> doit être différenciée, ce qui la ramène à du bruit stationnaire.
+    rng = np.random.RandomState(1)
+    n = 300
+    idx = pd.date_range("2020-01-01", periods=n, freq="D")
+    series = pd.Series(np.cumsum(rng.normal(0, 1, n)), index=idx)
+
+    result, adf_p, differenced = ensure_stationary(series)
+
+    assert differenced is True
+    assert adf_p > 0.05
+    assert len(result) == n - 1  # diff().dropna() perd la première observation
+
+
+def test_fisher_r_critical_bonferroni_more_conservative_than_uncorrected():
+    # Corriger pour 11 tests (comme les 11 lags de lead_lag_cross_correlation) doit relever le
+    # seuil |r| requis — sinon la correction ne sert à rien.
+    n = 500
+    assert fisher_r_critical_bonferroni(n, n_tests=11) > fisher_r_critical(n)
+
+
+def test_fisher_r_critical_bonferroni_none_for_small_n():
+    assert fisher_r_critical_bonferroni(3, n_tests=11) is None

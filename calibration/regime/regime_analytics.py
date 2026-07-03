@@ -20,6 +20,20 @@ BRIEF_dashboard_v6_corrections.md §3) :
     paire est conditionnée sur son propre sous-échantillon stress/calme (cf.
     BRIEF_dashboard_v9_corrections.md §2) — pas sur un mask global exigeant une condition
     simultanée sur tous les actifs du jeu de données, qui écrase artificiellement l'échantillon.
+  - test formel de causalité (granger_causality_vol_to_stress / granger_causality_volume_to_stress) :
+    la volatilité, puis le volume, passés aident-ils réellement à prédire le régime stress futur ?
+    Contrairement à regime_transition_vol_profile (descriptif, "indicatif"), c'est un vrai test
+    statistique (ADF + Granger + correction pour comparaisons multiples côté appelant).
+  - entre volatilité et volume, lequel bouge en premier EN GÉNÉRAL, pas seulement autour des
+    débuts de régime (lead_lag_cross_correlation) : corrélation croisée ±N jours sur les
+    variations journalières, question distincte de granger_causality_* (celles-ci sont
+    conditionnées aux transitions vers le régime stress ; celle-ci porte sur tout l'historique).
+
+ensure_stationary (test ADF + différenciation conditionnelle) et fisher_r_critical_bonferroni
+(seuil de Fisher corrigé pour comparaisons multiples) sont les deux prérequis statistiques
+partagés par granger_causality_*_to_stress et lead_lag_cross_correlation — tout test qui scanne
+plusieurs lags sur les mêmes données doit vérifier la stationnarité en amont et corriger son
+seuil de significativité, sous peine de p-values/corrélations non interprétables.
 """
 
 import itertools
@@ -27,6 +41,7 @@ import math
 
 import numpy as np
 import pandas as pd
+from statsmodels.tsa.stattools import adfuller, grangercausalitytests
 
 
 # ── 4.1 Largeur des régimes ─────────────────────────────────────────────────────
@@ -177,6 +192,63 @@ def rolling_cross_correlation(returns_by_asset: dict, window: int = 63) -> pd.Da
     return out
 
 
+def lead_lag_cross_correlation(series_a: pd.Series, series_b: pd.Series, max_lag: int = 5) -> dict:
+    """
+    Corrélation croisée entre deux séries (typiquement des VARIATIONS journalières déjà
+    différenciées par l'appelant — sigma_t et volume_norm sont chacune autocorrélées à leur
+    propre niveau, ce qui gonflerait artificiellement toute corrélation calculée sur les niveaux
+    bruts), sur un éventail de décalages -max_lag à +max_lag jours de trading.
+
+    Vérifie néanmoins la stationnarité de chaque série reçue (ADF, cf. ensure_stationary) et la
+    différencie une seconde fois si elle ne l'est toujours pas — un filet de sécurité, pas le
+    mécanisme principal : la différenciation "officielle" (variations journalières) reste la
+    responsabilité de l'appelant, exigée par la question posée (cf. ci-dessous), pas seulement
+    par la stationnarité. Sans cette vérification, les corrélations calculées sur des séries non
+    stationnaires ne seraient pas interprétables (corrélation fallacieuse).
+
+    Question à laquelle ça répond : entre deux signaux (typiquement vol et volume), lequel
+    bouge en premier EN GÉNÉRAL — pas seulement autour d'un événement particulier (contrairement
+    à regime_transition_vol_profile / granger_causality_*_to_stress, qui conditionnent sur les
+    transitions vers le régime stress) ?
+
+    Convention de signe (à ne pas confondre) :
+      - lag > 0 : corrèle series_a(t) avec series_b(t - lag), c'est-à-dire series_b DÉCALÉE DANS
+        LE PASSÉ. Une corrélation élevée ici signifie que series_b PASSÉE est liée à series_a
+        AUJOURD'HUI -> series_b précède (mène) series_a.
+      - lag < 0 : corrèle series_a(t) avec series_b(t + |lag|), c'est-à-dire series_b DÉCALÉE DANS
+        LE FUTUR. Une corrélation élevée ici signifie que series_a AUJOURD'HUI est liée à
+        series_b FUTURE -> series_a précède (mène) series_b.
+      - lag = 0 : corrélation contemporaine (même jour), généralement la plus forte des deux
+        séries (fait stylisé bien connu vol/volume) — ne pas la confondre avec un effet de
+        décalage réel.
+
+    Retourne {"ccf": DataFrame[lag, corr, n], "adf_a_p": float, "a_differenced": bool,
+    "adf_b_p": float, "b_differenced": bool}. n (par lag) sert à calculer un seuil de
+    significativité avec fisher_r_critical(n) ou, si plusieurs lags sont scannés (comme ici),
+    fisher_r_critical_bonferroni(n, n_tests=2*max_lag+1) — cf. appelant.
+    """
+    a, adf_a_p, a_differenced = ensure_stationary(series_a)
+    b, adf_b_p, b_differenced = ensure_stationary(series_b)
+
+    common = a.index.intersection(b.index)
+    a = a.loc[common]
+    b = b.loc[common]
+
+    rows = []
+    for lag in range(-max_lag, max_lag + 1):
+        b_shifted = b.shift(lag)
+        valid = pd.concat([a, b_shifted], axis=1).dropna()
+        n = len(valid)
+        corr = float(valid.iloc[:, 0].corr(valid.iloc[:, 1])) if n > 3 else float("nan")
+        rows.append({"lag": lag, "corr": corr, "n": n})
+
+    return {
+        "ccf": pd.DataFrame(rows),
+        "adf_a_p": adf_a_p, "a_differenced": bool(a_differenced),
+        "adf_b_p": adf_b_p, "b_differenced": bool(b_differenced),
+    }
+
+
 def market_mask_union(masks: dict) -> pd.Series:
     """Union booléenne (OR) d'un dict {ticker: pd.Series bool} aligné sur l'index commun."""
     aligned = pd.concat(masks, axis=1, join="inner")
@@ -289,3 +361,107 @@ def correlation_significance(r: float, n: int, z_crit: float = 1.959964) -> dict
     if r_crit is None:
         return {"r_crit": None, "significant": False, "n": n}
     return {"r_crit": r_crit, "significant": bool(abs(r) > r_crit), "n": n}
+
+
+def fisher_r_critical_bonferroni(n: int, n_tests: int, alpha: float = 0.05) -> float | None:
+    """
+    Comme fisher_r_critical, mais avec le seuil alpha corrigé pour comparaisons multiples
+    (Bonferroni : alpha / n_tests) — à utiliser quand plusieurs tests sont scannés sur les
+    mêmes données (ex. lead_lag_cross_correlation sur 2*max_lag+1 lags), pour éviter de conclure
+    à la significativité d'un pic isolé dû uniquement au nombre de tests effectués (le même
+    principe déjà appliqué à granger_causality_*_to_stress sur ses lags, cf. appelant côté
+    dashboard_builder.py — Bonferroni y est appliqué directement sur les p-values, ici il faut
+    d'abord convertir le alpha corrigé en seuil |r| via la transformation de Fisher).
+    """
+    from scipy.stats import norm
+    z_crit = float(norm.ppf(1 - (alpha / n_tests) / 2))
+    return fisher_r_critical(n, z_crit)
+
+
+def ensure_stationary(series: pd.Series) -> tuple[pd.Series, float, bool]:
+    """
+    Vérifie la stationnarité d'une série (test ADF, Augmented Dickey-Fuller) et la différencie
+    (diff().dropna()) si l'ADF ne rejette pas l'hypothèse de racine unitaire (p > 0.05).
+
+    Prérequis partagé par tout test qui suppose des séries stationnaires — sans ça, les p-values
+    (Granger) ou les corrélations (lead_lag_cross_correlation) calculées sur des séries non
+    stationnaires ne sont pas interprétables ("spurious regression"/corrélation fallacieuse).
+
+    Retourne (série_résultante, p_value_ADF_de_la_série_ORIGINALE, a_été_différenciée).
+    """
+    p_value = float(adfuller(series.dropna(), autolag="AIC")[1])
+    differenced = p_value > 0.05
+    out = series.diff().dropna() if differenced else series
+    return out, p_value, differenced
+
+
+# ── 4.6 Test formel : un signal passé (vol ou volume) cause-t-il (au sens de Granger) le régime stress ? ──
+
+def _granger_causality_column_to_stress(df: pd.DataFrame, column: str, maxlag: int) -> dict:
+    """
+    Implémentation générique du test formel de causalité de Granger : la colonne `column`
+    (sigma_t pour la Q1 vol, volume_norm pour la Q2 volume) retardée aide-t-elle à prédire
+    p_stress aujourd'hui, au-delà de ce que p_stress explique déjà de lui-même (persistance) ?
+
+    Contrairement à regime_transition_vol_profile (profil descriptif, "indicatif, pas un test
+    statistique formel"), ceci EST un test statistique formel, avec ses prérequis respectés :
+
+    1. Test ADF (Augmented Dickey-Fuller) de stationnarité sur `column` et p_stress — un test de
+       Granger sur des séries non stationnaires produit des p-values non interprétables
+       (régression fallacieuse, "spurious regression").
+    2. Différenciation (diff().dropna()) de chaque série dont l'ADF ne rejette pas l'hypothèse de
+       racine unitaire (p > 0.05).
+    3. Test F de causalité de Granger (statsmodels.tsa.stattools.grangercausalitytests) aux lags
+       1..maxlag, sur les séries stationnaires (différenciées si besoin).
+
+    Ne teste QUE le sens `column` -> stress (économiquement significatif). Le sens inverse
+    (stress -> `column`) ne l'est pas : p_stress est en partie dérivé de sigma_t (et donc
+    indirectement de volume_norm, corrélé) par le HMM (RegimeHMM._assign_regime_labels), donc
+    régime persistant et signal élevé co-varient mécaniquement par construction — un test dans
+    ce sens ne prouverait rien de causal.
+
+    Retourne {"adf_source_p": float, "source_differenced": bool, "adf_pstress_p": float,
+    "pstress_differenced": bool, "p_values": {lag: p_value}, "n_obs": int}.
+
+    Note de rigueur : les p-values à chaque lag ne sont PAS indépendantes (tester 10 lags sur les
+    mêmes données), donc appliquer une correction pour comparaisons multiples (ex. Bonferroni,
+    seuil = 0.05 / maxlag) avant de conclure à la significativité d'un lag précis — cf. appelant.
+    """
+    data = df[[column, "p_stress"]].dropna()
+
+    source, adf_source_p, source_differenced = ensure_stationary(data[column])
+    pstress, adf_pstress_p, pstress_differenced = ensure_stationary(data["p_stress"])
+
+    common = source.index.intersection(pstress.index)
+    gc_df = pd.DataFrame({"pstress": pstress.loc[common], "source": source.loc[common]}).dropna()
+
+    gc_result = grangercausalitytests(gc_df[["pstress", "source"]], maxlag=maxlag, verbose=False)
+    p_values = {lag: float(gc_result[lag][0]["ssr_ftest"][1]) for lag in range(1, maxlag + 1)}
+
+    return {
+        "adf_source_p": adf_source_p,
+        "source_differenced": bool(source_differenced),
+        "adf_pstress_p": adf_pstress_p,
+        "pstress_differenced": bool(pstress_differenced),
+        "p_values": p_values,
+        "n_obs": len(gc_df),
+    }
+
+
+def granger_causality_vol_to_stress(df: pd.DataFrame, maxlag: int = 10) -> dict:
+    """
+    Question 1 : la volatilité (sigma_t) passée cause-t-elle (au sens de Granger) le régime
+    stress futur ? Cf. _granger_causality_column_to_stress pour la méthode complète (ADF +
+    Granger, avec différenciation si nécessaire).
+    """
+    return _granger_causality_column_to_stress(df, "sigma_t", maxlag)
+
+
+def granger_causality_volume_to_stress(df: pd.DataFrame, maxlag: int = 10) -> dict:
+    """
+    Question 2 : le volume normalisé (volume_norm) passé cause-t-il (au sens de Granger) le
+    régime stress futur ? Même méthode exactement que granger_causality_vol_to_stress
+    (cf. _granger_causality_column_to_stress), appliquée à volume_norm plutôt qu'à sigma_t —
+    pour savoir si le volume est un signal précurseur utile, indépendamment de la volatilité.
+    """
+    return _granger_causality_column_to_stress(df, "volume_norm", maxlag)

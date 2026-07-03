@@ -87,9 +87,11 @@ def compute_all_analytics(results: dict) -> dict:
     Appelle regime_analytics.* sur les résultats de run_pipeline() :
       - segments + width stats par actif et agrégés
       - regime_transition_vol_profile, par actif (étude d'événement : profil moyen de sigma_t
-        autour des transitions de régime — toutes transitions, transitions vers stress
-        uniquement, et profil volume_norm vers stress (préparation question 2, cf.
-        BRIEF_dashboard_v11_corrections.md — pas encore affiché dans ce brief-ci)
+        ET de volume_norm autour des transitions de régime — toutes transitions, et transitions
+        vers stress uniquement, questions 1 et 2)
+      - granger_causality_vol_to_stress / granger_causality_volume_to_stress, par actif : test
+        formel (ADF + Granger) en complément de l'étude d'événement descriptive ci-dessus,
+        pour la vol (Q1) et le volume (Q2)
 
     Note (BRIEF_dashboard_v11_corrections.md) : le calcul cross-actifs (rolling_cross_correlation,
     pairwise_stress_calm_correlation, market_stress_majority) a été retiré d'ici — la page
@@ -114,6 +116,15 @@ def compute_all_analytics(results: dict) -> dict:
         profile_into_stress_volume = ra.regime_transition_vol_profile(
             history, window=10, alignment="start", only_into="stress", column="volume_norm"
         )
+        granger = ra.granger_causality_vol_to_stress(history, maxlag=10)
+        granger_volume = ra.granger_causality_volume_to_stress(history, maxlag=10)
+        # Question 3 : entre vol et volume, qui bouge en premier EN GÉNÉRAL (pas seulement
+        # autour des débuts de régime) ? Corrélation croisée ±5j sur les variations journalières,
+        # sur tout l'historique — méthode distincte de granger_causality_*_to_stress ci-dessus,
+        # qui elles sont conditionnées aux transitions vers le stress.
+        vol_volume_ccf = ra.lead_lag_cross_correlation(
+            history["sigma_t"].diff(), history["volume_norm"].diff(), max_lag=5
+        )
 
         per_asset[ticker] = {
             "segments": segments,
@@ -121,6 +132,9 @@ def compute_all_analytics(results: dict) -> dict:
             "profile_all": profile_all,
             "profile_into_stress": profile_into_stress,
             "profile_into_stress_volume": profile_into_stress_volume,
+            "granger": granger,
+            "granger_volume": granger_volume,
+            "vol_volume_ccf": vol_volume_ccf,
         }
 
         tagged = segments.copy()
@@ -200,6 +214,139 @@ def _asset_tab_payload(asset: dict, prices: pd.DataFrame, history: pd.DataFrame,
     }
 
 
+# Seuil de Bonferroni (correction pour comparaisons multiples : 10 lags testés par actif dans
+# granger_causality_vol_to_stress / granger_causality_volume_to_stress) — un lag isolé sous 0.05
+# mais au-dessus de ce seuil n'est pas une preuve, juste ce qu'on attend par hasard en testant
+# 10 hypothèses. Partagé entre la Q1 (vol) et la Q2 (volume) pour rester cohérent.
+GRANGER_BONFERRONI_ALPHA = 0.05 / 10
+
+
+def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str) -> dict:
+    """
+    Construit le payload d'étude d'événement (série indexée + premier jour de réaction
+    significative) à partir d'un profil regime_transition_vol_profile — que ce profil porte sur
+    sigma_t (Q1, vol) ou volume_norm (Q2, volume) : la méthode est identique, seule la colonne
+    source du profil diffère (cf. BRIEF_dashboard_v11_corrections.md et son extension Q2).
+    Indicatif, pas un test statistique formel — le test formel est granger_causality_*_to_stress.
+    """
+    if profile["n_events"].iloc[0] == 0 or profile["mean_sigma"].isna().all():
+        return {
+            "label": label, "color": color,
+            "rel_day": profile["rel_day"].tolist(), "index_pct": [None] * len(profile),
+            "n_events": 0, "first_reaction_day": None,
+        }
+
+    baseline_mask = profile["rel_day"].between(-10, -5)
+    baseline = profile.loc[baseline_mask, "mean_sigma"].mean()
+    n_events = int(profile["n_events"].iloc[0])
+
+    index_pct = ((profile["mean_sigma"] / baseline - 1.0) * 100.0)
+
+    # Seuil de déviation "significative" : 1,96 x erreur standard (95%, cohérent avec le
+    # seuil de Fisher déjà utilisé ailleurs dans ce dashboard, cf. fisher_r_critical), calculée
+    # à partir de l'écart-type de la période de RÉFÉRENCE (-10 à -5j, fixe) — pas de l'écart-type
+    # du jour testé lui-même. Utiliser le std du jour testé est instable : il fluctue d'un jour à
+    # l'autre par pur artefact d'échantillonnage sur les mêmes événements, et le jour où il tombe
+    # le plus bas devient mécaniquement le plus facile à faire "significatif" — ce n'est pas un
+    # vrai signal, juste un creux local du bruit. Un seuil à 1 erreur standard (au lieu de 1,96)
+    # est par ailleurs beaucoup trop permissif sur 21 jours testés (~68% de confiance, pas 95%) :
+    # on s'attend à des franchissements parasites même si rien ne se passe avant le jour 0
+    # (constaté empiriquement sur BTC/vol : un creux de bruit à -2,5% déclenchait un "premier jour
+    # de réaction" à J-3 avant cette correction).
+    baseline_std = profile.loc[baseline_mask, "std_sigma"].mean()
+    threshold = 1.959964 * baseline_std / np.sqrt(n_events)
+    deviation = (profile["mean_sigma"] - baseline).abs()
+    significant = deviation > threshold
+    first_reaction_day = None
+    for rel_day, is_sig in zip(profile["rel_day"], significant):
+        if is_sig:
+            first_reaction_day = int(rel_day)
+            break
+
+    return {
+        "label": label, "color": color,
+        "rel_day": profile["rel_day"].tolist(),
+        "index_pct": [_num(v) if not np.isnan(v) else None for v in index_pct],
+        "n_events": n_events,
+        "first_reaction_day": first_reaction_day,
+    }
+
+
+def _granger_table_payload(analytics: dict, key: str, alpha: float) -> dict:
+    """
+    Construit le payload JSON-safe d'un test de Granger déjà calculé (par compute_all_analytics,
+    sous per_asset[ticker][key]) pour chaque actif — réutilisé pour Q1 (key="granger") et
+    Q2 (key="granger_volume"), même structure de sortie dans les deux cas.
+    """
+    out = {}
+    for asset in ASSETS:
+        ticker = asset["ticker"]
+        g = analytics["per_asset"][ticker][key]
+        p_values = {int(lag): _num(p) for lag, p in g["p_values"].items()}
+        min_lag, min_p = min(g["p_values"].items(), key=lambda kv: kv[1])
+        out[asset["short"]] = {
+            "label": asset["label"], "color": asset["color"],
+            "adf_source_p": _num(g["adf_source_p"]), "source_differenced": g["source_differenced"],
+            "adf_pstress_p": _num(g["adf_pstress_p"]), "pstress_differenced": g["pstress_differenced"],
+            "p_values": p_values,
+            "min_p": _num(min_p), "min_p_lag": int(min_lag),
+            "significant": bool(min_p < alpha),
+            "n_obs": g["n_obs"],
+        }
+    return out
+
+
+# Nombre de lags testés par lead_lag_cross_correlation (max_lag=5 -> -5..+5 = 11 lags) — sert à
+# corriger le seuil de significativité de Fisher pour comparaisons multiples (même principe que
+# GRANGER_BONFERRONI_ALPHA, appliqué ici à une corrélation plutôt qu'à une p-value de Granger).
+CCF_N_TESTS = 11
+
+
+def _vol_volume_ccf_payload(analytics: dict) -> dict:
+    """
+    Construit le payload de corrélation croisée vol/volume (Question 3, cf.
+    lead_lag_cross_correlation) pour chaque actif : série lag/corr/n + seuil de significativité
+    de Fisher CORRIGÉ POUR COMPARAISONS MULTIPLES (Bonferroni sur les 11 lags scannés — sinon un
+    pic isolé dû au hasard du nombre de tests pourrait être pris pour un vrai signal, même piège
+    que celui déjà corrigé pour granger_causality_*_to_stress) par lag (n varie légèrement d'un
+    lag à l'autre à cause des NaN introduits par le décalage), les diagnostics de stationnarité
+    ADF (cf. ensure_stationary, appliqué en interne par lead_lag_cross_correlation), et le
+    verdict (qui mène, déterminé par le lag de |corrélation| maximale).
+    """
+    out = {}
+    for asset in ASSETS:
+        ticker = asset["ticker"]
+        result = analytics["per_asset"][ticker]["vol_volume_ccf"]
+        ccf = result["ccf"]
+        lags = [int(v) for v in ccf["lag"]]
+        corr = [_num(v) if not (isinstance(v, float) and np.isnan(v)) else None for v in ccf["corr"]]
+        n_obs = [int(v) for v in ccf["n"]]
+        r_crit = [
+            _num(rc) if (rc := ra.fisher_r_critical_bonferroni(int(n), CCF_N_TESTS)) is not None else None
+            for n in ccf["n"]
+        ]
+
+        valid = ccf.dropna(subset=["corr"])
+        peak_idx = valid["corr"].abs().idxmax()
+        peak_lag = int(valid.loc[peak_idx, "lag"])
+        peak_corr = _num(valid.loc[peak_idx, "corr"])
+        if peak_lag > 0:
+            leader = "volume"
+        elif peak_lag < 0:
+            leader = "vol"
+        else:
+            leader = "aucun"
+
+        out[asset["short"]] = {
+            "label": asset["label"], "color": asset["color"],
+            "lags": lags, "corr": corr, "n": n_obs, "r_crit": r_crit,
+            "peak_lag": peak_lag, "peak_corr": peak_corr, "leader": leader,
+            "adf_a_p": _num(result["adf_a_p"]), "a_differenced": result["a_differenced"],
+            "adf_b_p": _num(result["adf_b_p"]), "b_differenced": result["b_differenced"],
+        }
+    return out
+
+
 def _comparison_payload(results: dict, analytics: dict) -> dict:
     combined = analytics["comparison"]["combined_segments"]
 
@@ -214,49 +361,37 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
             "y": [int(v) for v in sub["n_days_calendar"]],
         })
 
-    # ── Étude d'événement : la volatilité annonce-t-elle ou confirme-t-elle un passage en
-    # stress ? (cf. BRIEF_dashboard_v11_corrections.md) — série indexée sur la baseline
-    # pré-événement (-10 à -5j = 0%) + premier jour de réaction significative (indicatif,
-    # pas un test formel : réservé au test de Granger prévu pour la question 4).
+    # ── Étude d'événement : la volatilité (Q1), puis le volume (Q2), annoncent-ils ou
+    # confirment-ils un passage en stress ? Indicatif dans les deux cas — le test formel
+    # (causalité de Granger) est dans les cartes suivantes.
     event_study = {}
+    event_study_volume = {}
     for asset in ASSETS:
         ticker = asset["ticker"]
-        profile = analytics["per_asset"][ticker]["profile_into_stress"]
-        if profile["n_events"].iloc[0] == 0 or profile["mean_sigma"].isna().all():
-            event_study[asset["short"]] = {
-                "label": asset["label"], "color": asset["color"],
-                "rel_day": profile["rel_day"].tolist(), "sigma_index": [None] * len(profile),
-                "n_events": 0, "first_reaction_day": None,
-            }
-            continue
+        event_study[asset["short"]] = _event_study_from_profile(
+            analytics["per_asset"][ticker]["profile_into_stress"], asset["label"], asset["color"]
+        )
+        event_study_volume[asset["short"]] = _event_study_from_profile(
+            analytics["per_asset"][ticker]["profile_into_stress_volume"], asset["label"], asset["color"]
+        )
 
-        baseline_mask = profile["rel_day"].between(-10, -5)
-        baseline = profile.loc[baseline_mask, "mean_sigma"].mean()
-        n_events = int(profile["n_events"].iloc[0])
+    # ── Test formel : causalité de Granger, vol -> régime stress (Q1) et volume -> régime
+    # stress (Q2), même méthode et même seuil corrigé pour les deux.
+    granger = _granger_table_payload(analytics, "granger", GRANGER_BONFERRONI_ALPHA)
+    granger_volume = _granger_table_payload(analytics, "granger_volume", GRANGER_BONFERRONI_ALPHA)
 
-        sigma_index = ((profile["mean_sigma"] / baseline - 1.0) * 100.0)
-
-        # Erreur standard de la moyenne à chaque jour relatif -> seuil de déviation "significative"
-        se = profile["std_sigma"] / np.sqrt(n_events)
-        deviation = (profile["mean_sigma"] - baseline).abs()
-        significant = deviation > se
-        first_reaction_day = None
-        for rel_day, is_sig in zip(profile["rel_day"], significant):
-            if is_sig:
-                first_reaction_day = int(rel_day)
-                break
-
-        event_study[asset["short"]] = {
-            "label": asset["label"], "color": asset["color"],
-            "rel_day": profile["rel_day"].tolist(),
-            "sigma_index": [_num(v) if not np.isnan(v) else None for v in sigma_index],
-            "n_events": n_events,
-            "first_reaction_day": first_reaction_day,
-        }
+    # ── Question 3 : entre vol et volume, qui bouge en premier en général (pas seulement
+    # autour des débuts de régime) ? Corrélation croisée ±5j sur variations journalières.
+    vol_volume_ccf = _vol_volume_ccf_payload(analytics)
 
     return {
         "box_traces": box_traces,
         "event_study": event_study,
+        "event_study_volume": event_study_volume,
+        "granger": granger,
+        "granger_volume": granger_volume,
+        "granger_alpha": _num(GRANGER_BONFERRONI_ALPHA),
+        "vol_volume_ccf": vol_volume_ccf,
     }
 
 
@@ -360,13 +495,88 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
     <p class="chart-note">Volatilit&#233; moyenne autour de chaque entr&#233;e en r&#233;gime stress (jour 0 = jour du
       basculement), index&#233;e sur la p&#233;riode -10&#224;-5 jours = 0% pour rester comparable entre crypto et
       obligations. Un losange marque, pour chaque actif, le premier jour o&#249; l'&#233;cart &#224; la p&#233;riode
-      pr&#233;-&#233;v&#233;nement d&#233;passe l'erreur standard &#8212; indicatif, pas un test statistique formel.</p>
+      pr&#233;-&#233;v&#233;nement d&#233;passe 1,96&#215; l'erreur standard de la p&#233;riode de r&#233;f&#233;rence (seuil &#224; 95%)
+      &#8212; indicatif, pas un test statistique formel.</p>
     <div id="chart-event-study" style="height:380px"></div>
     <details style="margin-top:8px">
       <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
       <div style="overflow-x:auto;margin-top:6px">
         <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n transitions vers stress</th></tr></thead>
         <tbody id="event-study-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Test formel &#8212; la volatilit&#233; pass&#233;e pr&#233;dit-elle le r&#233;gime stress futur&nbsp;? (causalit&#233; de Granger)</div>
+    <p class="chart-note">Test de Granger (&#963;<sub>t</sub> retard&#233; am&#233;liore-t-il la pr&#233;diction de p_stress,
+      au-del&#224; de sa propre persistance&nbsp;?), pr&#233;c&#233;d&#233; d'un test ADF de stationnarit&#233; (diff&#233;renciation
+      si n&#233;cessaire) &#8212; sinon les p-values ne seraient pas interpr&#233;tables. 10 lags test&#233;s par actif :
+      seuil de significativit&#233; corrig&#233; pour comparaisons multiples (Bonferroni, &#945;=0.005 au lieu de
+      0.05) pour &#233;viter de conclure sur un franchissement isol&#233; d&#251; au hasard. Case color&#233;e = p-value
+      sous ce seuil.</p>
+    <div id="chart-granger" style="height:260px"></div>
+    <p class="chart-note" id="granger-verdict"></p>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (stationnarit&#233; ADF, p-value minimale)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>ADF &#963;<sub>t</sub> (p)</th><th>ADF p_stress (p)</th><th>p-value min (lag)</th><th>Verdict</th></tr></thead>
+        <tbody id="granger-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Le volume annonce-t-il ou confirme-t-il un passage en stress&nbsp;? (&#233;tude d'&#233;v&#233;nement)</div>
+    <p class="chart-note">Volume normalis&#233; moyen (ratio &#224; la moyenne 30j) autour de chaque entr&#233;e en
+      r&#233;gime stress (jour 0 = jour du basculement), index&#233; sur la p&#233;riode -10&#224;-5 jours = 0% (m&#234;me
+      m&#233;thode que pour la volatilit&#233; ci-dessus). Un losange marque, pour chaque actif, le premier jour
+      o&#249; l'&#233;cart &#224; la p&#233;riode pr&#233;-&#233;v&#233;nement d&#233;passe 1,96&#215; l'erreur standard de la p&#233;riode de
+      r&#233;f&#233;rence (seuil &#224; 95%) &#8212; indicatif, pas un test statistique formel.</p>
+    <div id="chart-event-study-volume" style="height:380px"></div>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n transitions vers stress</th></tr></thead>
+        <tbody id="event-study-volume-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Test formel &#8212; le volume pass&#233; pr&#233;dit-il le r&#233;gime stress futur&nbsp;? (causalit&#233; de Granger)</div>
+    <p class="chart-note">M&#234;me test que pour la volatilit&#233; ci-dessus (ADF + Granger + correction de
+      Bonferroni, &#945;=0.005), appliqu&#233; &#224; volume_norm au lieu de &#963;<sub>t</sub> : le volume retard&#233;
+      am&#233;liore-t-il la pr&#233;diction de p_stress, au-del&#224; de sa propre persistance&nbsp;? Utilit&#233; :
+      savoir si le volume est un signal pr&#233;curseur ind&#233;pendant de la volatilit&#233;, ou s'il ne fait
+      que confirmer lui aussi.</p>
+    <div id="chart-granger-volume" style="height:260px"></div>
+    <p class="chart-note" id="granger-volume-verdict"></p>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (stationnarit&#233; ADF, p-value minimale)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>ADF volume (p)</th><th>ADF p_stress (p)</th><th>p-value min (lag)</th><th>Verdict</th></tr></thead>
+        <tbody id="granger-volume-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Entre volatilit&#233; et volume, lequel bouge en premier en g&#233;n&#233;ral&nbsp;? (corr&#233;lation crois&#233;e &#177;5j)</div>
+    <p class="chart-note">Corr&#233;lation entre les VARIATIONS journali&#232;res de &#963;<sub>t</sub> et de volume_norm
+      (pas les niveaux, v&#233;rifi&#233;es stationnaires par test ADF), sur tout l'historique de chaque actif
+      &#8212; pas seulement autour des d&#233;buts de r&#233;gime (question distincte des tests de Granger
+      ci-dessus). Lag &gt; 0 (&#224; droite) : le volume pass&#233; est li&#233; &#224; la vol d'aujourd'hui &#8212; le volume
+      pr&#233;c&#232;de. Lag &lt; 0 (&#224; gauche) : la vol d'aujourd'hui est li&#233;e au volume futur &#8212; la vol
+      pr&#233;c&#232;de. Lag 0 : corr&#233;lation le m&#234;me jour. Seuil de significativit&#233; corrig&#233; pour
+      comparaisons multiples (Bonferroni sur les 11 lags scann&#233;s, comme pour les tests de Granger).</p>
+    <div id="chart-vol-volume-ccf" style="height:320px"></div>
+    <p class="chart-note" id="vol-volume-ccf-verdict"></p>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (stationnarit&#233; ADF, lag du pic, corr&#233;lation, seuil de Fisher corrig&#233;)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>ADF &#916;&#963; (p)</th><th>ADF &#916;volume (p)</th><th>Lag du pic</th><th>Corr&#233;lation au pic</th><th>Seuil Fisher (Bonferroni)</th><th>Qui pr&#233;c&#232;de&nbsp;?</th></tr></thead>
+        <tbody id="vol-volume-ccf-table"></tbody></table>
       </div>
     </details>
   </div>
@@ -656,47 +866,154 @@ function initComparisonTab() {{
     yaxis:{{title:'Dur&#233;e (jours calendaires)',gridcolor:GRID}},
   }}), {{responsive:true,displayModeBar:false}});
 
-  // ── Étude d'événement : volatilité indexée autour de l'entrée en stress ──────────
-  const es = COMPARISON.event_study;
-  const esTraces = Object.keys(es).map(short => {{
-    const a = es[short];
-    return {{
-      type: 'scatter', mode: 'lines', name: short,
-      x: a.rel_day, y: a.sigma_index,
-      line: {{ color: a.color, width: 2 }},
-      legendgroup: short,
-      hovertemplate: `${{short}} : %{{y:.1f}}%<extra></extra>`,
-    }};
-  }});
-  const esMarkers = Object.keys(es).map(short => {{
-    const a = es[short];
-    const y = a.rel_day.map(d => d === a.first_reaction_day ? a.sigma_index[a.rel_day.indexOf(d)] : null);
-    return {{
-      type: 'scatter', mode: 'markers', name: short, legendgroup: short, showlegend: false,
-      x: a.rel_day, y: y,
-      marker: {{ color: a.color, size: 11, symbol: 'diamond', line: {{ color: '#fff', width: 1 }} }},
-      hovertemplate: `${{short}} : premi&#232;re r&#233;action au jour %{{x}}<extra></extra>`,
-    }};
-  }});
-  Plotly.newPlot('chart-event-study', [...esTraces, ...esMarkers], Object.assign({{}}, baseLayout(), {{
-    margin: {{ l: 55, r: 18, t: 10, b: 45 }},
-    xaxis: {{ title: 'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
-              gridcolor: GRID, dtick: 1, zeroline: false }},
-    yaxis: {{ title: '&#201;cart de volatilit&#233; vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)',
-              gridcolor: GRID, zeroline: true, zerolinewidth: 2, zerolinecolor: '#566573' }},
-    shapes: [{{ type: 'line', x0: 0, x1: 0, xref: 'x', y0: 0, y1: 1, yref: 'paper',
-               line: {{ color: '#7f8c8d', width: 1, dash: 'dash' }} }}],
-  }}), {{ responsive: true, displayModeBar: false }});
+  // ── Étude d'événement : profil indexé autour de l'entrée en stress (Q1 vol, Q2 volume) ──
+  function renderEventStudy(data, chartId, tableId) {{
+    const traces = Object.keys(data).map(short => {{
+      const a = data[short];
+      return {{
+        type: 'scatter', mode: 'lines', name: short,
+        x: a.rel_day, y: a.index_pct,
+        line: {{ color: a.color, width: 2 }},
+        legendgroup: short,
+        hovertemplate: `${{short}} : %{{y:.1f}}%<extra></extra>`,
+      }};
+    }});
+    const markers = Object.keys(data).map(short => {{
+      const a = data[short];
+      const y = a.rel_day.map(d => d === a.first_reaction_day ? a.index_pct[a.rel_day.indexOf(d)] : null);
+      return {{
+        type: 'scatter', mode: 'markers', name: short, legendgroup: short, showlegend: false,
+        x: a.rel_day, y: y,
+        marker: {{ color: a.color, size: 11, symbol: 'diamond', line: {{ color: '#fff', width: 1 }} }},
+        hovertemplate: `${{short}} : premi&#232;re r&#233;action au jour %{{x}}<extra></extra>`,
+      }};
+    }});
+    Plotly.newPlot(chartId, [...traces, ...markers], Object.assign({{}}, baseLayout(), {{
+      margin: {{ l: 55, r: 18, t: 10, b: 45 }},
+      xaxis: {{ title: 'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
+                gridcolor: GRID, dtick: 1, zeroline: false }},
+      yaxis: {{ title: '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)',
+                gridcolor: GRID, zeroline: true, zerolinewidth: 2, zerolinecolor: '#566573' }},
+      shapes: [{{ type: 'line', x0: 0, x1: 0, xref: 'x', y0: 0, y1: 1, yref: 'paper',
+                 line: {{ color: '#7f8c8d', width: 1, dash: 'dash' }} }}],
+    }}), {{ responsive: true, displayModeBar: false }});
 
-  const esBody = document.getElementById('event-study-table');
-  Object.keys(es).forEach(short => {{
-    const a = es[short];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${{short}}</td>` +
-      `<td>${{a.first_reaction_day !== null ? (a.first_reaction_day >= 0 ? '+' : '') + a.first_reaction_day + ' j' : 'aucun &#233;cart significatif d&#233;tect&#233;'}}</td>` +
-      `<td>${{a.n_events}}</td>`;
-    esBody.appendChild(tr);
-  }});
+    const body = document.getElementById(tableId);
+    Object.keys(data).forEach(short => {{
+      const a = data[short];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${{short}}</td>` +
+        `<td>${{a.first_reaction_day !== null ? (a.first_reaction_day >= 0 ? '+' : '') + a.first_reaction_day + ' j' : 'aucun &#233;cart significatif d&#233;tect&#233;'}}</td>` +
+        `<td>${{a.n_events}}</td>`;
+      body.appendChild(tr);
+    }});
+  }}
+
+  // ── Test formel : causalité de Granger (Q1 vol -> régime stress, Q2 volume -> régime stress) ──
+  function renderGrangerCard(grData, alpha, chartId, tableId, verdictId, sourceLabel) {{
+    const shorts = Object.keys(grData);
+    const lags = Object.keys(grData[shorts[0]].p_values).map(Number).sort((a,b) => a-b);
+
+    const zP = shorts.map(short => lags.map(lag => grData[short].p_values[lag]));
+    const zSig = zP.map(row => row.map(p => p < alpha ? 1 : 0));
+    const textVals = zP.map(row => row.map(p => p < alpha ? `${{p.toFixed(3)}}*` : p.toFixed(3)));
+
+    Plotly.newPlot(chartId, [{{
+      type: 'heatmap',
+      x: lags.map(l => `${{l}}`),
+      y: shorts,
+      z: zSig,
+      customdata: zP,
+      text: textVals,
+      texttemplate: '%{{text}}',
+      textfont: {{ size: 10, color: '#ecf0f1' }},
+      colorscale: [[0, BG], [1, '#e74c3c']],
+      zmin: 0, zmax: 1,
+      showscale: false,
+      xgap: 3, ygap: 3,
+      hovertemplate: 'lag %{{x}} : p=%{{customdata:.4f}}<extra>%{{y}}</extra>',
+    }}], Object.assign({{}}, baseLayout(), {{
+      margin: {{ l: 55, r: 18, t: 10, b: 40 }},
+      xaxis: {{ title: 'Lag (jours)', gridcolor: GRID, type: 'category' }},
+      yaxis: {{ gridcolor: GRID, automargin: true }},
+    }}), {{ responsive: true, displayModeBar: false }});
+
+    const body = document.getElementById(tableId);
+    shorts.forEach(short => {{
+      const g = grData[short];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${{short}}</td>` +
+        `<td>${{g.adf_source_p.toFixed(4)}}${{g.source_differenced ? ' (diff.)' : ''}}</td>` +
+        `<td>${{g.adf_pstress_p.toFixed(4)}}${{g.pstress_differenced ? ' (diff.)' : ''}}</td>` +
+        `<td>${{g.min_p.toFixed(4)}} (lag ${{g.min_p_lag}})</td>` +
+        `<td>${{g.significant ? '<b style="color:#e74c3c">causal (Granger)</b>' : 'non significatif'}}</td>`;
+      body.appendChild(tr);
+    }});
+
+    const sigAssets = shorts.filter(short => grData[short].significant);
+    document.getElementById(verdictId).innerHTML = sigAssets.length > 0
+      ? `<b>${{sigAssets.join(', ')}}</b> : ${{sourceLabel}} pr&#233;dit significativement (Granger, seuil corrig&#233; &#945;=${{alpha}}) le r&#233;gime stress futur. Pour les autres actifs, le test ne rejette pas H0 &#8212; pas de preuve d'un effet pr&#233;dictif, au-del&#224; de la propre persistance du r&#233;gime.`
+      : `Aucun actif ne montre de lien de Granger significatif (seuil corrig&#233; &#945;=${{alpha}}) entre ${{sourceLabel}} et r&#233;gime stress futur.`;
+  }}
+
+  // ── Question 3 : entre vol et volume, qui bouge en premier en général ? ────────
+  function renderVolVolumeCcf(ccfData, chartId, tableId, verdictId) {{
+    const shorts = Object.keys(ccfData);
+    const traces = shorts.map(short => {{
+      const a = ccfData[short];
+      return {{
+        type: 'scatter', mode: 'lines+markers', name: short,
+        x: a.lags, y: a.corr,
+        line: {{ color: a.color, width: 2 }}, marker: {{ size: 4 }},
+        hovertemplate: `${{short}} : %{{y:.3f}}<extra></extra>`,
+      }};
+    }});
+    Plotly.newPlot(chartId, traces, Object.assign({{}}, baseLayout(), {{
+      margin: {{ l: 55, r: 18, t: 30, b: 45 }},
+      xaxis: {{ title: 'Lag (jours de trading)', gridcolor: GRID, dtick: 1, zeroline: false }},
+      yaxis: {{ title: 'Corr&#233;lation (variations journali&#232;res)', gridcolor: GRID,
+                zeroline: true, zerolinewidth: 2, zerolinecolor: '#566573' }},
+      shapes: [{{ type: 'line', x0: 0, x1: 0, xref: 'x', y0: 0, y1: 1, yref: 'paper',
+                 line: {{ color: '#7f8c8d', width: 1, dash: 'dash' }} }}],
+      annotations: [
+        {{ x: 1, y: 1.1, xref: 'paper', yref: 'paper', xanchor: 'right', showarrow: false,
+          text: 'volume pr&#233;c&#232;de &#8594;', font: {{ size: 10, color: '#7f8c8d' }} }},
+        {{ x: 0, y: 1.1, xref: 'paper', yref: 'paper', xanchor: 'left', showarrow: false,
+          text: '&#8592; vol pr&#233;c&#232;de', font: {{ size: 10, color: '#7f8c8d' }} }},
+      ],
+    }}), {{ responsive: true, displayModeBar: false }});
+
+    const body = document.getElementById(tableId);
+    const leaderLabel = {{ volume: 'volume', vol: 'volatilit&#233;', aucun: 'contemporain (aucun)' }};
+    shorts.forEach(short => {{
+      const a = ccfData[short];
+      const rcrit = a.r_crit[a.lags.indexOf(a.peak_lag)];
+      const isSig = rcrit !== null && Math.abs(a.peak_corr) > rcrit;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${{short}}</td>` +
+        `<td>${{a.adf_a_p.toFixed(4)}}${{a.a_differenced ? ' (diff.)' : ''}}</td>` +
+        `<td>${{a.adf_b_p.toFixed(4)}}${{a.b_differenced ? ' (diff.)' : ''}}</td>` +
+        `<td>${{a.peak_lag >= 0 ? '+' : ''}}${{a.peak_lag}}</td>` +
+        `<td>${{a.peak_corr.toFixed(3)}}${{isSig ? '<b style="color:#f39c12">*</b>' : ''}}</td>` +
+        `<td>${{rcrit !== null ? rcrit.toFixed(3) : '&#8212;'}}</td>` +
+        `<td>${{leaderLabel[a.leader]}}</td>`;
+      body.appendChild(tr);
+    }});
+
+    const leaders = shorts.map(short => ccfData[short].leader);
+    const nVolume = leaders.filter(l => l === 'volume').length;
+    const nVol = leaders.filter(l => l === 'vol').length;
+    document.getElementById(verdictId).innerHTML =
+      `Sur ${{shorts.length}} actifs, le pic de corr&#233;lation se situe c&#244;t&#233; <b>volume pr&#233;c&#232;de</b> pour ${{nVolume}} actif(s), c&#244;t&#233; <b>vol pr&#233;c&#232;de</b> pour ${{nVol}} actif(s) (* = corr&#233;lation significative au seuil de Fisher corrig&#233; pour comparaisons multiples, Bonferroni sur 11 lags).`;
+  }}
+
+  renderEventStudy(COMPARISON.event_study, 'chart-event-study', 'event-study-table');
+  renderEventStudy(COMPARISON.event_study_volume, 'chart-event-study-volume', 'event-study-volume-table');
+  renderGrangerCard(COMPARISON.granger, COMPARISON.granger_alpha,
+    'chart-granger', 'granger-table', 'granger-verdict', 'la volatilit&#233; pass&#233;e');
+  renderGrangerCard(COMPARISON.granger_volume, COMPARISON.granger_alpha,
+    'chart-granger-volume', 'granger-volume-table', 'granger-volume-verdict', 'le volume pass&#233;');
+  renderVolVolumeCcf(COMPARISON.vol_volume_ccf, 'chart-vol-volume-ccf', 'vol-volume-ccf-table', 'vol-volume-ccf-verdict');
 }}
 
 // ── D&#233;marrage ──────────────────────────────────────────────────────────────────
