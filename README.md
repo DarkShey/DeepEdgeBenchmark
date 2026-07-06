@@ -3,12 +3,17 @@ Coding Benchmark
 
 ## Models
 
+All model, benchmark and orchestration scripts below live under
+[`benchmarks/`](benchmarks/) (moved out of the repo root for tidiness — the
+split between "reusable models" and "one-off benchmark iterations" may
+change later).
+
 | File | Description |
 |------|-------------|
-| [`arima_model.py`](arima_model.py) | ARIMA(2,0,2)-GARCH(1,1) forecaster on log-returns, walk-forward 1-step backtest. |
-| [`sarima_model.py`](sarima_model.py) | Seasonal ARIMA(1,1,1)(1,0,1)[5] on prices, walk-forward 1-step backtest. |
-| [`prophet_model.py`](prophet_model.py) | Prophet additive regression (weekly + yearly seasonality), fit-once batch forecast. |
-| [`lstm_model.py`](lstm_model.py) | LSTM(64) over a 30-step look-back window, walk-forward 1-step backtest. |
+| [`benchmarks/arima_model.py`](benchmarks/arima_model.py) | ARIMA(2,0,2)-GARCH(1,1) forecaster on log-returns, walk-forward 1-step backtest. |
+| [`benchmarks/sarima_model.py`](benchmarks/sarima_model.py) | Seasonal ARIMA(1,1,1)(1,0,1)[5] on prices, walk-forward 1-step backtest. |
+| [`benchmarks/prophet_model.py`](benchmarks/prophet_model.py) | Prophet additive regression (weekly + yearly seasonality), fit-once batch forecast. |
+| [`benchmarks/lstm_model.py`](benchmarks/lstm_model.py) | LSTM(64) over a 30-step look-back window, walk-forward 1-step backtest. |
 
 Each model file is self-contained and shares the same CLI
 (`--ticker / --start / --end / --test-ratio / --next-step / --plot`).
@@ -16,17 +21,19 @@ The `requirements.txt` covers all of them.
 
 ### Visual comparison
 
-[`run_benchmark.py`](run_benchmark.py) runs all four models on one asset and
-renders a single figure: forecasts overlaid on the actual price, plus a metrics
-table (best RMSE / Directional Accuracy highlighted).
+[`benchmarks/run_benchmark.py`](benchmarks/run_benchmark.py) runs all four
+models on one asset and renders a single figure: forecasts overlaid on the
+actual price, plus a metrics table (best RMSE / Directional Accuracy
+highlighted).
 
 ```bash
+cd benchmarks
 python run_benchmark.py                       # SPY, 2023-2024 (default)
 python run_benchmark.py --ticker BTC-USD      # different asset
 python run_benchmark.py --start 2020-01-01 --end 2024-12-31   # full window (slow)
 ```
 
-![Benchmark comparison](benchmark_visual.png)
+![Benchmark comparison](benchmarks/benchmark_visual.png)
 
 ---
 
@@ -69,7 +76,7 @@ git pull
 
 > Need only one file without cloning? Download it directly from the raw URL:
 > ```bash
-> curl -O https://raw.githubusercontent.com/DarkShey/DeepEdgeBenchmark/main/arima_model.py
+> curl -O https://raw.githubusercontent.com/DarkShey/DeepEdgeBenchmark/main/benchmarks/arima_model.py
 > ```
 > (Private repo, so add `-H "Authorization: token $(gh auth token)"` if `curl` is denied.)
 
@@ -92,6 +99,7 @@ pip install -r requirements.txt
 ### Step 4 — Run the model
 
 ```bash
+cd benchmarks
 python arima_model.py                              # BTC-USD backtest, prints metrics
 python arima_model.py --ticker SPY                 # different asset
 python arima_model.py --ticker SPY --plot out.png  # + save a forecast plot
