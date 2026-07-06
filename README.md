@@ -3,17 +3,16 @@ Coding Benchmark
 
 ## Models
 
-All model, benchmark and orchestration scripts below live under
-[`benchmarks/`](benchmarks/) (moved out of the repo root for tidiness — the
-split between "reusable models" and "one-off benchmark iterations" may
-change later).
+The 4 forecaster modules live under [`models/`](models/); the benchmark
+iterations and the multi-model orchestrator live under
+[`benchmarks/`](benchmarks/).
 
 | File | Description |
 |------|-------------|
-| [`benchmarks/arima_model.py`](benchmarks/arima_model.py) | ARIMA(2,0,2)-GARCH(1,1) forecaster on log-returns, walk-forward 1-step backtest. |
-| [`benchmarks/sarima_model.py`](benchmarks/sarima_model.py) | Seasonal ARIMA(1,1,1)(1,0,1)[5] on prices, walk-forward 1-step backtest. |
-| [`benchmarks/prophet_model.py`](benchmarks/prophet_model.py) | Prophet additive regression (weekly + yearly seasonality), fit-once batch forecast. |
-| [`benchmarks/lstm_model.py`](benchmarks/lstm_model.py) | LSTM(64) over a 30-step look-back window, walk-forward 1-step backtest. |
+| [`models/arima_model.py`](models/arima_model.py) | ARIMA(2,0,2)-GARCH(1,1) forecaster on log-returns, walk-forward 1-step backtest. |
+| [`models/sarima_model.py`](models/sarima_model.py) | Seasonal ARIMA(1,1,1)(1,0,1)[5] on prices, walk-forward 1-step backtest. |
+| [`models/prophet_model.py`](models/prophet_model.py) | Prophet additive regression (weekly + yearly seasonality), fit-once batch forecast. |
+| [`models/lstm_model.py`](models/lstm_model.py) | LSTM(64) over a 30-step look-back window, walk-forward 1-step backtest. |
 
 Each model file is self-contained and shares the same CLI
 (`--ticker / --start / --end / --test-ratio / --next-step / --plot`).
@@ -76,7 +75,7 @@ git pull
 
 > Need only one file without cloning? Download it directly from the raw URL:
 > ```bash
-> curl -O https://raw.githubusercontent.com/DarkShey/DeepEdgeBenchmark/main/benchmarks/arima_model.py
+> curl -O https://raw.githubusercontent.com/DarkShey/DeepEdgeBenchmark/main/models/arima_model.py
 > ```
 > (Private repo, so add `-H "Authorization: token $(gh auth token)"` if `curl` is denied.)
 
@@ -99,7 +98,7 @@ pip install -r requirements.txt
 ### Step 4 — Run the model
 
 ```bash
-cd benchmarks
+cd models
 python arima_model.py                              # BTC-USD backtest, prints metrics
 python arima_model.py --ticker SPY                 # different asset
 python arima_model.py --ticker SPY --plot out.png  # + save a forecast plot

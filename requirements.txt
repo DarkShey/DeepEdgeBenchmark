@@ -14,3 +14,6 @@ tensorflow>=2.12       # lstm_model.py
 # Dependencies for calibration/regime (RegimeHMM engine)
 hmmlearn>=0.3.0
 pandas_ta>=0.3.14b
+
+# Test tooling (models/ + calibration/regime test suites)
+pytest>=7

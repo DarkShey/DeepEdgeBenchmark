@@ -1,0 +1,62 @@
+[
+  {
+    "model": "ARIMA",
+    "ticker": "SPY",
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "test_ratio": 0.15,
+    "n_test": 76,
+    "RMSE": 4.345,
+    "MAE": 3.1224,
+    "MAPE": 0.55,
+    "DirAcc_%": 46.67,
+    "PI_cov95_%": 96.05,
+    "runtime_s": 0.24,
+    "seed": 42
+  },
+  {
+    "model": "SARIMA",
+    "ticker": "SPY",
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "test_ratio": 0.15,
+    "n_test": 76,
+    "RMSE": 4.3328,
+    "MAE": 3.1175,
+    "MAPE": 0.54,
+    "DirAcc_%": 49.33,
+    "PI_cov95_%": 94.74,
+    "runtime_s": 3.78,
+    "seed": 42
+  },
+  {
+    "model": "Prophet",
+    "ticker": "SPY",
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "test_ratio": 0.15,
+    "n_test": 76,
+    "RMSE": 42.1249,
+    "MAE": 40.4472,
+    "MAPE": 7.04,
+    "DirAcc_%": 53.33,
+    "PI_cov95_%": 3.95,
+    "runtime_s": 0.11,
+    "seed": 42
+  },
+  {
+    "model": "LSTM",
+    "ticker": "SPY",
+    "start": "2023-01-01",
+    "end": "2024-12-31",
+    "test_ratio": 0.15,
+    "n_test": 76,
+    "RMSE": 10.6015,
+    "MAE": 9.373,
+    "MAPE": 1.62,
+    "DirAcc_%": 54.67,
+    "PI_cov95_%": 94.74,
+    "runtime_s": 3.29,
+    "seed": 42
+  }
+]

@@ -26,6 +26,7 @@ Note: training a neural net is CPU/GPU intensive — the backtest takes a while.
 
 import argparse
 import os
+import random
 import time
 import warnings
 
@@ -47,10 +48,19 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 
 # ── Config (defaults; override via CLI) ──────────────────────────────────────
-SEQ_LEN    = 30     # look-back window
-UNITS      = 64     # LSTM hidden units
-EPOCHS     = 30
-BATCH_SIZE = 32
+SEQ_LEN      = 30     # look-back window
+UNITS        = 64     # LSTM hidden units
+EPOCHS       = 30
+BATCH_SIZE   = 32
+DEFAULT_SEED = 42     # --seed default: TF training isn't bit-exact across machines,
+                      # but fixing this makes a given run reproducible on the same machine.
+
+
+def set_seed(seed: int = DEFAULT_SEED) -> None:
+    """Seed numpy/tensorflow (and Python's hash-based RNG) for a reproducible run."""
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
 
 # ── Data ─────────────────────────────────────────────────────────────────────
@@ -118,6 +128,11 @@ def build_lstm(seq_len: int = SEQ_LEN, units: int = UNITS) -> Sequential:
 def run_lstm(train: pd.Series, test: pd.Series,
              seq_len=SEQ_LEN, epochs=EPOCHS, batch_size=BATCH_SIZE) -> dict:
     """Train on the scaled train window, roll 1-step-ahead over the test window."""
+    if len(train) <= seq_len:
+        raise ValueError(
+            f"train series has {len(train)} points, but seq_len={seq_len} requires "
+            f"more than {seq_len} points to build at least one training sequence."
+        )
     t0 = time.time()
     scaler       = MinMaxScaler()
     train_scaled = scaler.fit_transform(train.values.reshape(-1, 1))
@@ -156,6 +171,11 @@ def run_lstm(train: pd.Series, test: pd.Series,
 def next_step_lstm(series: pd.Series, seq_len=SEQ_LEN, epochs=EPOCHS,
                    batch_size=BATCH_SIZE):
     """Single 1-step forecast beyond the last observation. Returns (pred, lo, hi)."""
+    if len(series) <= seq_len:
+        raise ValueError(
+            f"series has {len(series)} points, but seq_len={seq_len} requires "
+            f"more than {seq_len} points to build at least one training sequence."
+        )
     scaler = MinMaxScaler()
     scaled = scaler.fit_transform(series.values.reshape(-1, 1)).flatten()
     X, y   = make_sequences(scaled, seq_len)
@@ -201,9 +221,13 @@ def main() -> None:
     p.add_argument("--end", default="2024-12-31")
     p.add_argument("--test-ratio", type=float, default=0.15)
     p.add_argument("--epochs", type=int, default=EPOCHS)
+    p.add_argument("--seed", type=int, default=DEFAULT_SEED,
+                   help="RNG seed for reproducible training (numpy/tensorflow)")
     p.add_argument("--next-step", action="store_true", help="only forecast the next step")
     p.add_argument("--plot", metavar="PATH", default=None, help="save a forecast plot")
     args = p.parse_args()
+
+    set_seed(args.seed)
 
     print(f"Downloading {args.ticker} [{args.start} -> {args.end}] ...")
     prices = fetch_data(args.ticker, args.start, args.end)
