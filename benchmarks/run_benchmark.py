@@ -25,13 +25,16 @@ several minutes. Prophet is fit once then batch-predicts the test window.
 """
 
 import argparse
+import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "models"))
 import arima_model
 import sarima_model
 import prophet_model
