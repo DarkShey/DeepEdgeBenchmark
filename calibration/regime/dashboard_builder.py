@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 import yfinance as yf
 
 from calibration.regime.assets import (
@@ -105,6 +106,7 @@ def compute_all_analytics(results: dict) -> dict:
     for asset in ASSETS:
         ticker = asset["ticker"]
         short = asset["short"]
+        prices = results[ticker]["prices"]
         history = results[ticker]["history"]
 
         segments = ra.segment_regimes(history)
@@ -116,6 +118,16 @@ def compute_all_analytics(results: dict) -> dict:
         profile_into_stress_volume = ra.regime_transition_vol_profile(
             history, window=10, alignment="start", only_into="stress", column="volume_norm"
         )
+        # Partie 2 (BRIEF_dashboard_v14_corrections.md) : symétrique de profile_into_stress mais
+        # pour la SORTIE du stress (only_from="stress", alignment="end") — le déclencheur de fin
+        # de régime plutôt que de début. Rétiré de l'affichage HTML depuis, mais gardé ici : cette
+        # capacité analytique reste testée et réutilisable même si la page ne l'affiche plus.
+        profile_out_of_stress = ra.regime_transition_vol_profile(
+            history, window=10, alignment="end", only_from="stress"
+        )
+        profile_out_of_stress_volume = ra.regime_transition_vol_profile(
+            history, window=10, alignment="end", only_from="stress", column="volume_norm"
+        )
         granger = ra.granger_causality_vol_to_stress(history, maxlag=10)
         granger_volume = ra.granger_causality_volume_to_stress(history, maxlag=10)
         # Question 3 : entre vol et volume, qui bouge en premier EN GÉNÉRAL (pas seulement
@@ -126,16 +138,39 @@ def compute_all_analytics(results: dict) -> dict:
             history["sigma_t"].diff(), history["volume_norm"].diff(), max_lag=5
         )
 
+        # Indicateurs de force/momentum (BRIEF_dashboard_v15_corrections.md) : couche de
+        # confirmation à côté du HMM, calculée sur les prix bruts puis réindexée sur history
+        # (même index que sigma_t/volume_norm) pour être réutilisable telle quelle par
+        # regime_transition_vol_profile / granger_causality_to_stress ci-dessous.
+        history_ext = history.copy()
+        macd = ta.macd(prices["Close"], fast=12, slow=26, signal=9)
+        history_ext["macd_hist"] = macd["MACDh_12_26_9"].reindex(history_ext.index)
+        history_ext["momentum"] = ta.mom(prices["Close"], length=10).reindex(history_ext.index)
+        history_ext["roc"] = ta.roc(prices["Close"], length=10).reindex(history_ext.index)
+        history_ext["rsi"] = ta.rsi(prices["Close"], length=14).reindex(history_ext.index)
+        stoch = ta.stoch(prices["High"], prices["Low"], prices["Close"], k=14, d=3)
+        history_ext["stoch_k"] = stoch["STOCHk_14_3_3"].reindex(history_ext.index)
+
         per_asset[ticker] = {
             "segments": segments,
             "width_stats": width_stats,
             "profile_all": profile_all,
             "profile_into_stress": profile_into_stress,
             "profile_into_stress_volume": profile_into_stress_volume,
+            "profile_out_of_stress": profile_out_of_stress,
+            "profile_out_of_stress_volume": profile_out_of_stress_volume,
             "granger": granger,
             "granger_volume": granger_volume,
             "vol_volume_ccf": vol_volume_ccf,
         }
+
+        for signal_key in FORCE_SIGNALS:
+            per_asset[ticker][f"profile_{signal_key}"] = ra.regime_transition_vol_profile(
+                history_ext, window=10, alignment="start", only_into="stress", column=signal_key
+            )
+            per_asset[ticker][f"granger_{signal_key}"] = ra.granger_causality_to_stress(
+                history_ext, signal_key, maxlag=10
+            )
 
         tagged = segments.copy()
         tagged["asset"] = short
@@ -220,14 +255,32 @@ def _asset_tab_payload(asset: dict, prices: pd.DataFrame, history: pd.DataFrame,
 # 10 hypothèses. Partagé entre la Q1 (vol) et la Q2 (volume) pour rester cohérent.
 GRANGER_BONFERRONI_ALPHA = 0.05 / 10
 
+# Indicateurs de force/momentum (couche de confirmation, hors HMM) — clé = nom de colonne dans
+# history_ext, valeur = libellé humain pour l'UI (cf. BRIEF_dashboard_v15_corrections.md).
+FORCE_SIGNALS = {
+    "macd_hist": "MACD (histogramme)",
+    "momentum": "Momentum (non borné)",
+    "roc": "Rate of Change (RoC)",
+    "rsi": "RSI",
+    "stoch_k": "Stochastique (%K)",
+}
 
-def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str) -> dict:
+
+def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str, method: str = "pct") -> dict:
     """
     Construit le payload d'étude d'événement (série indexée + premier jour de réaction
     significative) à partir d'un profil regime_transition_vol_profile — que ce profil porte sur
-    sigma_t (Q1, vol) ou volume_norm (Q2, volume) : la méthode est identique, seule la colonne
-    source du profil diffère (cf. BRIEF_dashboard_v11_corrections.md et son extension Q2).
+    sigma_t (Q1, vol), volume_norm (Q2, volume) ou l'un des 5 signaux de force/momentum de
+    FORCE_SIGNALS : la méthode est identique, seule la colonne source du profil diffère (cf.
+    BRIEF_dashboard_v11_corrections.md et son extension Q2/force-momentum en v15).
     Indicatif, pas un test statistique formel — le test formel est granger_causality_*_to_stress.
+
+    method : "pct" (défaut, variation en % vs baseline — adapté à sigma_t/volume_norm, toujours
+    positifs) ou "zscore" (écart standardisé en écarts-types de la période de référence —
+    obligatoire pour les signaux qui oscillent autour de 0 comme MACD/Momentum, où un ratio à une
+    baseline proche de 0 serait instable ou trompeur ; cf. BRIEF_dashboard_v15_corrections.md §1c).
+    Le calcul du seuil de significativité (first_reaction_day) ne dépend pas de `method` : il est
+    déjà en unités absolues, donc déjà robuste au signe — seule la valeur AFFICHÉE change de formule.
     """
     if profile["n_events"].iloc[0] == 0 or profile["mean_sigma"].isna().all():
         return {
@@ -237,10 +290,21 @@ def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str) -> 
         }
 
     baseline_mask = profile["rel_day"].between(-10, -5)
-    baseline = profile.loc[baseline_mask, "mean_sigma"].mean()
+    baseline_mean = profile.loc[baseline_mask, "mean_sigma"].mean()
     n_events = int(profile["n_events"].iloc[0])
+    baseline_std_of_stat = profile.loc[baseline_mask, "std_sigma"].mean()
 
-    index_pct = ((profile["mean_sigma"] / baseline - 1.0) * 100.0)
+    if method == "zscore":
+        baseline_std = profile.loc[baseline_mask, "mean_sigma"].std()
+        if not baseline_std or np.isnan(baseline_std) or baseline_std == 0:
+            return {
+                "label": label, "color": color,
+                "rel_day": profile["rel_day"].tolist(), "index_pct": [None] * len(profile),
+                "n_events": n_events, "first_reaction_day": None,
+            }
+        index_values = (profile["mean_sigma"] - baseline_mean) / baseline_std
+    else:
+        index_values = (profile["mean_sigma"] / baseline_mean - 1.0) * 100.0
 
     # Seuil de déviation "significative" : 1,96 x erreur standard (95%, cohérent avec le
     # seuil de Fisher déjà utilisé ailleurs dans ce dashboard, cf. fisher_r_critical), calculée
@@ -253,9 +317,8 @@ def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str) -> 
     # on s'attend à des franchissements parasites même si rien ne se passe avant le jour 0
     # (constaté empiriquement sur BTC/vol : un creux de bruit à -2,5% déclenchait un "premier jour
     # de réaction" à J-3 avant cette correction).
-    baseline_std = profile.loc[baseline_mask, "std_sigma"].mean()
-    threshold = 1.959964 * baseline_std / np.sqrt(n_events)
-    deviation = (profile["mean_sigma"] - baseline).abs()
+    threshold = 1.959964 * baseline_std_of_stat / np.sqrt(n_events)
+    deviation = (profile["mean_sigma"] - baseline_mean).abs()
     significant = deviation > threshold
     first_reaction_day = None
     for rel_day, is_sig in zip(profile["rel_day"], significant):
@@ -266,7 +329,7 @@ def _event_study_from_profile(profile: pd.DataFrame, label: str, color: str) -> 
     return {
         "label": label, "color": color,
         "rel_day": profile["rel_day"].tolist(),
-        "index_pct": [_num(v) if not np.isnan(v) else None for v in index_pct],
+        "index_pct": [_num(v) if not np.isnan(v) else None for v in index_values],
         "n_events": n_events,
         "first_reaction_day": first_reaction_day,
     }
@@ -366,6 +429,8 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
     # (causalité de Granger) est dans les cartes suivantes.
     event_study = {}
     event_study_volume = {}
+    event_study_end = {}
+    event_study_end_volume = {}
     for asset in ASSETS:
         ticker = asset["ticker"]
         event_study[asset["short"]] = _event_study_from_profile(
@@ -373,6 +438,15 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
         )
         event_study_volume[asset["short"]] = _event_study_from_profile(
             analytics["per_asset"][ticker]["profile_into_stress_volume"], asset["label"], asset["color"]
+        )
+        # Partie 2 (BRIEF_dashboard_v14_corrections.md) : symétrique de Q1/Q2 mais pour la sortie
+        # du stress plutôt que l'entrée — même fonction _event_study_from_profile, réutilisée telle
+        # quelle sur les profils profile_out_of_stress(_volume).
+        event_study_end[asset["short"]] = _event_study_from_profile(
+            analytics["per_asset"][ticker]["profile_out_of_stress"], asset["label"], asset["color"]
+        )
+        event_study_end_volume[asset["short"]] = _event_study_from_profile(
+            analytics["per_asset"][ticker]["profile_out_of_stress_volume"], asset["label"], asset["color"]
         )
 
     # ── Test formel : causalité de Granger, vol -> régime stress (Q1) et volume -> régime
@@ -384,14 +458,39 @@ def _comparison_payload(results: dict, analytics: dict) -> dict:
     # autour des débuts de régime) ? Corrélation croisée ±5j sur variations journalières.
     vol_volume_ccf = _vol_volume_ccf_payload(analytics)
 
+    # ── Extension Partie 1 (BRIEF_dashboard_v15_corrections.md) : les 5 indicateurs de
+    # force/momentum traités avec exactement la même méthode que Q1/Q2 (étude d'événement en
+    # method="zscore" car ces signaux oscillent autour de 0, contrairement à sigma_t/volume_norm
+    # qui sont toujours positifs, + test formel de Granger), regroupés par clé de signal plutôt
+    # que par actif pour être sélectionnables via les boutons de l'UI.
+    force_event_study = {
+        signal_key: {
+            asset["short"]: _event_study_from_profile(
+                analytics["per_asset"][asset["ticker"]][f"profile_{signal_key}"],
+                asset["label"], asset["color"], method="zscore",
+            )
+            for asset in ASSETS
+        }
+        for signal_key in FORCE_SIGNALS
+    }
+    force_granger = {
+        signal_key: _granger_table_payload(analytics, f"granger_{signal_key}", GRANGER_BONFERRONI_ALPHA)
+        for signal_key in FORCE_SIGNALS
+    }
+
     return {
         "box_traces": box_traces,
         "event_study": event_study,
         "event_study_volume": event_study_volume,
+        "event_study_end": event_study_end,
+        "event_study_end_volume": event_study_end_volume,
         "granger": granger,
         "granger_volume": granger_volume,
         "granger_alpha": _num(GRANGER_BONFERRONI_ALPHA),
         "vol_volume_ccf": vol_volume_ccf,
+        "force_event_study": force_event_study,
+        "force_granger": force_granger,
+        "force_signal_labels": FORCE_SIGNALS,
     }
 
 
@@ -466,6 +565,9 @@ tbody td{{padding:3px 10px;border-bottom:1px solid #151d2b}}
   padding:3px 10px;font-size:.72rem;cursor:pointer}}
 .scale-btn.active{{background:#2980b9;color:#fff}}
 .scale-label{{font-size:.72rem;color:#7f8c8d;margin-right:2px}}
+.force-btn{{background:#0f0f1a;color:#95a5a6;border:1px solid #1c2a3a;border-radius:4px;
+  padding:3px 10px;font-size:.72rem;cursor:pointer}}
+.force-btn.force-btn-active{{background:#2980b9;color:#fff}}
 .date-pick{{background:#0f0f1a;color:#ecf0f1;border:1px solid #1c2a3a;border-radius:4px;
   padding:2px 6px;font-size:.72rem}}
 .date-pick:disabled{{opacity:.4}}
@@ -577,6 +679,84 @@ footer{{text-align:center;color:#3d5166;font-size:.72rem;margin-top:14px}}
       <div style="overflow-x:auto;margin-top:6px">
         <table><thead><tr><th>Actif</th><th>ADF &#916;&#963; (p)</th><th>ADF &#916;volume (p)</th><th>Lag du pic</th><th>Corr&#233;lation au pic</th><th>Seuil Fisher (Bonferroni)</th><th>Qui pr&#233;c&#232;de&nbsp;?</th></tr></thead>
         <tbody id="vol-volume-ccf-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <h2 style="font-size:1rem;color:#95a5a6;border-top:1px solid #1c2a3a;padding-top:14px;margin-top:18px">
+    Partie 2 &#8212; D&#233;clencheur de fin de r&#233;gime (sortie du stress)
+  </h2>
+
+  <div class="card">
+    <div class="card-label">La volatilit&#233; recule-t-elle avant ou apr&#232;s la sortie du r&#233;gime stress&nbsp;? (&#233;tude d'&#233;v&#233;nement)</div>
+    <p class="chart-note">Volatilit&#233; moyenne autour de chaque sortie du r&#233;gime stress (jour 0 = dernier jour
+      avant la sortie, quel que soit le r&#233;gime suivant), index&#233;e sur la p&#233;riode -10&#224;-5 jours = 0%
+      &#8212; m&#234;me m&#233;thode que la Partie 1. Un losange marque le premier jour o&#249; l'&#233;cart d&#233;passe 1,96&#215;
+      l'erreur standard de la p&#233;riode de r&#233;f&#233;rence (indicatif, pas un test statistique formel &#8212; cf.
+      les tests de Granger de la Partie 1 pour la preuve formelle, qui couvrent d&#233;j&#224; la relation
+      g&#233;n&#233;rale vol/volume vs stress dans le temps).</p>
+    <div id="chart-event-study-end" style="height:380px"></div>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n sorties de stress</th></tr></thead>
+        <tbody id="event-study-end-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Le volume recule-t-il avant ou apr&#232;s la sortie du r&#233;gime stress&nbsp;? (&#233;tude d'&#233;v&#233;nement)</div>
+    <p class="chart-note">M&#234;me m&#233;thode que ci-dessus, appliqu&#233;e au volume normalis&#233;.</p>
+    <div id="chart-event-study-end-volume" style="height:380px"></div>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n sorties de stress</th></tr></thead>
+        <tbody id="event-study-end-volume-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <h2 style="font-size:1rem;color:#95a5a6;border-top:1px solid #1c2a3a;padding-top:14px;margin-top:18px">
+    Extension Partie 1 &#8212; indicateurs de force/momentum (couche de confirmation, hors HMM)
+  </h2>
+
+  <div class="scale-sel" style="justify-content:flex-start;margin-bottom:10px">
+    <button class="force-btn force-btn-active" data-signal="rsi">RSI</button>
+    <button class="force-btn" data-signal="macd_hist">MACD</button>
+    <button class="force-btn" data-signal="momentum">Momentum</button>
+    <button class="force-btn" data-signal="roc">RoC</button>
+    <button class="force-btn" data-signal="stoch_k">Stochastique</button>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Le signal s&#233;lectionn&#233; pr&#233;c&#232;de-t-il ou confirme-t-il un passage en stress&nbsp;? (&#233;tude d'&#233;v&#233;nement)</div>
+    <p class="chart-note">M&#234;me m&#233;thode que la Partie 1 (indexation standardis&#233;e en &#233;carts-types de la
+      p&#233;riode de r&#233;f&#233;rence, robuste aux signaux qui oscillent autour de 0 comme le MACD). On teste
+      maintenant 7 signaux au total avec le vol et le volume &#8212; chaque test individuel reste correctement
+      corrig&#233;, mais comparer "lequel ressort le mieux" parmi 7 comporte un risque suppl&#233;mentaire de
+      surinterpr&#233;tation, &#224; garder en t&#234;te.</p>
+    <div id="chart-force-event-study" style="height:380px"></div>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (jour de premi&#232;re r&#233;action, nombre d'&#233;v&#233;nements)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>Premier jour de r&#233;action</th><th>n transitions vers stress</th></tr></thead>
+        <tbody id="force-event-study-table"></tbody></table>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Test formel &#8212; le signal s&#233;lectionn&#233; pr&#233;dit-il le r&#233;gime stress futur&nbsp;? (causalit&#233; de Granger)</div>
+    <p class="chart-note">M&#234;me test que pour vol/volume (ADF + Granger + Bonferroni, &#945;=0.005).</p>
+    <div id="chart-force-granger" style="height:260px"></div>
+    <p class="chart-note" id="force-granger-verdict"></p>
+    <details style="margin-top:8px">
+      <summary>Voir le d&#233;tail par actif (stationnarit&#233; ADF, p-value minimale)</summary>
+      <div style="overflow-x:auto;margin-top:6px">
+        <table><thead><tr><th>Actif</th><th>ADF signal (p)</th><th>ADF p_stress (p)</th><th>p-value min (lag)</th><th>Verdict</th></tr></thead>
+        <tbody id="force-granger-table"></tbody></table>
       </div>
     </details>
   </div>
@@ -867,7 +1047,7 @@ function initComparisonTab() {{
   }}), {{responsive:true,displayModeBar:false}});
 
   // ── Étude d'événement : profil indexé autour de l'entrée en stress (Q1 vol, Q2 volume) ──
-  function renderEventStudy(data, chartId, tableId) {{
+  function renderEventStudy(data, chartId, tableId, xAxisTitle, yAxisTitle) {{
     const traces = Object.keys(data).map(short => {{
       const a = data[short];
       return {{
@@ -890,9 +1070,8 @@ function initComparisonTab() {{
     }});
     Plotly.newPlot(chartId, [...traces, ...markers], Object.assign({{}}, baseLayout(), {{
       margin: {{ l: 55, r: 18, t: 10, b: 45 }},
-      xaxis: {{ title: 'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
-                gridcolor: GRID, dtick: 1, zeroline: false }},
-      yaxis: {{ title: '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)',
+      xaxis: {{ title: xAxisTitle, gridcolor: GRID, dtick: 1, zeroline: false }},
+      yaxis: {{ title: yAxisTitle,
                 gridcolor: GRID, zeroline: true, zerolinewidth: 2, zerolinecolor: '#566573' }},
       shapes: [{{ type: 'line', x0: 0, x1: 0, xref: 'x', y0: 0, y1: 1, yref: 'paper',
                  line: {{ color: '#7f8c8d', width: 1, dash: 'dash' }} }}],
@@ -1007,13 +1186,41 @@ function initComparisonTab() {{
       `Sur ${{shorts.length}} actifs, le pic de corr&#233;lation se situe c&#244;t&#233; <b>volume pr&#233;c&#232;de</b> pour ${{nVolume}} actif(s), c&#244;t&#233; <b>vol pr&#233;c&#232;de</b> pour ${{nVol}} actif(s) (* = corr&#233;lation significative au seuil de Fisher corrig&#233; pour comparaisons multiples, Bonferroni sur 11 lags).`;
   }}
 
-  renderEventStudy(COMPARISON.event_study, 'chart-event-study', 'event-study-table');
-  renderEventStudy(COMPARISON.event_study_volume, 'chart-event-study-volume', 'event-study-volume-table');
+  renderEventStudy(COMPARISON.event_study, 'chart-event-study', 'event-study-table',
+    'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
+    '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)');
+  renderEventStudy(COMPARISON.event_study_volume, 'chart-event-study-volume', 'event-study-volume-table',
+    'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
+    '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)');
   renderGrangerCard(COMPARISON.granger, COMPARISON.granger_alpha,
     'chart-granger', 'granger-table', 'granger-verdict', 'la volatilit&#233; pass&#233;e');
   renderGrangerCard(COMPARISON.granger_volume, COMPARISON.granger_alpha,
     'chart-granger-volume', 'granger-volume-table', 'granger-volume-verdict', 'le volume pass&#233;');
   renderVolVolumeCcf(COMPARISON.vol_volume_ccf, 'chart-vol-volume-ccf', 'vol-volume-ccf-table', 'vol-volume-ccf-verdict');
+
+  renderEventStudy(COMPARISON.event_study_end, 'chart-event-study-end', 'event-study-end-table',
+    'Jours relatifs &#224; la sortie du r&#233;gime stress (0 = dernier jour avant la sortie)',
+    '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)');
+  renderEventStudy(COMPARISON.event_study_end_volume, 'chart-event-study-end-volume', 'event-study-end-volume-table',
+    'Jours relatifs &#224; la sortie du r&#233;gime stress (0 = dernier jour avant la sortie)',
+    '&#201;cart vs p&#233;riode pr&#233;-&#233;v&#233;nement (%)');
+
+  const FORCE_SIGNAL_LABELS = COMPARISON.force_signal_labels;
+  function renderForceSignal(signal) {{
+    renderEventStudy(COMPARISON.force_event_study[signal], 'chart-force-event-study', 'force-event-study-table',
+      'Jours relatifs au d&#233;but du r&#233;gime stress (0 = jour du basculement)',
+      '&#201;cart standardis&#233; vs p&#233;riode pr&#233;-&#233;v&#233;nement (&#233;carts-types)');
+    renderGrangerCard(COMPARISON.force_granger[signal], COMPARISON.granger_alpha,
+      'chart-force-granger', 'force-granger-table', 'force-granger-verdict', FORCE_SIGNAL_LABELS[signal]);
+  }}
+  renderForceSignal('rsi');
+  document.querySelectorAll('.force-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.force-btn').forEach(b => b.classList.remove('force-btn-active'));
+      btn.classList.add('force-btn-active');
+      renderForceSignal(btn.dataset.signal);
+    }});
+  }});
 }}
 
 // ── D&#233;marrage ──────────────────────────────────────────────────────────────────

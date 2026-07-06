@@ -100,7 +100,8 @@ def regime_width_stats(segments: pd.DataFrame) -> pd.DataFrame:
 # ── 4.3 Vol comme signal avancé d'un changement de régime (étude d'événement) ───
 
 def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment: str = "start",
-                                   only_into: str | None = None, column: str = "sigma_t") -> pd.DataFrame:
+                                   only_into: str | None = None, only_from: str | None = None,
+                                   column: str = "sigma_t") -> pd.DataFrame:
     """
     Étude d'événement : profil moyen d'une colonne (sigma_t par défaut) autour des transitions
     de régime.
@@ -116,6 +117,12 @@ def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment:
     transitions sont poolées ensemble. Pour alignment="start", c'est le régime du segment qui
     COMMENCE à l'événement qui est testé ; pour alignment="end", c'est le régime du segment
     SUIVANT (celui vers lequel on transitionne après la fin du segment courant).
+    only_from : si fourni (ex. "stress"), ne considère que les transitions DEPUIS ce régime
+    (ex. "à quoi ressemble la vol juste avant de SORTIR du stress, peu importe le régime
+    suivant ?") — filtre sur le régime du segment qui se termine (segments["regime"].iloc[i]),
+    pas sur regime_at_event (qui, en alignment="end", pointe déjà vers le régime suivant).
+    only_from et only_into peuvent être combinés (ex. only_from="stress", only_into="calm" pour
+    ne garder que les sorties de stress vers le calme spécifiquement).
     window : nombre de jours de trading de part et d'autre de l'événement.
 
     Pour chaque segment de segment_regimes (sauf le premier segment de l'historique en
@@ -153,6 +160,8 @@ def regime_transition_vol_profile(df: pd.DataFrame, window: int = 10, alignment:
     profiles = []
     for i in candidate_positions:
         if only_into is not None and regime_at_event.iloc[i] != only_into:
+            continue
+        if only_from is not None and segments["regime"].iloc[i] != only_from:
             continue
         pos = df.index.get_loc(event_dates.iloc[i])
         lo, hi = pos - window, pos + window
@@ -397,7 +406,7 @@ def ensure_stationary(series: pd.Series) -> tuple[pd.Series, float, bool]:
 
 # ── 4.6 Test formel : un signal passé (vol ou volume) cause-t-il (au sens de Granger) le régime stress ? ──
 
-def _granger_causality_column_to_stress(df: pd.DataFrame, column: str, maxlag: int) -> dict:
+def granger_causality_to_stress(df: pd.DataFrame, column: str, maxlag: int) -> dict:
     """
     Implémentation générique du test formel de causalité de Granger : la colonne `column`
     (sigma_t pour la Q1 vol, volume_norm pour la Q2 volume) retardée aide-t-elle à prédire
@@ -451,17 +460,17 @@ def _granger_causality_column_to_stress(df: pd.DataFrame, column: str, maxlag: i
 def granger_causality_vol_to_stress(df: pd.DataFrame, maxlag: int = 10) -> dict:
     """
     Question 1 : la volatilité (sigma_t) passée cause-t-elle (au sens de Granger) le régime
-    stress futur ? Cf. _granger_causality_column_to_stress pour la méthode complète (ADF +
+    stress futur ? Cf. granger_causality_to_stress pour la méthode complète (ADF +
     Granger, avec différenciation si nécessaire).
     """
-    return _granger_causality_column_to_stress(df, "sigma_t", maxlag)
+    return granger_causality_to_stress(df, "sigma_t", maxlag)
 
 
 def granger_causality_volume_to_stress(df: pd.DataFrame, maxlag: int = 10) -> dict:
     """
     Question 2 : le volume normalisé (volume_norm) passé cause-t-il (au sens de Granger) le
     régime stress futur ? Même méthode exactement que granger_causality_vol_to_stress
-    (cf. _granger_causality_column_to_stress), appliquée à volume_norm plutôt qu'à sigma_t —
+    (cf. granger_causality_to_stress), appliquée à volume_norm plutôt qu'à sigma_t —
     pour savoir si le volume est un signal précurseur utile, indépendamment de la volatilité.
     """
-    return _granger_causality_column_to_stress(df, "volume_norm", maxlag)
+    return granger_causality_to_stress(df, "volume_norm", maxlag)

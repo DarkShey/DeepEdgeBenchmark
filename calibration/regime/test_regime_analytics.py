@@ -147,6 +147,43 @@ def test_regime_transition_vol_profile_end_alignment_excludes_last_segment():
     assert (profile["n_events"] == 1).all()
 
 
+def test_regime_transition_vol_profile_only_from_filters_on_departing_regime():
+    window = 5
+    # 3 segments : calm(0-29), stress(30-59), calm(60-89) -> 2 transitions en alignment="end" :
+    # fin du segment calm (pos 29, régime de départ = calm) et fin du segment stress (pos 59,
+    # régime de départ = stress). only_from="stress" ne doit garder QUE la seconde, quel que
+    # soit le régime suivant (ici calm) — à la différence de only_into, qui filtrerait sur le
+    # régime suivant et non sur celui qui se termine.
+    regimes = ["calm"] * 30 + ["stress"] * 30 + ["calm"] * 30
+    df = _make_sigma_history(regimes, np.ones(len(regimes)))
+
+    profile = regime_transition_vol_profile(df, window=window, alignment="end", only_from="stress")
+
+    assert (profile["n_events"] == 1).all()
+
+
+def test_regime_transition_vol_profile_only_from_and_only_into_combine():
+    window = 5
+    # 4 segments : calm(0-19), stress(20-39), bull(40-59), stress(60-79). En alignment="end" :
+    # fin de calm (départ=calm, suivant=stress), fin de stress (départ=stress, suivant=bull),
+    # fin de bull (départ=bull, suivant=stress). only_from="stress" seul retiendrait seulement
+    # la fin du 1er segment stress (départ=stress) ; combiné à only_into="bull" (suivant=bull),
+    # le résultat doit rester identique ici car cette unique transition stress->bull satisfait
+    # déjà les deux filtres — la combinaison ne doit pas en écarter une qui les satisfait tous les
+    # deux, ni en garder une qui n'en satisfait qu'un seul (ex. le 3e segment, départ=bull mais
+    # suivant=stress, doit être exclu par only_from="stress" malgré only_into non contraignant ici).
+    regimes = ["calm"] * 20 + ["stress"] * 20 + ["bull"] * 20 + ["stress"] * 20
+    df = _make_sigma_history(regimes, np.ones(len(regimes)))
+
+    only_from_alone = regime_transition_vol_profile(df, window=window, alignment="end", only_from="stress")
+    combined = regime_transition_vol_profile(
+        df, window=window, alignment="end", only_from="stress", only_into="bull"
+    )
+
+    assert (only_from_alone["n_events"] == 1).all()
+    assert (combined["n_events"] == 1).all()
+
+
 def test_segment_boolean_mask_basic():
     idx = pd.date_range("2020-01-01", periods=5, freq="D")
     mask = pd.Series([False, True, True, False, True], index=idx)
