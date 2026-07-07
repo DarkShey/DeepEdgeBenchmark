@@ -5,4 +5,5 @@ __pycache__/
 .venv
 *.db
 tracking_demo_export.csv
-tracking_export.csvRun/
+tracking_export.csv
+Run/
