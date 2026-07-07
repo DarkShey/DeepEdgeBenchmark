@@ -31,10 +31,10 @@ import naive_model
 
 
 # ── ARIMA-GARCH ───────────────────────────────────────────────────────────────
-def forecast_horizons_arima(train: pd.Series, horizons: list) -> dict:
-    """Multi-step via ARIMA.forecast(steps=h) (retours cumulés) + variance GARCH
-    cumulée (somme des variances par pas, hypothèse d'indépendance approx.)."""
-    max_h = max(horizons)
+def fit_arima(train: pd.Series):
+    """Fit ARIMA(order) puis GARCH(1,1) sur ses résidus, une seule fois.
+    Extrait de forecast_horizons_arima (même calcul, exposé pour la sérialisation
+    des artefacts modèles — cf. model_artifacts/pipeline.py)."""
     prices = train.astype(float).values
     returns = np.diff(np.log(prices)) * 100.0
 
@@ -46,14 +46,20 @@ def forecast_horizons_arima(train: pd.Series, horizons: list) -> dict:
     garch_res = arima_model.arch_model(
         resid, vol="Garch", p=1, q=1, dist="normal", rescale=False
     ).fit(disp="off")
+    return arima_res, garch_res
 
+
+def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons: list) -> dict:
+    """Multi-step via ARIMA.forecast(steps=h) (retours cumulés) + variance GARCH
+    cumulée (somme des variances par pas, hypothèse d'indépendance approx.),
+    à partir d'objets déjà fittés (aucun nouveau fit ici)."""
+    max_h = max(horizons)
     mean_fc = np.asarray(arima_res.forecast(steps=max_h), dtype=float) / 100.0
     garch_fc = garch_res.forecast(horizon=max_h, reindex=False)
     var_per_step = garch_fc.variance.values[-1, :] / (100.0 ** 2)
 
     cum_return = np.cumsum(mean_fc)
     cum_sigma = np.sqrt(np.cumsum(var_per_step))
-    last_price = prices[-1]
 
     results = {}
     for h in horizons:
@@ -65,17 +71,28 @@ def forecast_horizons_arima(train: pd.Series, horizons: list) -> dict:
     return results
 
 
+def forecast_horizons_arima(train: pd.Series, horizons: list) -> dict:
+    """Fit once (fit_arima) puis forecast (forecast_from_fitted_arima) — inchangé
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
+    arima_res, garch_res = fit_arima(train)
+    last_price = train.astype(float).values[-1]
+    return forecast_from_fitted_arima(arima_res, garch_res, last_price, horizons)
+
+
 # ── SARIMA ────────────────────────────────────────────────────────────────────
-def forecast_horizons_sarima(train: pd.Series, horizons: list) -> dict:
-    """Multi-step natif : SARIMAX.get_forecast(steps=h) donne predicted_mean et
-    conf_int() pour chaque pas 1..h en un seul appel."""
-    max_h = max(horizons)
+def fit_sarima(train: pd.Series):
+    """Fit SARIMAX une seule fois. Extrait de forecast_horizons_sarima."""
     history = train.astype(float).values.tolist()
-    result = sarima_model.SARIMAX(
+    return sarima_model.SARIMAX(
         history, order=sarima_model.ORDER, seasonal_order=sarima_model.SEASONAL_ORDER,
         enforce_stationarity=False, enforce_invertibility=False,
     ).fit(disp=False)
 
+
+def forecast_from_fitted_sarima(result, horizons: list) -> dict:
+    """Multi-step natif : SARIMAX.get_forecast(steps=h) donne predicted_mean et
+    conf_int() pour chaque pas 1..h en un seul appel, à partir d'un résultat déjà fitté."""
+    max_h = max(horizons)
     fc = result.get_forecast(steps=max_h)
     pred_mean = np.asarray(fc.predicted_mean, dtype=float)
     ci = np.asarray(fc.conf_int(alpha=sarima_model.PI_ALPHA), dtype=float)
@@ -87,13 +104,17 @@ def forecast_horizons_sarima(train: pd.Series, horizons: list) -> dict:
     return results
 
 
+def forecast_horizons_sarima(train: pd.Series, horizons: list) -> dict:
+    """Fit once (fit_sarima) puis forecast (forecast_from_fitted_sarima) — inchangé
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
+    result = fit_sarima(train)
+    return forecast_from_fitted_sarima(result, horizons)
+
+
 # ── Prophet ───────────────────────────────────────────────────────────────────
-def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
-    """Le modèle est fit une seule fois ; on interroge directement les dates futures
-    (jours ouvrés au-delà de la dernière date d'entraînement) — Prophet élargit
-    nativement l'IC avec la distance dans le futur."""
+def fit_prophet(train: pd.Series):
+    """Fit Prophet une seule fois. Extrait de forecast_horizons_prophet."""
     import prophet_model
-    max_h = max(horizons)
     df_train = pd.DataFrame({
         "ds": pd.to_datetime(train.index),
         "y": train.astype(float).values.flatten(),
@@ -103,8 +124,15 @@ def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
         daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True,
     )
     model.fit(df_train)
+    return model
 
-    last_date = pd.to_datetime(train.index[-1])
+
+def forecast_from_fitted_prophet(model, last_date, horizons: list) -> dict:
+    """Interroge directement les dates futures (jours ouvrés au-delà de last_date)
+    sur un modèle déjà fitté — Prophet élargit nativement l'IC avec la distance
+    dans le futur, sans dépendre d'un état interne à mettre à jour."""
+    max_h = max(horizons)
+    last_date = pd.to_datetime(last_date)
     future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=max_h)
     forecast = model.predict(pd.DataFrame({"ds": future_dates}))
 
@@ -116,13 +144,18 @@ def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
     return results
 
 
+def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
+    """Fit once (fit_prophet) puis forecast (forecast_from_fitted_prophet) — inchangé
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
+    model = fit_prophet(train)
+    return forecast_from_fitted_prophet(model, train.index[-1], horizons)
+
+
 # ── LSTM ──────────────────────────────────────────────────────────────────────
-def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
-                           seed: int = None) -> dict:
-    """Un seul rollout récursif de max(horizons) pas : le réseau se ré-alimente de
-    ses propres prédictions (jamais du vrai futur, contrainte point-in-time). L'IC
-    s'élargit en sqrt(h) à partir de l'écart-type des résidus d'entraînement (même
-    convention que next_step_lstm, étendue au multi-step)."""
+def fit_lstm(train: pd.Series, epochs: int = None, seed: int = None):
+    """Fit le réseau une seule fois. Extrait de forecast_horizons_lstm.
+    Retourne (model, scaler, std_résidus, série_scalée_complète) : tout ce qu'il
+    faut pour forecaster (forecast_from_fitted_lstm) ou sérialiser l'artefact."""
     import lstm_model
     seq_len = lstm_model.SEQ_LEN
     epochs = lstm_model.EPOCHS if epochs is None else epochs
@@ -134,7 +167,6 @@ def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
             f"train series has {len(train)} points, but seq_len={seq_len} requires "
             f"more than {seq_len} points to build at least one training sequence."
         )
-    max_h = max(horizons)
 
     scaler = lstm_model.MinMaxScaler()
     scaled = scaler.fit_transform(train.values.reshape(-1, 1)).flatten()
@@ -148,7 +180,18 @@ def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
 
     train_preds = scaler.inverse_transform(
         model.predict(X, verbose=0).reshape(-1, 1)).flatten()
-    std = np.std(train.values[seq_len:] - train_preds)
+    std = float(np.std(train.values[seq_len:] - train_preds))
+    return model, scaler, std, scaled
+
+
+def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list) -> dict:
+    """Un seul rollout récursif de max(horizons) pas à partir d'objets déjà fittés :
+    le réseau se ré-alimente de ses propres prédictions (jamais du vrai futur,
+    contrainte point-in-time). L'IC s'élargit en sqrt(h) à partir de l'écart-type
+    des résidus d'entraînement (même convention que next_step_lstm)."""
+    import lstm_model
+    seq_len = lstm_model.SEQ_LEN
+    max_h = max(horizons)
 
     buffer = list(scaled[-seq_len:])
     rollout_scaled = []
@@ -165,9 +208,17 @@ def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
     for h in horizons:
         i = h - 1
         point = float(rollout_prices[i])
-        sigma_h = float(std) * np.sqrt(h)
+        sigma_h = std * np.sqrt(h)
         results[h] = (point, point - 1.96 * sigma_h, point + 1.96 * sigma_h)
     return results
+
+
+def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
+                           seed: int = None) -> dict:
+    """Fit once (fit_lstm) puis forecast (forecast_from_fitted_lstm) — inchangé
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
+    model, scaler, std, scaled = fit_lstm(train, epochs=epochs, seed=seed)
+    return forecast_from_fitted_lstm(model, scaler, std, scaled, horizons)
 
 
 # ── Naive ─────────────────────────────────────────────────────────────────────

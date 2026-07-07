@@ -1,0 +1,11 @@
+{
+  "RMSE": 3052.0422,
+  "MAE": 2734.7105,
+  "MAPE": 3.82,
+  "directional_accuracy": 66.67,
+  "pi_coverage_95": 100.0,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "BTC-USD",
+  "model": "Naive"
+}

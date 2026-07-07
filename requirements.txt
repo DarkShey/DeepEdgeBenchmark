@@ -17,3 +17,7 @@ pandas_ta>=0.3.14b
 
 # Test tooling (models/ + calibration/regime test suites)
 pytest>=7
+pytest-timeout>=2
+
+# model_artifacts/ (résidus ARIMA/SARIMA sérialisés en residuals.parquet)
+pyarrow>=14

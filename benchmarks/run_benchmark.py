@@ -17,7 +17,7 @@ Quick start
 -----------
     python -m benchmarks.run_benchmark
     python -m benchmarks.run_benchmark --models "Naive,ARIMA-GARCH" --assets "SPY,BTC-USD"
-    python -m benchmarks.run_benchmark --headless artifacts/benchmark_check.png
+    python -m benchmarks.run_benchmark --headless Run/benchmark_check.png
 """
 
 import argparse

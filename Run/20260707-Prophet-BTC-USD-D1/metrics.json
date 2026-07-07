@@ -1,0 +1,11 @@
+{
+  "RMSE": 12066.4273,
+  "MAE": 9926.0238,
+  "MAPE": 14.88,
+  "directional_accuracy": 53.05,
+  "pi_coverage_95": 81.21,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "Prophet"
+}
