@@ -32,11 +32,6 @@ REQUIRED_FIELDS = [
     "verdict_integrite", "verdict_plausibilite", "created_at",
 ]
 
-# Colonnes optionnelles, remplies soit par l'appelant (ex. generate_test_cases.py
-# en mode "holdout" : le futur est déjà connu dans les mêmes données téléchargées,
-# donc actual est rempli tout de suite — un fait brut, pas un verdict de
-# précision), soit plus tard par evaluate_pending() (hors scope de ce module) via
-# un UPDATE. Absentes du record -> restent NULL, comme avant.
 OPTIONAL_FIELDS = ["actual", "evaluated_at"]
 ALL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS
 SCHEMA = """
@@ -79,15 +74,15 @@ def _connect(db_path: str) -> sqlite3.Connection:
 
 
 def save_prediction(record: dict, db_path: str = "tracking.db") -> bool:
-    """Insère `record` dans `predictions` (table créée si absente).
+    """Insere record dans predictions (table creee si absente).
 
-    Retourne True si la ligne a été insérée, False si elle existait déjà
-    (même tc_id/model/cutoff_date — doublon ignoré silencieusement, comme
-    demandé). Lève ValueError si un champ de REQUIRED_FIELDS manque.
+    Retourne True si la ligne a ete inseree, False si elle existait deja
+    (meme tc_id/model/cutoff_date -- doublon ignore silencieusement, comme
+    demande). Leve ValueError si un champ de REQUIRED_FIELDS manque.
 
-    `record` peut aussi contenir "actual"/"evaluated_at" (OPTIONAL_FIELDS) —
-    si présents, ils sont persistés dès l'insertion ; sinon NULL (comportement
-    inchangé, à remplir plus tard par un UPDATE, ex. evaluate_pending()).
+    record peut aussi contenir actual/evaluated_at (OPTIONAL_FIELDS) --
+    si presents, ils sont persistes des l'insertion ; sinon NULL (comportement
+    inchange, a remplir plus tard par un UPDATE, ex. evaluate_pending()).
     """
     _validate(record)
     conn = _connect(db_path)
