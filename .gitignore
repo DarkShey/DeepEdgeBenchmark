@@ -4,3 +4,4 @@ __pycache__/
 .pytest_cache/
 .venv
 *.db
+tracking_demo_export.csv
