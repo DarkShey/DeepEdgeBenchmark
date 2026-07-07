@@ -10,7 +10,7 @@ import sqlite3
 
 import pytest
 
-import tracking_db as td
+from validation import tracking_db as td
 
 
 def make_record(**overrides):

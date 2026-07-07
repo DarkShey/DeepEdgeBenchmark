@@ -5,16 +5,16 @@ usage_tracking_db.py — démonstration bout-en-bout de tracking_db.py (Partie B
             -> evaluate_pending (price_fetcher yfinance de price_fetcher.py)
             -> report (par modèle, puis par modèle x régime)
 
-Exécution :
-    python usage_tracking_db.py
+Exécution (depuis DeepEdgeBenchmark/) :
+    python -m validation.usage_tracking_db
 """
 
 from datetime import datetime
 
-import tracking_db as td
-from price_fetcher import yfinance_price_fetcher
+from validation import tracking_db as td
+from validation.price_fetcher import yfinance_price_fetcher
 
-DB_PATH = "tracking_demo.db"
+DB_PATH = "validation/tracking_demo.db"
 
 # 3 records d'exemple conformes au contrat (§3) — réutilisables tels quels par
 # Kyrio pour tester son côté (save_prediction côté Partie A).
@@ -65,7 +65,7 @@ def main():
     for row in td.report(group_by=("model", "regime"), db_path=DB_PATH):
         print(row)
 
-    n_csv = td.export_csv("tracking_demo_export.csv", db_path=DB_PATH)
+    n_csv = td.export_csv("validation/tracking_demo_export.csv", db_path=DB_PATH)
     print(f"\nexport_csv -> tracking_demo_export.csv ({n_csv} lignes)")
 
 
