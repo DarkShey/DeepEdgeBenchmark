@@ -1,9 +1,12 @@
 {
   "RMSE": 1869.4675,
-  "MAE": 1301.2088,
+  "MAE": 1301.2082,
   "MAPE": 1.85,
   "directional_accuracy": 53.05,
   "pi_coverage_95": 95.76,
+  "pi_width_min": 7129.880281,
+  "pi_width_mean": 7269.384629,
+  "pi_width_max": 7364.542411,
   "n_val": 165,
   "horizon": "D1",
   "asset": "BTC-USD",

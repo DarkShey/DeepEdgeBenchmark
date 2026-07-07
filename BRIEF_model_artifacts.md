@@ -58,6 +58,23 @@ ex : Run/20260707-ARIMA-BTC-USD-D1/
 
 `RMSE`, `MAE`, `MAPE`, `directional_accuracy`, `pi_coverage_95`, `n_val`, `horizon`, `asset`, `model`.
 
+**Ajout (dashboard v2)** : `pi_width_min`, `pi_width_mean`, `pi_width_max` (largeur `pi_upper - pi_lower`
+de l'intervalle à 95%, agrégée sur les points de validation Gate 2) — alimente le breakdown
+modèle × horizon du dashboard.
+
+### 6bis. `predictions.parquet` et `prices.parquet` (dashboard v2)
+
+Produits par Gate 2 (si succès) en plus de `metrics.json`, pour le graphe prix + prédictions
+du dashboard (`model_artifacts/generate_dashboard.py`) :
+
+- `predictions.parquet` : colonnes `date, actual, predicted, pi_lower, pi_upper` — un point par
+  jour de validation (D+1, walk-forward 1-step) ou par origine glissante (D+7, cf. §12 de
+  `pipeline.py`). Absent si Gate 2 échoue.
+- `prices.parquet` : colonnes `date, close` — historique complet (train + validation), écrit dans
+  chaque dossier de combinaison (même redondance assumée que `metadata.json`, cf. §12) pour que le
+  dossier reste auto-suffisant. La coupure train/validation est déjà connue via
+  `metadata.json.train_end`.
+
 ## 7. Contenu de `metadata.json`
 
 `asset`, `asset_class`, `frequency` (`1d`), `window_start`, `window_end`, `train_end` (date de coupure 85 %), `run_date`, `git_commit`, `seed`, versions des libs clés.
