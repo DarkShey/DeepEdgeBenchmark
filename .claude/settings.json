@@ -13,7 +13,9 @@
       "Bash(python -c \"import certifi; print\\(certifi.where\\(\\)\\)\")",
       "Bash(env)",
       "Bash(python -c \"import ssl; print\\(ssl.OPENSSL_VERSION\\)\")",
-      "PowerShell(Start-Process \"c:\\\\Users\\\\huche\\\\Documents\\\\Cours\\\\2025-2026\\\\Stage\\\\DeepEdgeBenchmark-main\\\\DeepEdgeBenchmark\\\\Run\\\\dashboard.html\")"
+      "PowerShell(Start-Process \"c:\\\\Users\\\\huche\\\\Documents\\\\Cours\\\\2025-2026\\\\Stage\\\\DeepEdgeBenchmark-main\\\\DeepEdgeBenchmark\\\\Run\\\\dashboard.html\")",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)"
     ]
   }
 }
