@@ -451,26 +451,41 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
     n_origins = min(max_origins, max_origin)
     origins = sorted(set(np.linspace(0, max_origin - 1, n_origins, dtype=int).tolist()))
 
-    actuals, preds, los, his = [], [], [], []
+    dates, actuals, preds, los, his = [], [], [], [], []
     for origin in origins:
         extended_train = pd.concat([train, validation.iloc[:origin]]) if origin > 0 else train
-        actual = float(validation.iloc[origin + h_days - 1])
+        target_idx = origin + h_days - 1
+        actual = float(validation.iloc[target_idx])
         point, lo, hi = _forecast_horizon(model_key, extended_train, h_days, seed, epochs)
+        dates.append(validation.index[target_idx])
         actuals.append(actual); preds.append(point); los.append(lo); his.append(hi)
 
     metrics = _compute_metrics_for(model_key, actuals, preds, los, his)
+    # Clés préfixées `_` (même convention que `_n_val` déjà en place) : poppées par
+    # evaluate_gate2 avant de construire le payload de métriques, portées jusque-là
+    # pour permettre l'écriture de predictions.parquet (cf. write_predictions_parquet).
     metrics["_n_val"] = len(origins)
+    metrics["_dates"] = dates
+    metrics["_actuals"] = actuals
+    metrics["_preds"] = preds
+    metrics["_los"] = los
+    metrics["_his"] = his
     return metrics
 
 
-def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label: str, n_val: int) -> dict:
+def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label: str, n_val: int,
+                        pi_lower, pi_upper) -> dict:
     pi_cov = result.get("PI Cov 95% (%)")
+    widths = np.asarray(pi_upper, dtype=float) - np.asarray(pi_lower, dtype=float)
     return {
         "RMSE": _num(result.get("RMSE")),
         "MAE": _num(result.get("MAE")),
         "MAPE": _num(result.get("MAPE (%)")),
         "directional_accuracy": _num(result.get("Dir. Acc (%)")),
         "pi_coverage_95": _num(pi_cov) if pi_cov != "N/A" else None,
+        "pi_width_min": _num(np.min(widths)) if widths.size else None,
+        "pi_width_mean": _num(np.mean(widths)) if widths.size else None,
+        "pi_width_max": _num(np.max(widths)) if widths.size else None,
         "n_val": n_val,
         "horizon": horizon_label,
         "asset": asset,
@@ -486,25 +501,40 @@ def _gate2_metrics_ok(payload: dict) -> bool:
 def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.Series,
                    horizon_label: str, seed=None, epochs=None,
                    max_d7_origins: int = MAX_D7_ROLLING_ORIGINS):
-    """Gate 2 : évalue sur les 15% de fin, retourne (payload, gate2_ok). payload est
-    None si le calcul a levé une exception ou si une métrique n'est pas calculable."""
+    """Gate 2 : évalue sur les 15% de fin, retourne (payload, gate2_ok, series). payload
+    et series sont None si le calcul a levé une exception. `series` (dict avec
+    dates/actual/predicted/pi_lower/pi_upper, alignés point à point) alimente
+    write_predictions_parquet — pour D1 c'est le validation set complet (walk-forward
+    1-step), pour D7 c'est un point par origine glissante (cf. _run_model_d7_rolling)."""
     h_days = HORIZON_TRADING_DAYS[horizon_label]
     try:
         if horizon_label == "D1":
             result = _run_model_d1(model_key, train, validation, seed, epochs)
             n_val = len(validation)
+            dates = list(result["index"])
+            actual_arr = list(np.asarray(result["actual"], dtype=float))
+            pred_arr = list(np.asarray(result["predictions"], dtype=float))
+            lo_arr = list(np.asarray(result["lower"], dtype=float))
+            hi_arr = list(np.asarray(result["upper"], dtype=float))
         else:
             result = _run_model_d7_rolling(model_key, train, validation, h_days, seed, epochs, max_d7_origins)
             n_val = result.pop("_n_val")
-        payload = _to_metrics_payload(result, model_key, asset, horizon_label, n_val)
+            dates = result.pop("_dates")
+            actual_arr = result.pop("_actuals")
+            pred_arr = result.pop("_preds")
+            lo_arr = result.pop("_los")
+            hi_arr = result.pop("_his")
+        payload = _to_metrics_payload(result, model_key, asset, horizon_label, n_val, lo_arr, hi_arr)
+        series = {"dates": dates, "actual": actual_arr, "predicted": pred_arr,
+                  "pi_lower": lo_arr, "pi_upper": hi_arr}
     except Exception as exc:
         print(f"    [Gate2 FAIL] {model_key} {horizon_label} : {exc}")
-        return None, False
+        return None, False, None
 
     ok = _gate2_metrics_ok(payload)
     if not ok:
         print(f"    [Gate2 FAIL] {model_key} {horizon_label} : métriques non calculables ({payload})")
-    return payload, ok
+    return payload, ok, series
 
 
 def write_metadata_json(out_dir: Path, asset: str, asset_class: str, window_start: str,
@@ -516,6 +546,29 @@ def write_metadata_json(out_dir: Path, asset: str, asset_class: str, window_star
         "lib_versions": get_lib_versions(),
     }
     (out_dir / "metadata.json").write_text(json.dumps(payload, indent=2))
+
+
+def write_predictions_parquet(out_dir: Path, dates, actual, predicted, pi_lower, pi_upper) -> None:
+    """Série datée réel/prédit/PI 95% de la validation Gate 2 (D1 : un point par jour de
+    validation ; D7 : un point par origine glissante) — alimente le graphe du dashboard."""
+    df = pd.DataFrame({
+        "date": pd.DatetimeIndex(dates),
+        "actual": np.asarray(actual, dtype=float),
+        "predicted": np.asarray(predicted, dtype=float),
+        "pi_lower": np.asarray(pi_lower, dtype=float),
+        "pi_upper": np.asarray(pi_upper, dtype=float),
+    })
+    df.to_parquet(out_dir / "predictions.parquet")
+
+
+def write_prices_parquet(out_dir: Path, train: pd.Series, validation: pd.Series) -> None:
+    """Historique complet (train + validation) — permet au graphe du dashboard de tracer
+    la courbe de prix réelle avant même la fenêtre de validation, avec la coupure
+    train/validation (cf. metadata.json.train_end). Même redondance assumée que
+    metadata.json (cf. BRIEF §12) : un dossier de combinaison reste auto-suffisant."""
+    full = pd.concat([train, validation])
+    df = pd.DataFrame({"date": pd.DatetimeIndex(full.index), "close": full.values.astype(float)})
+    df.to_parquet(out_dir / "prices.parquet")
 
 
 # ── Orchestration d'une combinaison / du pipeline complet ───────────────────────
@@ -541,11 +594,13 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         if model_key != "Naive" and gate1_ok and out_dir != first_out_dir:
             copy_serialized_artifacts(first_out_dir, out_dir, model_key)
 
-        payload, gate2_ok = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
-                                           seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
+        payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
+                                                   seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
         if gate2_ok:
             (out_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
+            write_predictions_parquet(out_dir, **series)
 
+        write_prices_parquet(out_dir, train, validation)
         write_metadata_json(out_dir, ticker, asset_class, window_start, window_end,
                             train_end, run_date_iso, seed)
 

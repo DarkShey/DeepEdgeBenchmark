@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "Bash(node \"C:\\\\Users\\\\huche\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.202\\\\ee3ed7407658f4c4a4805e1f90029885\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#2a78d6,#1baf7a,#eda100,#008300,#4a3aa7\" --mode light)",
+      "Bash(node \"C:\\\\Users\\\\huche\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.202\\\\ee3ed7407658f4c4a4805e1f90029885\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#3987e5,#199e70,#c98500,#008300,#9085e9\" --mode dark --surface \"#1a1a19\")",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue)",
+      "PowerShell(node --version 2>&1)",
+      "Bash(python -m model_artifacts.generate_dashboard)",
+      "Bash(python -m model_artifacts.pipeline)",
+      "Bash(python -c \"import certifi; print\\(certifi.where\\(\\)\\)\")",
+      "Bash(env)",
+      "Bash(python -c \"import ssl; print\\(ssl.OPENSSL_VERSION\\)\")",
+      "PowerShell(Start-Process \"c:\\\\Users\\\\huche\\\\Documents\\\\Cours\\\\2025-2026\\\\Stage\\\\DeepEdgeBenchmark-main\\\\DeepEdgeBenchmark\\\\Run\\\\dashboard.html\")",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)"
+    ]
+  }
+}

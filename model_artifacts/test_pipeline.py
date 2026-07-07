@@ -23,6 +23,7 @@ from model_artifacts import pipeline as mp
 MODELS_TO_TEST = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM"]
 EXPECTED_METRICS_KEYS = {
     "RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
+    "pi_width_min", "pi_width_mean", "pi_width_max",
     "n_val", "horizon", "asset", "model",
 }
 
@@ -61,7 +62,7 @@ def test_gate1_passes_and_serializes_expected_files(model_key, tmp_path, synthet
 def test_gate2_passes_and_metrics_have_expected_keys(model_key, horizon_label, synthetic_split):
     train, validation = synthetic_split
 
-    payload, gate2_ok = mp.evaluate_gate2(
+    payload, gate2_ok, series = mp.evaluate_gate2(
         model_key, "SYN", train, validation, horizon_label,
         seed=0, epochs=_epochs_for(model_key), max_d7_origins=2,
     )
@@ -73,7 +74,15 @@ def test_gate2_passes_and_metrics_have_expected_keys(model_key, horizon_label, s
     assert payload["model"] == model_key
     assert payload["n_val"] > 0
     assert all(np.isfinite(payload[k]) for k in
-              ("RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95"))
+              ("RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
+               "pi_width_min", "pi_width_mean", "pi_width_max"))
+    assert payload["pi_width_min"] <= payload["pi_width_mean"] <= payload["pi_width_max"]
+
+    # series alimente predictions.parquet (cf. write_predictions_parquet) : un point par
+    # jour de validation (D1) ou par origine glissante (D7), toutes les listes alignées.
+    n_points = payload["n_val"]
+    assert {"dates", "actual", "predicted", "pi_lower", "pi_upper"} == set(series.keys())
+    assert all(len(series[k]) == n_points for k in series)
 
 
 @pytest.mark.parametrize("model_key", MODELS_TO_TEST)
@@ -119,7 +128,8 @@ def test_process_asset_model_produces_all_five_files_for_lstm(tmp_path, monkeypa
 
     for log in logs:
         out_dir = Path(log["dir"])
-        for filename in ("model.h5", "scaler.pkl", "hyperparams.json", "metrics.json", "metadata.json"):
+        for filename in ("model.h5", "scaler.pkl", "hyperparams.json", "metrics.json", "metadata.json",
+                         "predictions.parquet", "prices.parquet"):
             assert (out_dir / filename).exists(), f"{filename} manquant dans {out_dir}"
 
     # même modèle (fit une fois) -> model.h5/scaler.pkl identiques dans D1 et D7 (§12)
@@ -127,3 +137,16 @@ def test_process_asset_model_produces_all_five_files_for_lstm(tmp_path, monkeypa
     d7_dir = Path(logs[1]["dir"])
     assert (d1_dir / "model.h5").read_bytes() == (d7_dir / "model.h5").read_bytes()
     assert (d1_dir / "scaler.pkl").read_bytes() == (d7_dir / "scaler.pkl").read_bytes()
+
+    # predictions.parquet (D1) : un point par jour de validation, colonnes attendues.
+    preds_d1 = pd.read_parquet(d1_dir / "predictions.parquet")
+    assert list(preds_d1.columns) == ["date", "actual", "predicted", "pi_lower", "pi_upper"]
+    assert len(preds_d1) == len(validation)
+
+    # prices.parquet : historique complet (train + validation), identique dans D1 et D7
+    # (même redondance assumée que metadata.json, cf. BRIEF §12).
+    prices_d1 = pd.read_parquet(d1_dir / "prices.parquet")
+    prices_d7 = pd.read_parquet(d7_dir / "prices.parquet")
+    assert list(prices_d1.columns) == ["date", "close"]
+    assert len(prices_d1) == len(train) + len(validation)
+    pd.testing.assert_frame_equal(prices_d1, prices_d7)
