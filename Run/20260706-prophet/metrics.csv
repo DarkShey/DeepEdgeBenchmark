@@ -1,0 +1,2 @@
+model,ticker,start,end,test_ratio,n_test,RMSE,MAE,MAPE,DirAcc_%,PI_cov95_%,runtime_s,seed
+Prophet,SPY,2023-01-01,2024-12-31,0.15,76,42.1249,40.4472,7.04,53.33,3.95,0.11,42

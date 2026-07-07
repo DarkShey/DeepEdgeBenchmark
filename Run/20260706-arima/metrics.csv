@@ -1,0 +1,2 @@
+model,ticker,start,end,test_ratio,n_test,RMSE,MAE,MAPE,DirAcc_%,PI_cov95_%,runtime_s,seed
+ARIMA,SPY,2023-01-01,2024-12-31,0.15,76,4.345,3.1224,0.55,46.67,96.05,0.24,42
