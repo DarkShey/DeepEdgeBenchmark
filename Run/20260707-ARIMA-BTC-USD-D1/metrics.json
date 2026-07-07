@@ -1,0 +1,11 @@
+{
+  "RMSE": 1871.8356,
+  "MAE": 1303.6185,
+  "MAPE": 1.85,
+  "directional_accuracy": 54.27,
+  "pi_coverage_95": 94.55,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "ARIMA-GARCH"
+}

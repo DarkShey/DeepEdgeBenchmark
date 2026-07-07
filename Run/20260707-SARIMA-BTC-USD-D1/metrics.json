@@ -1,0 +1,11 @@
+{
+  "RMSE": 1869.4675,
+  "MAE": 1301.2088,
+  "MAPE": 1.85,
+  "directional_accuracy": 53.05,
+  "pi_coverage_95": 95.76,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "SARIMA"
+}
