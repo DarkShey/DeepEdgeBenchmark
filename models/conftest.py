@@ -5,15 +5,35 @@ No network access anywhere in this suite: fetch_data() is never exercised with
 real arguments, only monkeypatched or called on data already in memory.
 """
 
-import importlib
 import os
+
+os.environ.setdefault("PYTHONHASHSEED", "0")
+
+# Doit s'exécuter avant TOUT le reste, y compris pytest/numpy/pandas (cf.
+# model_artifacts/lstm_worker.py pour l'investigation complète) : lstm_model.py importe
+# yfinance/statsmodels AVANT tensorflow (son propre ordre interne) -- si un test filtré
+# sur lstm_model est le premier à importer tensorflow via cet ordre-là, le premier
+# model.fit() de la session pytest se bloque indéfiniment (deadlock TF confirmé, pile
+# figée dans TFE_Execute -> Notification jamais signalée). Importer + configurer
+# tensorflow ici, avant toute collecte de tests, élimine la classe de deadlock.
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+try:
+    import tensorflow as _tf
+    _tf.config.set_visible_devices([], "GPU")
+    _tf.config.threading.set_intra_op_parallelism_threads(1)
+    _tf.config.threading.set_inter_op_parallelism_threads(1)
+except Exception:
+    pass
+
+import importlib
 import random
 
 import numpy as np
 import pandas as pd
 import pytest
-
-os.environ.setdefault("PYTHONHASHSEED", "0")
 
 MODEL_MODULE_NAMES = ["arima_model", "sarima_model", "prophet_model", "lstm_model"]
 

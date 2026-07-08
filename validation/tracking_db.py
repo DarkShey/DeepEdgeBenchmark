@@ -228,6 +228,53 @@ def report(group_by=("model",), db_path=DEFAULT_DB_PATH) -> list:
         conn.close()
 
 
+def fetch_predictions_for_run(run_id, db_path=DEFAULT_DB_PATH) -> list:
+    """Toutes les lignes (contrat + évaluation) de ce run_id précis, une par
+    (tc_id, model) — utilisé pour ranger les résultats de validation business dans
+    les dossiers Run/<date>-<modèle>-<asset>-<horizon>/ du pipeline ML."""
+    init_db(db_path)
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM predictions WHERE run_id = ? ORDER BY id", (run_id,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def pending_assets(db_path=DEFAULT_DB_PATH) -> list:
+    """Actifs distincts ayant au moins une prédiction non résolue et déjà échue
+    (target_date <= aujourd'hui) — utilisé par evaluate_daily.py (cron) pour savoir
+    quels actifs re-télécharger avant d'appeler evaluate_pending()."""
+    init_db(db_path)
+    conn = _connect(db_path)
+    try:
+        today = date.today().isoformat()
+        rows = conn.execute(
+            "SELECT DISTINCT asset FROM predictions WHERE y_true IS NULL AND target_date <= ?",
+            (today,),
+        ).fetchall()
+        return [row["asset"] for row in rows]
+    finally:
+        conn.close()
+
+
+def run_ids_evaluated_on(day_iso, db_path=DEFAULT_DB_PATH) -> list:
+    """run_id distincts ayant eu au moins une prédiction évaluée ce jour précis
+    (evaluated_at = day_iso) — permet de ne rafraîchir que les bundles Run/ concernés
+    après un evaluate_pending(), sans retraiter tous les runs historiques."""
+    init_db(db_path)
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT run_id FROM predictions WHERE evaluated_at = ?", (day_iso,)
+        ).fetchall()
+        return [row["run_id"] for row in rows]
+    finally:
+        conn.close()
+
+
 def export_csv(path, db_path=DEFAULT_DB_PATH) -> int:
     """Dump de la table predictions en CSV. Retourne le nombre de lignes écrites."""
     conn = _connect(db_path)

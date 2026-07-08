@@ -35,12 +35,15 @@ Exécution (depuis DeepEdgeBenchmark/) :
 """
 
 import argparse
+import ast
 import json
 import os
 import pickle
 import shutil
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
@@ -603,6 +606,105 @@ def write_prices_parquet(out_dir: Path, train: pd.Series, validation: pd.Series)
 
 # ── Orchestration d'une combinaison / du pipeline complet ───────────────────────
 
+MODEL_TEST_FILTER = {
+    # Bracketé : "arima_model" seul matcherait aussi les tests de "sarima_model" (sous-chaîne).
+    "ARIMA-GARCH": "[arima_model]", "SARIMA": "[sarima_model]", "Prophet": "[prophet_model]",
+    "LSTM": "lstm",  # pas "[lstm_model]" : capte aussi les 2 tests spécifiques LSTM de
+                      # test_models_common.py (noms contenant "lstm" mais hors fixture paramétrée)
+    "Naive": "naive_model",  # aucun test dédié pour naive_model dans models/ à ce jour -> 0 collecté
+}
+
+_unit_test_cache = {}
+
+# Fichiers de tests couvrant models/*.py, sourcés par MODEL_TEST_FILTER ci-dessus.
+UNIT_TEST_SOURCE_FILES = ["models/test_models_common.py", "models/test_metrics.py"]
+
+
+def _module_docstring(relative_path: str) -> str:
+    """Docstring de tête du fichier de test, lue à chaque run (jamais périmée, contrairement
+    à une doc à maintenir à la main) — répond à "à quoi correspondent ces tests"."""
+    tree = ast.parse((REPO_ROOT / relative_path).read_text())
+    return (ast.get_docstring(tree) or "").strip()
+
+
+def _model_unit_test_results(model_key: str) -> dict:
+    """Résultats des tests unitaires (models/) propres à ce modèle : statut global, détail
+    test par test (via le rapport JUnit, plus fiable qu'un parsing du texte de sortie), et
+    la docstring des fichiers de tests sources pour documenter ce qu'ils vérifient. Mis en
+    cache pour la durée du process : le code testé ne change pas d'un actif/horizon à
+    l'autre dans un même run, inutile de relancer pytest pour un résultat identique."""
+    if model_key in _unit_test_cache:
+        return _unit_test_cache[model_key]
+
+    filter_expr = MODEL_TEST_FILTER[model_key]
+    with tempfile.TemporaryDirectory() as tmp:
+        junit_path = Path(tmp) / "report.xml"
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "models", "-k", filter_expr,
+             "-q", "--no-header", f"--junitxml={junit_path}"],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+        )
+        tests = []
+        if junit_path.exists():
+            root = ET.parse(junit_path).getroot()
+            suite = root.find("testsuite") if root.tag == "testsuites" else root
+            for case in suite.findall("testcase"):
+                outcome = "passed"
+                if case.find("failure") is not None:
+                    outcome = "failed"
+                elif case.find("error") is not None:
+                    outcome = "error"
+                elif case.find("skipped") is not None:
+                    outcome = "skipped"
+                module = case.get("classname", "").replace(".", "/") + ".py"
+                tests.append({"name": f"{module}::{case.get('name')}", "outcome": outcome})
+
+    summary_line = next((l for l in reversed(result.stdout.strip().splitlines()) if l.strip()), "")
+    status = "no_tests_collected" if result.returncode == 5 else ("pass" if result.returncode == 0 else "fail")
+
+    summary = {
+        "model": model_key, "pytest_filter": filter_expr,
+        "status": status, "exit_code": result.returncode, "summary": summary_line,
+        "tests": tests,
+        "what_these_tests_check": {f: _module_docstring(f) for f in UNIT_TEST_SOURCE_FILES},
+    }
+    _unit_test_cache[model_key] = summary
+    return summary
+
+
+def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path, seed, epochs,
+                         max_d7_origins: int, horizons: list) -> dict:
+    """LSTM tourne dans un sous-processus neuf et isolé (model_artifacts/lstm_worker.py),
+    jamais dans CE process : ce module importe benchmarks.multi_horizon (donc
+    arima_model/regime_overlay) sans condition dès son chargement (cf. import plus haut),
+    et cette combinaison avec TensorFlow bloque indéfiniment le premier model.fit()
+    (deadlock confirmé le 2026-07-08, cf. docstring de lstm_worker.py) -- ni une
+    question de nombre de threads, ni spécifique à Prophet, ni réglable par les
+    variables d'environnement OpenMP usuelles. Seule l'isolation de process règle
+    le problème, vérifiée empiriquement."""
+    with tempfile.TemporaryDirectory() as tmp:
+        data_pickle = Path(tmp) / "data.pkl"
+        result_json = Path(tmp) / "result.json"
+        with open(data_pickle, "wb") as f:
+            pickle.dump((train, validation), f)
+        live_horizons_days = sorted({HORIZON_TRADING_DAYS[h] for h in horizons})
+        cmd = [sys.executable, "-m", "model_artifacts.lstm_worker",
+               "--data-pickle", str(data_pickle), "--out-dir", str(out_dir),
+               "--result-json", str(result_json), "--max-d7-origins", str(max_d7_origins),
+               "--horizons", ",".join(horizons),
+               "--live-horizons", ",".join(str(h) for h in live_horizons_days)]
+        if seed is not None:
+            cmd += ["--seed", str(seed)]
+        if epochs is not None:
+            cmd += ["--epochs", str(epochs)]
+        subprocess.run(cmd, cwd=REPO_ROOT, check=True)
+        result = json.loads(result_json.read_text())
+        # Clés JSON toujours strings -- reconverties en int (h_days) pour matcher
+        # HORIZON_TRADING_DAYS et le format déjà utilisé par _forecast_all_horizons.
+        result["live_forecast"] = {int(k): v for k, v in result.get("live_forecast", {}).items()}
+        return result
+
+
 def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd.Series,
                         validation: pd.Series, run_date_str: str, run_date_iso: str,
                         window_start: str, window_end: str, seed: int, epochs,
@@ -612,22 +714,43 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     train_end = str(train.index[-1].date())
     logs = []
 
-    fitted, gate1_ok = None, True
     first_out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizons[0])
-    if model_key != "Naive":
-        fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
+
+    lstm_worker_result = None
+    if model_key == "LSTM":
+        lstm_worker_result = _run_lstm_via_worker(train, validation, first_out_dir, seed, epochs,
+                                                  max_d7_origins, horizons)
+        gate1_ok = lstm_worker_result["gate1_ok"]
+        if gate1_ok:
+            (first_out_dir / "hyperparams.json").write_text(
+                json.dumps(lstm_worker_result["hyperparams"], indent=2))
+        else:
+            print(f"    [Gate1 FAIL] LSTM : {lstm_worker_result.get('gate1_error')}")
+    else:
+        fitted, gate1_ok = None, True
+        if model_key != "Naive":
+            fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
     print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : {'PASS' if gate1_ok else 'FAIL'}")
+
+    unit_test_result = _model_unit_test_results(model_key)
 
     # Prévision live (hors-échantillon) : fit une seule fois sur train+validation (toute la
     # donnée connue, ancre = window_end) et prévoit tous les horizons demandés d'un coup —
     # distinct de Gate 2 (backtest) qui ne voit jamais au-delà de la validation.
     full_series = pd.concat([train, validation])
     h_days_list = sorted({HORIZON_TRADING_DAYS[h] for h in horizons})
-    try:
-        forecasts_by_h = _forecast_all_horizons(model_key, full_series, h_days_list, seed, epochs)
-    except Exception as exc:
-        forecasts_by_h = {}
-        print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
+    if model_key == "LSTM":
+        # _forecast_all_horizons("LSTM", ...) appellerait mh.forecast_horizons_lstm dans CE
+        # process (celui-ci a déjà importé benchmarks.multi_horizon plus haut) -> même
+        # deadlock TF que Gate1/Gate2 (cf. _run_lstm_via_worker). La prévision live est
+        # déjà calculée par le worker (voir --live-horizons dans _run_lstm_via_worker).
+        forecasts_by_h = lstm_worker_result.get("live_forecast", {}) if lstm_worker_result else {}
+    else:
+        try:
+            forecasts_by_h = _forecast_all_horizons(model_key, full_series, h_days_list, seed, epochs)
+        except Exception as exc:
+            forecasts_by_h = {}
+            print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
 
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)
@@ -635,8 +758,20 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         if model_key != "Naive" and gate1_ok and out_dir != first_out_dir:
             copy_serialized_artifacts(first_out_dir, out_dir, model_key)
 
-        payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
-                                                   seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
+        if model_key == "LSTM":
+            g2 = lstm_worker_result["gate2"].get(horizon_label, {"ok": False})
+            if g2["ok"]:
+                payload = _to_metrics_payload(g2["metrics"], model_key, ticker, horizon_label,
+                                              len(g2["actual"]), g2["pi_lower"], g2["pi_upper"])
+                gate2_ok = _gate2_metrics_ok(payload)
+                series = {"dates": g2["dates"], "actual": g2["actual"], "predicted": g2["predicted"],
+                          "pi_lower": g2["pi_lower"], "pi_upper": g2["pi_upper"]}
+            else:
+                payload, gate2_ok, series = None, False, None
+                print(f"    [Gate2 FAIL] LSTM {horizon_label} : {g2.get('error')}")
+        else:
+            payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
+                                                       seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
         if gate2_ok:
             (out_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
             write_predictions_parquet(out_dir, **series)
@@ -644,6 +779,7 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         write_prices_parquet(out_dir, train, validation)
         write_metadata_json(out_dir, ticker, asset_class, window_start, window_end,
                             train_end, run_date_iso, seed)
+        (out_dir / "unit_tests.json").write_text(json.dumps(unit_test_result, indent=2, ensure_ascii=False))
 
         h_days = HORIZON_TRADING_DAYS[horizon_label]
         if h_days in forecasts_by_h:
@@ -718,7 +854,11 @@ def main():
     p.add_argument("--max-d7-origins", type=int, default=MAX_D7_ROLLING_ORIGINS)
     p.add_argument("--no-process-isolation", action="store_true",
                    help="désactive l'isolation LSTM/autres-modèles en 2 sous-processus (déconseillé)")
+    p.add_argument("--run-date", default=None,
+                   help="YYYY-MM-DD : date à utiliser pour le nom des dossiers Run/ (défaut : "
+                        "aujourd'hui) — pour compléter rétroactivement un run passé")
     args = p.parse_args()
+    run_date = datetime.strptime(args.run_date, "%Y-%m-%d") if args.run_date else None
 
     if args.models is None and not args.no_process_isolation:
         # Run complet : on ré-invoke ce même script deux fois (sous-processus séparés) plutôt
@@ -727,6 +867,7 @@ def main():
         if args.assets: common += ["--assets", args.assets]
         if args.horizons: common += ["--horizons", args.horizons]
         if args.epochs is not None: common += ["--epochs", str(args.epochs)]
+        if args.run_date: common += ["--run-date", args.run_date]
         common += ["--seed", str(args.seed), "--max-d7-origins", str(args.max_d7_origins)]
 
         print(f"=== Sous-processus 1/2 : {', '.join(_MODELS_BEFORE_LSTM)} ===")
@@ -745,7 +886,7 @@ def main():
         wanted = {t.strip() for t in args.assets.split(",")}
         assets = [a for a in ASSETS if a["ticker"] in wanted]
 
-    logs = run_pipeline(models=models, assets=assets, horizons=horizons,
+    logs = run_pipeline(models=models, assets=assets, horizons=horizons, run_date=run_date,
                         seed=args.seed, epochs=args.epochs, max_d7_origins=args.max_d7_origins)
 
     n_gate1_pass = sum(1 for l in logs if l["gate1"])

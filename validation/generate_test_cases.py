@@ -28,8 +28,11 @@ Test cases couverts par défaut :
      ex. dépendance optionnelle absente — géré comme dans run_benchmark.py :
      un échec de modèle n'interrompt pas les autres).
 
-tc_id volontairement auto-descriptif : "TC_<ticker>_H<horizon>" (ex.
-"TC_BTC-USD_H1"). C'est ce qui rend la clé de dédoublonnage de save_prediction
+tc_id volontairement auto-descriptif : "TC_<ticker>_D<horizon>" (ex.
+"TC_BTC-USD_D1"), même convention que les 50 lignes déjà en base (validation/tracking.db)
+générées avant la réécriture de ce fichier — cf. commit f00f75a, qui avait changé le
+préfixe en "H" sans mettre à jour les données déjà persistées. C'est ce qui rend la clé
+de dédoublonnage de save_prediction
 (tc_id, model, cutoff_date) sûre : deux actifs différents ne peuvent jamais
 partager un tc_id, donc ne peuvent jamais se faire passer pour un doublon l'un
 de l'autre.
@@ -42,7 +45,6 @@ Usage (depuis DeepEdgeBenchmark/) :
 
 import argparse
 import json
-import shutil
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -53,12 +55,23 @@ from benchmarks.regime_overlay import fit_predict_regime
 from benchmarks.run_benchmark import download_full_data
 from calibration.regime.assets import ASSETS
 
+from model_artifacts.pipeline import MODEL_FOLDER_NAME
 from validation import tracking_db as td
 from validation import verdict_rules
 
 # Horizons en JOURS DE BOURSE, conformes au contrat RECORD_FIELDS de
 # BRIEF_tracking_db.md §3 ("horizon : int, 1 ou 7 (jours de bourse)").
 HORIZONS_TRADING_DAYS = (1, 7)
+
+# Étiquette de dossier Run/<date>-<modèle>-<asset>-<horizon>/ (model_artifacts/pipeline.py)
+# la plus proche pour chaque horizon business. ATTENTION : horizon=1 correspond
+# exactement à D1 (1 jour de bourse des deux côtés), mais horizon=7 ici est 7 jours de
+# bourse alors que le "D7" du pipeline ML en est 5 (cf. HORIZON_TRADING_DAYS de
+# model_artifacts/pipeline.py) — DEUX CONVENTIONS DIFFÉRENTES, pas encore harmonisées.
+# On écrit quand même dans le dossier D7 (le plus proche), mais avec le champ
+# "horizon_trading_days" explicite dans le JSON pour ne pas laisser croire que c'est
+# la même fenêtre que les métriques Gate2 du même dossier.
+PIPELINE_HORIZON_LABEL = {1: "D1", 7: "D7"}
 
 DEFAULT_DB_PATH = "validation/tracking.db"
 DEFAULT_RUN_DIR = "Run"
@@ -82,55 +95,52 @@ def build_price_fetcher(full_by_asset):
     return price_fetcher
 
 
-def export_run_bundle(run_id, visible_by_asset, args, run_dir_root=DEFAULT_RUN_DIR):
-    """Exporte le bundle du run dans Run/<YYYYMMDD>-run-complet/, suivant la
-    convention de Run/readme.md~: "output de trainings (cf. doc de Kyrio,
-    Data Readiness)" + tests. Le pipeline actuel n'a ni Parquet ni PostgreSQL
-    (SQLite + CSV suffisent à cette échelle) ; on reprend la structure du bundle
-    Corpus décrite dans ce doc (Training Data Set + Meta Data + .py), adaptée~:
-      training_data/<ticker>.csv  -- série Close visible (post-holdout) utilisée
-                                     à l'entraînement pour cet actif.
-      results.csv                 -- dump de la table predictions (tracking_db.export_csv),
-                                     donc déjà à jour des évaluations faites ce run.
-      meta_data.json               -- paramètres du run (modèles, actifs, horizons,
-                                     holdout, dates de cutoff).
-      scripts/                     -- copie de tracking_db.py, verdict_rules.py,
-                                     generate_test_cases.py (le ".py" du bundle).
-    Les fichiers XLS de tests (smoke tests Claude + Test Cases) restent à ajouter
-    manuellement dans ce même dossier, cf. Run/readme.md.
+def export_business_validation(run_id, args, run_dir_root=DEFAULT_RUN_DIR):
+    """Range les résultats de validation business (prédiction + évaluation dès que
+    connue) de ce run_id dans Run/<date>-<modèle>-<asset>-<horizon>/business_validation.json
+    (mêmes dossiers combo que model_artifacts/pipeline.py, cf. combo_dir/MODEL_FOLDER_NAME) —
+    plutôt que dans un bundle séparé Run/<date>-run-complet/, pour suivre Run/readme.md
+    ("les tests ... dans ce même sous-dossier <date>-<modèle>-<asset-horizon>").
+
+    Crée le dossier combo s'il n'existe pas encore (ex. ce script tourne un autre jour,
+    ou sur un actif que model_artifacts/pipeline.py n'a pas encore traité) : il contiendra
+    alors uniquement ce fichier jusqu'à ce que le pipeline ML y ajoute ses propres artefacts.
+
+    Date déduite de run_id (format "run_YYYYMMDDTHHMMSS", cf. main()) plutôt que
+    datetime.now() : ce sont les dossiers du jour où la prédiction a été FAITE, pas du
+    jour où cet export est appelé (utile pour un export différé/rejoué, ex. backfill).
+
+    N'utilise PAS model_artifacts.pipeline.combo_dir() : cette fonction est câblée sur
+    la constante globale RUN_ROOT de ce module (toujours REPO_ROOT/"Run"), elle ignore
+    silencieusement run_dir_root — on reproduit donc la même convention de nom ici, mais
+    avec le run_dir_root réellement passé en argument (indispensable pour les tests).
     """
-    date_str = datetime.now().strftime("%Y%m%d")
-    run_folder = Path(run_dir_root) / f"{date_str}-run-complet"
-    (run_folder / "training_data").mkdir(parents=True, exist_ok=True)
-    (run_folder / "scripts").mkdir(parents=True, exist_ok=True)
+    date_str = run_id.removeprefix("run_").split("T", 1)[0]
+    rows = td.fetch_predictions_for_run(run_id, db_path=args.db_path)
 
-    for ticker, series in visible_by_asset.items():
-        series.rename("close").to_csv(run_folder / "training_data" / f"{ticker}.csv")
+    written = []
+    for row in rows:
+        model_folder = MODEL_FOLDER_NAME.get(row["model"], row["model"])
+        horizon_label = PIPELINE_HORIZON_LABEL.get(row["horizon"], f"H{row['horizon']}")
+        out_dir = Path(run_dir_root) / f"{date_str}-{model_folder}-{row['asset']}-{horizon_label}"
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-    n_rows = td.export_csv(str(run_folder / "results.csv"), db_path=args.db_path)
+        payload = dict(row)
+        payload["horizon_trading_days"] = row["horizon"]
+        if row["horizon"] != 5 and horizon_label == "D7":
+            payload["note"] = (
+                "horizon_trading_days=7 ici (test case business), à ne pas confondre "
+                "avec les métriques Gate2 D7 de ce même dossier qui portent sur 5 jours "
+                "de bourse (cf. PIPELINE_HORIZON_LABEL dans generate_test_cases.py)."
+            )
 
-    meta = {
-        "run_id": run_id,
-        "date": date_str,
-        "holdout_days": args.holdout_days,
-        "db_path": args.db_path,
-        "assets": sorted(visible_by_asset.keys()),
-        "horizons_trading_days": list(HORIZONS_TRADING_DAYS),
-        "cutoff_dates": {t: str(s.index[-1].date()) for t, s in visible_by_asset.items()},
-        "n_rows_in_db_export": n_rows,
-        "source": "yfinance (daily, benchmarks.run_benchmark.download_full_data)",
-    }
-    with open(run_folder / "meta_data.json", "w", encoding="utf-8") as f:
-        json.dump(meta, f, indent=2, ensure_ascii=False)
+        (out_dir / "business_validation.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False)
+        )
+        written.append(out_dir)
 
-    this_dir = Path(__file__).resolve().parent
-    for fname in ("tracking_db.py", "verdict_rules.py", "generate_test_cases.py"):
-        src = this_dir / fname
-        if src.exists():
-            shutil.copy(src, run_folder / "scripts" / fname)
-
-    print(f"[generate_test_cases] bundle Run exporté -> {run_folder}")
-    return run_folder
+    print(f"[generate_test_cases] business_validation.json écrit dans {len(written)} dossier(s) Run/")
+    return written
 
 
 def build_records(ticker, asset_class, model_name, adapter_fn, visible_close,
@@ -172,7 +182,7 @@ def build_records(ticker, asset_class, model_name, adapter_fn, visible_close,
 
         record = {
             "run_id": run_id,
-            "tc_id": f"TC_{ticker}_H{h_days}",
+            "tc_id": f"TC_{ticker}_D{h_days}",
             "model": model_name,
             "asset": ticker,
             "horizon": h_days,
@@ -210,9 +220,9 @@ def main():
                         "evaluate_pending() puisse résoudre des cas tout de suite "
                         "(0 = mode live, rien d'évaluable avant le vrai futur)")
     p.add_argument("--run-dir", default=DEFAULT_RUN_DIR,
-                   help="dossier Run/ où exporter le bundle du run (cf. Run/readme.md)")
+                   help="dossier Run/ où écrire business_validation.json par combo (cf. Run/readme.md)")
     p.add_argument("--no-run-export", action="store_true",
-                   help="désactive l'export du bundle Run/ (actif par défaut)")
+                   help="désactive l'écriture de business_validation.json dans Run/ (actif par défaut)")
     args = p.parse_args()
 
     selected_assets = ASSETS
@@ -317,7 +327,7 @@ def main():
             print(f"  {row}")
 
     if not args.no_run_export and visible_by_asset:
-        export_run_bundle(run_id, visible_by_asset, args, run_dir_root=args.run_dir)
+        export_business_validation(run_id, args, run_dir_root=args.run_dir)
 
 
 if __name__ == "__main__":
