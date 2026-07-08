@@ -34,6 +34,12 @@ python run_benchmark.py --start 2020-01-01 --end 2024-12-31   # full window (slo
 
 ![Benchmark comparison](benchmarks/benchmark_visual.png)
 
+### Dashboard HTML (tous modèles × actifs × horizons)
+
+[`model_artifacts/`](model_artifacts/) contient le pipeline « train + validate +
+prévision » et le générateur de la page HTML `Run/dashboard.html` — voir
+[`model_artifacts/README.md`](model_artifacts/README.md) pour la marche à suivre.
+
 ---
 
 ## How to get the code from GitHub and run it locally

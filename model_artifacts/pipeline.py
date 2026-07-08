@@ -436,6 +436,25 @@ def _forecast_horizon(model_key: str, train_extended: pd.Series, h_days: int, se
     raise ValueError(model_key)
 
 
+def _forecast_all_horizons(model_key: str, train_extended: pd.Series, horizons_days: list, seed, epochs) -> dict:
+    """Comme _forecast_horizon mais pour plusieurs horizons en un seul fit (contrat
+    forecast_horizons_<model> : fit once puis prévoit tous les horizons demandés) —
+    utilisé pour la prévision live (hors-échantillon, au-delà de window_end), fittée
+    une fois par (modèle, actif) et réutilisée pour D1 et D7 (cf. Gate 1 qui fait de
+    même via copy_serialized_artifacts)."""
+    if model_key == "ARIMA-GARCH":
+        return mh.forecast_horizons_arima(train_extended, horizons_days)
+    if model_key == "SARIMA":
+        return mh.forecast_horizons_sarima(train_extended, horizons_days)
+    if model_key == "Prophet":
+        return mh.forecast_horizons_prophet(train_extended, horizons_days)
+    if model_key == "LSTM":
+        return mh.forecast_horizons_lstm(train_extended, horizons_days, epochs=epochs, seed=seed)
+    if model_key == "Naive":
+        return mh.forecast_horizons_naive(train_extended, horizons_days)
+    raise ValueError(model_key)
+
+
 def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Series,
                           h_days: int, seed, epochs, max_origins: int) -> dict:
     """D+7 (ou plus généralement h_days > 1) : aucune API d'état incrémental commune
@@ -548,6 +567,17 @@ def write_metadata_json(out_dir: Path, asset: str, asset_class: str, window_star
     (out_dir / "metadata.json").write_text(json.dumps(payload, indent=2))
 
 
+def write_forecast_json(out_dir: Path, last_date: str, last_price: float, horizon_label: str,
+                        predicted: float, pi_lower: float, pi_upper: float) -> None:
+    """Prévision hors-échantillon (au-delà de last_date, la dernière clôture connue) —
+    seule vraie prévision "future" du dashboard, distincte du backtest de Gate 2."""
+    payload = {
+        "horizon": horizon_label, "last_date": last_date, "last_price": _num(last_price),
+        "predicted": _num(predicted), "pi_lower": _num(pi_lower), "pi_upper": _num(pi_upper),
+    }
+    (out_dir / "forecast.json").write_text(json.dumps(payload, indent=2))
+
+
 def write_predictions_parquet(out_dir: Path, dates, actual, predicted, pi_lower, pi_upper) -> None:
     """Série datée réel/prédit/PI 95% de la validation Gate 2 (D1 : un point par jour de
     validation ; D7 : un point par origine glissante) — alimente le graphe du dashboard."""
@@ -588,6 +618,17 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
     print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : {'PASS' if gate1_ok else 'FAIL'}")
 
+    # Prévision live (hors-échantillon) : fit une seule fois sur train+validation (toute la
+    # donnée connue, ancre = window_end) et prévoit tous les horizons demandés d'un coup —
+    # distinct de Gate 2 (backtest) qui ne voit jamais au-delà de la validation.
+    full_series = pd.concat([train, validation])
+    h_days_list = sorted({HORIZON_TRADING_DAYS[h] for h in horizons})
+    try:
+        forecasts_by_h = _forecast_all_horizons(model_key, full_series, h_days_list, seed, epochs)
+    except Exception as exc:
+        forecasts_by_h = {}
+        print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
+
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -603,6 +644,12 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         write_prices_parquet(out_dir, train, validation)
         write_metadata_json(out_dir, ticker, asset_class, window_start, window_end,
                             train_end, run_date_iso, seed)
+
+        h_days = HORIZON_TRADING_DAYS[horizon_label]
+        if h_days in forecasts_by_h:
+            point, lo, hi = forecasts_by_h[h_days]
+            write_forecast_json(out_dir, str(full_series.index[-1].date()),
+                                float(full_series.iloc[-1]), horizon_label, point, lo, hi)
 
         status = f"RMSE={payload['RMSE']} DirAcc={payload['directional_accuracy']}%" if gate2_ok else "—"
         print(f"  [{model_key:<12} {ticker:<8} {horizon_label}] Gate2 (validation) : "

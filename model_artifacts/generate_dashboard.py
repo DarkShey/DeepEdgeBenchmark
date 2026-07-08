@@ -76,6 +76,8 @@ def collect_run_data(run_root: Path) -> dict:
         metrics = json.loads(metrics_path.read_text())
         metadata_path = combo_dir / "metadata.json"
         metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        forecast_path = combo_dir / "forecast.json"
+        forecast = json.loads(forecast_path.read_text()) if forecast_path.exists() else {}
         # Le préfixe du nom de dossier (YYYYMMDD-...) fait foi pour regrouper par date de
         # run — indépendant du nombre de tirets dans le nom de l'actif (BTC-USD, ZN=F...).
         run_date = combo_dir.name.split("-", 1)[0]
@@ -91,6 +93,11 @@ def collect_run_data(run_root: Path) -> dict:
             "pi_width_mean": metrics.get("pi_width_mean"),
             "pi_width_max": metrics.get("pi_width_max"),
             "n_val": metrics.get("n_val"),
+            "forecast_last_price": _num(forecast.get("last_price")),
+            "forecast_last_date": forecast.get("last_date"),
+            "forecast_predicted": _num(forecast.get("predicted")),
+            "forecast_pi_lower": _num(forecast.get("pi_lower")),
+            "forecast_pi_upper": _num(forecast.get("pi_upper")),
             "run_date": run_date,
             "dir": combo_dir.name,
         })
@@ -116,6 +123,8 @@ def collect_run_data(run_root: Path) -> dict:
                     "points": [{"date": d.strftime("%Y-%m-%d"), "close": _num(c)}
                                for d, c in zip(pdf["date"], pdf["close"])],
                     "train_end": metadata.get("train_end"),
+                    "window_start": metadata.get("window_start"),
+                    "window_end": metadata.get("window_end"),
                 }
                 prices[run_date] = asset_bucket
 
@@ -295,6 +304,29 @@ tbody tr:hover { background: rgba(128,128,128,0.06); }
 .kpi-card-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .kpi-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: var(--text-secondary); }
 .kpi-row b { color: var(--text-primary); font-variant-numeric: tabular-nums; font-weight: 600; }
+.kpi-row.warn { background: rgba(214,58,58,0.10); border-radius: 4px; margin: 1px -6px; padding: 3px 6px; }
+.kpi-row.warn b { color: #d63a3a; }
+td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 600; border-radius: 4px; }
+.last-price-card {
+  flex: 1 1 220px; border: 1px solid var(--text-primary); border-radius: 8px; padding: 12px 14px;
+  background: rgba(128,128,128,0.05);
+}
+.last-price-card .kpi-card-title { color: var(--text-primary); }
+.last-price-card .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.last-price-card .sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.info-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1px solid var(--text-muted); color: var(--text-muted);
+  font-size: 9.5px; line-height: 1; cursor: help; user-select: none; flex: none;
+}
+.info-dot:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.threshold-field { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.threshold-field input[type=range] { width: 110px; }
+.threshold-field b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.chart-daterange { font-size: 12px; color: var(--text-secondary); margin: -4px 0 12px; }
+.chart-checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
+.chart-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .chart-wrap { min-height: 480px; }
 </style>
 
@@ -314,8 +346,16 @@ const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const MODEL_COLORS = isDark ? DATA.model_colors_dark : DATA.model_colors_light;
 const MODELS = DATA.model_order.filter(m => DATA.models_present.includes(m));
 const ACTUAL_COLOR = isDark ? '#ffffff' : '#0b0b0b';
+const TRAIN_COLOR = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(11,11,11,0.45)';
 const GRID_COLOR = isDark ? '#2c2c2a' : '#e1e0d9';
 const AXIS_TEXT_COLOR = isDark ? '#c3c2b7' : '#52514e';
+const FORECAST_DAYS_OFFSET = { D1: 1, D7: 7 };
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 function fmt(v, digits) {
   if (v === null || v === undefined) return '—';
@@ -364,6 +404,44 @@ function showTooltip(evt, title, rows) {
 }
 function hideTooltip() { tooltipEl.style.display = 'none'; }
 
+// ---- Définitions des KPI (bulle au survol du repère "ⓘ") -------------------
+const KPI_DEFINITIONS = {
+  rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
+  mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
+  mape: "MAPE — erreur absolue moyenne en % du prix réel. Comparable entre actifs de prix différents.",
+  diracc: "Exactitude directionnelle — % de fois où le modèle a prédit le bon sens (hausse/baisse) par rapport à la veille.",
+  picov: "Couverture du PI 95% — % des points réels de validation tombant dans la bande de prédiction à 95%. Cible ≈ 95% ; trop haut ou trop bas indique un intervalle mal calibré.",
+  piwidth: "Largeur du PI 95% — écart entre borne haute et basse de l'intervalle de confiance sur la validation (min / moyenne / max). Une bande large traduit une forte incertitude du modèle.",
+  forecast: "Prévision hors-échantillon — prix prédit par le modèle au-delà de la dernière clôture connue (pas du backtest), avec son intervalle de confiance à 95% (PI 95% [bas – haut]).",
+  lastprice: "Dernier prix de marché utilisé — dernière clôture connue (veille de J+1), point de référence pour comparer chaque prévision de modèle.",
+  warnthreshold: "Seuil d'alerte — si la prévision s'écarte de plus de ce pourcentage par rapport au dernier prix connu, la case est signalée en rouge comme a priori suspecte.",
+  lag: "Déphasage (cross-corrélation) — corrèle prédit(t) avec réel(t−k) pour k=−5..5 sur le backtest de validation ; le k qui maximise la corrélation est le décalage effectif du modèle. k=0 : pas de déphasage. k=1 : le modèle reproduit en fait la valeur d'hier.",
+  nval: "n (validation) — nombre de points de la période de validation utilisés pour calculer ces métriques.",
+};
+
+function infoDot(defKey) {
+  return `<span class="info-dot" data-def="${defKey}">i</span>`;
+}
+
+document.addEventListener('mouseover', (evt) => {
+  const dot = evt.target.closest('.info-dot');
+  if (!dot) return;
+  const text = KPI_DEFINITIONS[dot.dataset.def];
+  if (!text) return;
+  tooltipEl.innerHTML = `<div style="max-width:220px;">${text}</div>`;
+  tooltipEl.style.display = 'block';
+  tooltipEl.style.left = (evt.clientX + 14) + 'px';
+  tooltipEl.style.top = (evt.clientY + 14) + 'px';
+});
+document.addEventListener('mousemove', (evt) => {
+  if (!evt.target.closest('.info-dot')) return;
+  tooltipEl.style.left = (evt.clientX + 14) + 'px';
+  tooltipEl.style.top = (evt.clientY + 14) + 'px';
+});
+document.addEventListener('mouseout', (evt) => {
+  if (evt.target.closest('.info-dot')) hideTooltip();
+});
+
 // =============================================================================
 // Onglets par actif : état, squelette, KPIs, Graphique
 // =============================================================================
@@ -375,6 +453,10 @@ DATA.assets.forEach(a => {
     horizon: 'D1',
     models: new Set(MODELS),
     showPI: true,
+    showTrain: true,
+    showVal: true,
+    showPred: true,
+    warnThreshold: 20,
     subtab: 'kpis',
   };
 });
@@ -417,6 +499,10 @@ function assetPanelSkeleton(a) {
       </label>
       <div class="toggle-group" id="horizon-${s}"></div>
       <div class="model-checks" id="models-${s}"></div>
+      <label class="threshold-field">Seuil d'alerte ${infoDot('warnthreshold')}
+        <input type="range" id="warn-${s}" min="5" max="100" step="1" value="20">
+        <span>±<b id="warn-value-${s}">20</b>%</span>
+      </label>
     </div>
 
     <div class="sub-panel active" id="sub-kpis-${s}">
@@ -432,7 +518,13 @@ function assetPanelSkeleton(a) {
 
     <div class="sub-panel" id="sub-chart-${s}">
       <div class="card">
+        <div class="chart-daterange" id="chart-daterange-${s}"></div>
         <div class="controls-row" style="margin-bottom:12px;">
+          <div class="chart-checks" id="chart-checks-${s}">
+            <label class="chart-check"><input type="checkbox" id="showtrain-${s}" checked> Entraînement</label>
+            <label class="chart-check"><input type="checkbox" id="showval-${s}" checked> Validation</label>
+            <label class="chart-check"><input type="checkbox" id="showpred-${s}" checked> Prédiction</label>
+          </div>
           <label class="field-label">
             <input type="checkbox" id="showpi-${s}" checked> Afficher les intervalles de confiance
           </label>
@@ -563,6 +655,27 @@ function wireAssetPanel(a) {
     Plotly.relayout(`chart-${s}`, { 'xaxis.autorange': true, 'yaxis.autorange': true });
   });
 
+  const warnEl = document.getElementById(`warn-${s}`);
+  const warnValueEl = document.getElementById(`warn-value-${s}`);
+  warnEl.addEventListener('input', () => {
+    st.warnThreshold = Number(warnEl.value);
+    warnValueEl.textContent = warnEl.value;
+    renderAssetKpis(ticker);
+  });
+
+  document.getElementById(`showtrain-${s}`).addEventListener('change', (e) => {
+    st.showTrain = e.target.checked;
+    if (st.subtab === 'chart') renderAssetChart(ticker);
+  });
+  document.getElementById(`showval-${s}`).addEventListener('change', (e) => {
+    st.showVal = e.target.checked;
+    if (st.subtab === 'chart') renderAssetChart(ticker);
+  });
+  document.getElementById(`showpred-${s}`).addEventListener('change', (e) => {
+    st.showPred = e.target.checked;
+    if (st.subtab === 'chart') renderAssetChart(ticker);
+  });
+
   renderAssetKpis(ticker);
 }
 
@@ -571,19 +684,74 @@ function refreshAssetTab(ticker) {
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
 }
 
+// ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
+function forecastPct(rec) {
+  if (rec.forecast_predicted == null || !rec.forecast_last_price) return null;
+  return (rec.forecast_predicted / rec.forecast_last_price - 1) * 100;
+}
+function isWarn(rec, threshold) {
+  const pct = forecastPct(rec);
+  return pct !== null && Math.abs(pct) > threshold;
+}
+function piRangeText(rec) {
+  if (rec.forecast_pi_lower == null || rec.forecast_pi_upper == null) return '—';
+  return `${fmt(rec.forecast_pi_lower, 2)} – ${fmt(rec.forecast_pi_upper, 2)}`;
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, dx2 = 0, dy2 = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx, dy = ys[i] - my;
+    num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
+  }
+  const denom = Math.sqrt(dx2 * dy2);
+  return denom === 0 ? null : num / denom;
+}
+
+// Cross-corrélation à décalages -maxLag..+maxLag entre prédit(t) et réel(t-k) sur le
+// backtest de validation — le k qui maximise |corr| est le déphasage effectif du modèle.
+function lagCorrelation(points, maxLag = 5) {
+  const actual = points.map(p => p.actual);
+  const predicted = points.map(p => p.predicted);
+  const n = points.length;
+  let best = { lag: 0, corr: null };
+  for (let k = -maxLag; k <= maxLag; k++) {
+    const xs = [], ys = [];
+    for (let t = 0; t < n; t++) {
+      const tk = t - k;
+      if (tk < 0 || tk >= n) continue;
+      if (predicted[t] == null || actual[tk] == null) continue;
+      xs.push(predicted[t]); ys.push(actual[tk]);
+    }
+    const corr = pearson(xs, ys);
+    if (corr !== null && (best.corr === null || Math.abs(corr) > Math.abs(best.corr))) best = { lag: k, corr };
+  }
+  return best;
+}
+function lagLabel(lag) {
+  if (lag === 0) return 'aucun déphasage';
+  if (lag > 0) return `reproduit le réel d'il y a ${lag} jour(s) (retard)`;
+  return `en avance de ${-lag} jour(s) sur le réel`;
+}
+
 // ---- KPIs par modèle (cartes) + breakdown modèle x horizon ------------------
 const BREAKDOWN_COLS = [
   { key: 'model', label: 'Modèle' },
   { key: 'horizon', label: 'Horizon' },
-  { key: 'RMSE', label: 'RMSE', digits: 4 },
-  { key: 'MAE', label: 'MAE', digits: 4 },
-  { key: 'MAPE', label: 'MAPE (%)', digits: 2 },
-  { key: 'directional_accuracy', label: 'Exact. dir. (%)', digits: 2 },
-  { key: 'pi_coverage_95', label: 'Couv. PI 95 (%)', digits: 2 },
+  { key: 'RMSE', label: 'RMSE', digits: 4, def: 'rmse' },
+  { key: 'MAE', label: 'MAE', digits: 4, def: 'mae' },
+  { key: 'MAPE', label: 'MAPE (%)', digits: 2, def: 'mape' },
+  { key: 'directional_accuracy', label: 'Exact. dir. (%)', digits: 2, def: 'diracc' },
+  { key: 'pi_coverage_95', label: 'Couv. PI 95 (%)', digits: 2, def: 'picov' },
   { key: 'pi_width_min', label: 'Larg. PI min', digits: 4 },
-  { key: 'pi_width_mean', label: 'Larg. PI moy.', digits: 4 },
+  { key: 'pi_width_mean', label: 'Larg. PI moy.', digits: 4, def: 'piwidth' },
   { key: 'pi_width_max', label: 'Larg. PI max', digits: 4 },
-  { key: 'n_val', label: 'n_val', digits: 0 },
+  { key: 'n_val', label: 'n_val', digits: 0, def: 'nval' },
+  { key: 'forecast_predicted', label: 'Prévision (prix)', digits: 2, def: 'forecast', warn: true },
+  { key: '_pi_range', label: 'PI 95% [bas – haut]', render: piRangeText, warn: true },
 ];
 
 function renderAssetKpis(ticker) {
@@ -593,23 +761,51 @@ function renderAssetKpis(ticker) {
 
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
   cardsEl.innerHTML = '';
+
+  const priceBucket = (DATA.prices[st.date] || {})[ticker];
+  const anyRec = DATA.records.find(r => r.asset === ticker && r.horizon === st.horizon && r.run_date === st.date);
+  const lastPrice = priceBucket ? priceBucket.points[priceBucket.points.length - 1] : null;
+  const lastPriceCard = document.createElement('div');
+  lastPriceCard.className = 'last-price-card';
+  lastPriceCard.innerHTML = `<div class="kpi-card-title">Dernier prix de marché utilisé ${infoDot('lastprice')}</div>`
+    + (lastPrice
+        ? `<div class="value">${fmt(lastPrice.close, 2)}</div><div class="sub">${lastPrice.date}</div>`
+        : (anyRec && anyRec.forecast_last_price != null
+            ? `<div class="value">${fmt(anyRec.forecast_last_price, 2)}</div><div class="sub">${anyRec.forecast_last_date || ''}</div>`
+            : `<div class="no-data">Pas de données</div>`));
+  cardsEl.appendChild(lastPriceCard);
+
   if (!checked.length) {
-    cardsEl.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
+    cardsEl.insertAdjacentHTML('beforeend', '<div class="no-data">Sélectionnez au moins un modèle.</div>');
   } else {
     checked.forEach(m => {
       const rec = DATA.records.find(r => r.asset === ticker && r.model === m
         && r.horizon === st.horizon && r.run_date === st.date);
       const card = document.createElement('div');
       card.className = 'kpi-card';
-      const rowsHtml = !rec ? '<div class="no-data">Pas de données</div>' : [
-        ['RMSE', fmt(rec.RMSE, 4)],
-        ['MAE', fmt(rec.MAE, 4)],
-        ['MAPE', fmt(rec.MAPE, 2) + ' %'],
-        ['Exact. directionnelle', fmt(rec.directional_accuracy, 1) + ' %'],
-        ['Couverture PI 95%', fmt(rec.pi_coverage_95, 1) + ' %'],
-        ['Largeur PI min/moy/max', `${fmt(rec.pi_width_min, 2)} / ${fmt(rec.pi_width_mean, 2)} / ${fmt(rec.pi_width_max, 2)}`],
-        ['n (validation)', rec.n_val ?? '—'],
-      ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
+      let rowsHtml;
+      if (!rec) {
+        rowsHtml = '<div class="no-data">Pas de données</div>';
+      } else {
+        const pct = forecastPct(rec);
+        const warn = isWarn(rec, st.warnThreshold);
+        const pctText = pct === null ? '' : ` (${pct > 0 ? '+' : ''}${fmt(pct, 1)}%)`;
+        const predSeries = ((DATA.predictions[st.date] || {})[ticker] || {})[m] || {};
+        const backtestPoints = predSeries[st.horizon] || [];
+        const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
+        rowsHtml = [
+          [`RMSE ${infoDot('rmse')}`, fmt(rec.RMSE, 4)],
+          [`MAE ${infoDot('mae')}`, fmt(rec.MAE, 4)],
+          [`MAPE ${infoDot('mape')}`, fmt(rec.MAPE, 2) + ' %'],
+          [`Exact. directionnelle ${infoDot('diracc')}`, fmt(rec.directional_accuracy, 1) + ' %'],
+          [`Couverture PI 95% ${infoDot('picov')}`, fmt(rec.pi_coverage_95, 1) + ' %'],
+          [`Largeur PI min/moy/max ${infoDot('piwidth')}`, `${fmt(rec.pi_width_min, 2)} / ${fmt(rec.pi_width_mean, 2)} / ${fmt(rec.pi_width_max, 2)}`],
+          ['n (validation)', rec.n_val ?? '—'],
+          [`Prévision ${infoDot('forecast')}`, fmt(rec.forecast_predicted, 2) + pctText, warn],
+          ['PI 95% [bas – haut]', piRangeText(rec), warn],
+          [`Déphasage ${infoDot('lag')}`, lag && lag.corr !== null ? `k=${lag.lag} (corr=${fmt(lag.corr, 2)}) — ${lagLabel(lag.lag)}` : '—'],
+        ].map(([k, v, w]) => `<div class="kpi-row${w ? ' warn' : ''}"><span>${k}</span><b>${v}</b></div>`).join('');
+      }
       card.innerHTML = `<div class="kpi-card-title">`
         + `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}</div>`
         + rowsHtml;
@@ -640,7 +836,7 @@ function renderBreakdownTable(ticker) {
   const headRow = document.createElement('tr');
   BREAKDOWN_COLS.forEach(c => {
     const th = document.createElement('th');
-    th.textContent = c.label;
+    th.innerHTML = c.label + (c.def ? ' ' + infoDot(c.def) : '');
     headRow.appendChild(th);
   });
   thead.appendChild(headRow);
@@ -649,10 +845,16 @@ function renderBreakdownTable(ticker) {
   const tbody = document.createElement('tbody');
   recs.forEach(r => {
     const tr = document.createElement('tr');
+    const warnRow = isWarn(r, st.warnThreshold);
     BREAKDOWN_COLS.forEach(c => {
       const td = document.createElement('td');
-      const v = r[c.key];
-      td.textContent = c.digits !== undefined ? fmt(v, c.digits) : (v ?? '—');
+      if (c.render) {
+        td.textContent = c.render(r);
+      } else {
+        const v = r[c.key];
+        td.textContent = c.digits !== undefined ? fmt(v, c.digits) : (v ?? '—');
+      }
+      if (c.warn && warnRow) td.classList.add('warn-cell');
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -666,70 +868,173 @@ function renderAssetChart(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
   const container = document.getElementById(`chart-${s}`);
+  const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
 
   const priceBucket = (DATA.prices[st.date] || {})[ticker];
   if (!priceBucket) {
     container.innerHTML = '<div class="no-data">Aucune donnée de prix pour cette date de run.</div>';
+    dateRangeEl.textContent = '';
     return;
   }
 
-  const traces = [{
-    x: priceBucket.points.map(p => p.date),
-    y: priceBucket.points.map(p => p.close),
-    mode: 'lines', name: 'Réel',
-    line: { color: ACTUAL_COLOR, width: 1.6 },
-    hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
-  }];
+  const allPoints = priceBucket.points;
+  const trainEnd = priceBucket.train_end;
+  const trainPoints = trainEnd ? allPoints.filter(p => p.date <= trainEnd) : allPoints;
+  const valPoints = trainEnd ? allPoints.filter(p => p.date >= trainEnd) : [];
+  const windowStart = priceBucket.window_start || (trainPoints[0] || {}).date;
+  const windowEnd = priceBucket.window_end || (allPoints[allPoints.length - 1] || {}).date;
+  const valStart = (valPoints[0] || {}).date;
+  const lastClose = (allPoints[allPoints.length - 1] || {}).close;
+
+  dateRangeEl.textContent = trainEnd
+    ? `Entraînement : ${windowStart || '—'} → ${trainEnd}   ·   Validation : ${valStart || trainEnd} → ${windowEnd || '—'}`
+    : `Historique : ${windowStart || '—'} → ${windowEnd || '—'}`;
+
+  const traces = [];
+  if (!trainEnd) {
+    if (st.showTrain || st.showVal) {
+      traces.push({
+        x: allPoints.map(p => p.date), y: allPoints.map(p => p.close),
+        mode: 'lines', name: 'Réel',
+        line: { color: ACTUAL_COLOR, width: 1.6 },
+        hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
+      });
+    }
+  } else {
+    if (st.showTrain && trainPoints.length) {
+      traces.push({
+        x: trainPoints.map(p => p.date), y: trainPoints.map(p => p.close),
+        mode: 'lines', name: 'Réel (entraînement)',
+        line: { color: TRAIN_COLOR, width: 1.6 },
+        hovertemplate: '%{x}<br>%{y:.2f}<extra>Entraînement</extra>',
+      });
+    }
+    if (st.showVal && valPoints.length) {
+      traces.push({
+        x: valPoints.map(p => p.date), y: valPoints.map(p => p.close),
+        mode: 'lines', name: 'Réel (validation)',
+        line: { color: ACTUAL_COLOR, width: 2.2 },
+        hovertemplate: '%{x}<br>%{y:.2f}<extra>Validation</extra>',
+      });
+    }
+  }
 
   const checked = MODELS.filter(m => st.models.has(m));
   const predBucket = (DATA.predictions[st.date] || {})[ticker] || {};
-  checked.forEach(m => {
-    const series = (predBucket[m] || {})[st.horizon];
-    if (!series || !series.length) return;
-    const color = MODEL_COLORS[m];
+  const forecastAnchorDate = windowEnd;
+  const forecastAnchorClose = (allPoints.find(p => p.date === forecastAnchorDate) || {}).close ?? lastClose;
+  const forecastTargetDate = addDays(forecastAnchorDate, FORECAST_DAYS_OFFSET[st.horizon] || 1);
+  let anyForecastPlotted = false;
 
-    if (st.showPI) {
-      traces.push({
-        x: series.map(p => p.date), y: series.map(p => p.pi_upper),
-        mode: 'lines', line: { width: 0, color }, legendgroup: m,
-        showlegend: false, hoverinfo: 'skip',
-      });
-      traces.push({
-        x: series.map(p => p.date), y: series.map(p => p.pi_lower),
-        mode: 'lines', line: { width: 0, color }, fill: 'tonexty',
-        fillcolor: hexToRgba(color, 0.16), legendgroup: m,
-        showlegend: false, hoverinfo: 'skip',
-      });
+  checked.forEach(m => {
+    const color = MODEL_COLORS[m];
+    let legendAdded = false;
+
+    if (st.showVal) {
+      const series = (predBucket[m] || {})[st.horizon];
+      if (series && series.length) {
+        if (st.showPI) {
+          traces.push({
+            x: series.map(p => p.date), y: series.map(p => p.pi_upper),
+            mode: 'lines', line: { width: 0, color }, legendgroup: m,
+            showlegend: false, hoverinfo: 'skip',
+          });
+          traces.push({
+            x: series.map(p => p.date), y: series.map(p => p.pi_lower),
+            mode: 'lines', line: { width: 0, color }, fill: 'tonexty',
+            fillcolor: hexToRgba(color, 0.16), legendgroup: m,
+            showlegend: false, hoverinfo: 'skip',
+          });
+        }
+        traces.push({
+          x: series.map(p => p.date), y: series.map(p => p.predicted),
+          mode: 'lines+markers', name: m, legendgroup: m, showlegend: true,
+          line: { color, width: 1.8, dash: 'dot' }, marker: { color, size: 4 },
+          hovertemplate: '%{x}<br>%{y:.2f}<extra>' + m + ' (backtest)</extra>',
+        });
+        legendAdded = true;
+      }
     }
 
-    traces.push({
-      x: series.map(p => p.date), y: series.map(p => p.predicted),
-      mode: 'lines+markers', name: m, legendgroup: m,
-      line: { color, width: 1.8, dash: 'dot' }, marker: { color, size: 4 },
-      hovertemplate: '%{x}<br>%{y:.2f}<extra>' + m + '</extra>',
-    });
+    if (st.showPred) {
+      const rec = DATA.records.find(r => r.asset === ticker && r.model === m
+        && r.horizon === st.horizon && r.run_date === st.date);
+      if (rec && rec.forecast_predicted != null && forecastAnchorClose != null) {
+        traces.push({
+          x: [forecastAnchorDate, forecastTargetDate], y: [forecastAnchorClose, rec.forecast_predicted],
+          mode: 'lines', line: { color, width: 1.4, dash: 'dot' },
+          legendgroup: m, showlegend: false, hoverinfo: 'skip',
+        });
+        const hi = rec.forecast_pi_upper != null ? rec.forecast_pi_upper - rec.forecast_predicted : 0;
+        const lo = rec.forecast_pi_lower != null ? rec.forecast_predicted - rec.forecast_pi_lower : 0;
+        traces.push({
+          x: [forecastTargetDate], y: [rec.forecast_predicted],
+          mode: 'markers', name: m, legendgroup: m, showlegend: !legendAdded,
+          marker: { color, size: 10, symbol: 'diamond', line: { color: ACTUAL_COLOR, width: 1 } },
+          error_y: { type: 'data', symmetric: false, array: [hi], arrayminus: [lo], color, thickness: 1.5, width: 4 },
+          hovertemplate: `Prévision ${st.horizon}<br>%{x}<br>%{y:.2f}<extra>${m}</extra>`,
+        });
+        anyForecastPlotted = true;
+      }
+    }
   });
 
   const shapes = [];
-  if (priceBucket.train_end) {
+  const annotations = [];
+  if (trainEnd) {
     shapes.push({
       type: 'line', xref: 'x', yref: 'paper',
-      x0: priceBucket.train_end, x1: priceBucket.train_end, y0: 0, y1: 1,
+      x0: trainEnd, x1: trainEnd, y0: 0, y1: 1,
       line: { color: AXIS_TEXT_COLOR, width: 1, dash: 'dash' },
+    });
+    shapes.push({
+      type: 'line', xref: 'x', yref: 'paper',
+      x0: windowEnd, x1: windowEnd, y0: 0, y1: 1,
+      line: { color: AXIS_TEXT_COLOR, width: 1, dash: 'dash' },
+    });
+    if (trainPoints.length) {
+      annotations.push({
+        x: trainPoints[Math.floor(trainPoints.length / 2)].date, y: 1, yref: 'paper', yanchor: 'bottom',
+        text: 'Entraînement', showarrow: false, font: { size: 11, color: AXIS_TEXT_COLOR },
+      });
+    }
+    if (valPoints.length) {
+      annotations.push({
+        x: valPoints[Math.floor(valPoints.length / 2)].date, y: 1, yref: 'paper', yanchor: 'bottom',
+        text: 'Validation', showarrow: false, font: { size: 11, color: AXIS_TEXT_COLOR },
+      });
+    }
+    if (anyForecastPlotted) {
+      annotations.push({
+        x: forecastTargetDate, y: 1, yref: 'paper', yanchor: 'bottom',
+        text: 'Prévision', showarrow: false, font: { size: 11, color: AXIS_TEXT_COLOR },
+      });
+    }
+  }
+  if (lastClose != null) {
+    shapes.push({
+      type: 'line', xref: 'paper', yref: 'y',
+      x0: 0, x1: 1, y0: lastClose, y1: lastClose,
+      line: { color: AXIS_TEXT_COLOR, width: 1, dash: 'dot' },
     });
   }
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
     font: { color: AXIS_TEXT_COLOR, family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 12 },
-    margin: { l: 55, r: 20, t: 10, b: 40 },
+    margin: { l: 55, r: 20, t: 30, b: 40 },
     xaxis: { gridcolor: GRID_COLOR, showgrid: true },
     yaxis: { gridcolor: GRID_COLOR, showgrid: true, title: 'Prix' },
     shapes,
+    annotations,
     legend: { orientation: 'h', y: -0.15 },
     hovermode: 'x unified',
   };
 
+  if (!traces.length) {
+    container.innerHTML = '<div class="no-data">Sélectionnez au moins une partie (entraînement / validation / prédiction) et un modèle.</div>';
+    return;
+  }
   Plotly.newPlot(`chart-${s}`, traces, layout, { responsive: true, displaylogo: false });
 }
 
