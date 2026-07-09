@@ -222,16 +222,16 @@ def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
 
 
 # ── Naive ─────────────────────────────────────────────────────────────────────
-def forecast_horizons_naive(train: pd.Series, horizons: list, band: float = None) -> dict:
-    """point_h = dernier_prix * (1 + U(-band,band)) ; IC = dernier_prix * [1 -+ band*sqrt(h)]."""
-    band = naive_model.BAND if band is None else band
+def forecast_horizons_naive(train: pd.Series, horizons: list) -> dict:
+    """Persistence stricte (Point 0 du brief) : point_h = dernier_prix, exactement ;
+    IC95 = dernier_prix ± 1.96·σ·sqrt(h), σ = écart-type des variations 1 jour du train
+    (échelle marche aléatoire, même convention que les autres modèles)."""
     last_price = float(train.iloc[-1])
+    sigma = naive_model.train_sigma(train)
     results = {}
     for h in horizons:
-        drift = np.random.uniform(-band, band)
-        point = last_price * (1.0 + drift)
-        half = band * np.sqrt(h)
-        results[h] = (point, last_price * (1.0 - half), last_price * (1.0 + half))
+        half = naive_model.Z_95 * sigma * np.sqrt(h)
+        results[h] = (last_price, last_price - half, last_price + half)
     return results
 
 

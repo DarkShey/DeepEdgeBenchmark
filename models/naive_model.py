@@ -5,14 +5,24 @@ Baseline model for the DeepEdgeBenchmark model comparison.
 
 What it does
 ------------
-The simplest possible baseline: **tomorrow = yesterday's price, perturbed by a random
-drift drawn uniformly in [-5%, +5%]**. No fitting, no statistics — this is the bar every
-other model in models/ must clear to be worth using. Forecasting is walk-forward
-1-step-ahead: each step uses the realised previous price (never its own past prediction),
-which is the standard definition of a persistence/naive baseline.
+The canonical persistence baseline: **tomorrow = yesterday's price, exactly**.
+No fitting, no statistics, no perturbation — this is the bar every other model
+in models/ must clear to be worth using. Forecasting is walk-forward
+1-step-ahead: each step uses the realised previous price (never its own past
+prediction), which is the standard definition of a persistence/naive baseline.
 
-95% prediction interval: since the model's own generating process is a uniform draw over
-[-5%, +5%], that band *is* the interval by construction — `previous_price * [0.95, 1.05]`.
+    IMPORTANT (Point 0 of IMPROVEMENTS_BRIEF.md): an earlier version perturbed
+    the prediction by a uniform ±5% drift "by design". That inflated the naive
+    RMSE ×1.5–×10 (std of U(-5%,5%) ≈ 2.9% of price vs realised daily moves of
+    0.3–3%), which made every model look like it beat the baseline when none
+    did. A handicapped baseline is not a baseline. Do not reintroduce noise
+    here — `honest_eval.naive.verify_naive()` audits this file's output and
+    fails if predictions deviate from the previous close.
+
+95% prediction interval: Gaussian random-walk band around the previous price,
+`prev ± 1.96·σ` where σ is the standard deviation of the 1-day price changes
+of the training window (same convention as the other models' residual-based
+intervals; grows like √h for multi-step, see benchmarks/multi_horizon.py).
 
 This file is fully self-contained — it does not depend on any other DEITA module, and
 mirrors the interface of arima_model.py / sarima_model.py / prophet_model.py / lstm_model.py
@@ -42,13 +52,21 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 # ── Config (defaults; override via CLI) ──────────────────────────────────────
-BAND          = 0.05   # +/- 5% uniform drift band, also used as the 95% PI half-width
-DEFAULT_SEED  = 42
+Z_95          = 1.96   # 95% prediction interval z-score (Gaussian random walk)
+DEFAULT_SEED  = 42     # kept for interface compatibility (model is deterministic)
 
 
 def set_seed(seed: int = DEFAULT_SEED) -> None:
-    """Seed numpy's RNG for a reproducible run (the model's drift is random by design)."""
+    """No-op kept for interface compatibility: the persistence baseline is
+    deterministic by definition (callers such as model_artifacts/pipeline.py
+    invoke set_seed on every model uniformly)."""
     np.random.seed(seed)
+
+
+def train_sigma(train: pd.Series) -> float:
+    """Std of the 1-step price changes of the training window — the Gaussian
+    random-walk scale used for the 95% PI."""
+    return float(np.std(np.diff(np.asarray(train, dtype=float))))
 
 
 # ── Data ─────────────────────────────────────────────────────────────────────
@@ -97,20 +115,20 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
 
 
 # ── Naive walk-forward backtest ──────────────────────────────────────────────
-def run_naive(train: pd.Series, test: pd.Series, band: float = BAND) -> dict:
-    """Rolling 1-step-ahead naive forecast: pred_t = actual_{t-1} * (1 + U(-band, band)).
+def run_naive(train: pd.Series, test: pd.Series) -> dict:
+    """Rolling 1-step-ahead persistence forecast: pred_t = actual_{t-1}, exactly.
 
     Walk-forward: uses the realised previous price at every step (train's last price
     for the first test point, then test's own realised prices), never its own prediction.
+    95% PI: prev ± 1.96·σ, σ = std of the train-set 1-day changes.
     """
     t0 = time.time()
     prev_prices = np.concatenate([[train.iloc[-1]], test.values[:-1].astype(float)])
-    n = len(test)
 
-    drift = np.random.uniform(-band, band, size=n)
-    preds = prev_prices * (1.0 + drift)
-    lower = prev_prices * (1.0 - band)
-    upper = prev_prices * (1.0 + band)
+    preds = prev_prices.copy()               # persistence: no drift, no noise
+    sigma = train_sigma(train)
+    lower = prev_prices - Z_95 * sigma
+    upper = prev_prices + Z_95 * sigma
 
     train_time = time.time() - t0
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
@@ -119,12 +137,11 @@ def run_naive(train: pd.Series, test: pd.Series, band: float = BAND) -> dict:
             "index": test.index, "actual": test.values}
 
 
-def next_step_naive(series: pd.Series, band: float = BAND):
+def next_step_naive(series: pd.Series):
     """Single 1-step forecast beyond the last observation. Returns (pred, lo, hi)."""
     last_price = float(series.iloc[-1])
-    drift = np.random.uniform(-band, band)
-    pred = last_price * (1.0 + drift)
-    return pred, last_price * (1.0 - band), last_price * (1.0 + band)
+    sigma = train_sigma(series)
+    return last_price, last_price - Z_95 * sigma, last_price + Z_95 * sigma
 
 
 # ── Plot (optional) ──────────────────────────────────────────────────────────
@@ -137,8 +154,8 @@ def save_plot(result: dict, ticker: str, path: str) -> None:
     ax.plot(idx, result["actual"], label="Actual", color="black", lw=1.3)
     ax.plot(idx, result["predictions"], label="Naive forecast", color="tab:gray", lw=1.3)
     ax.fill_between(idx, result["lower"], result["upper"], color="tab:gray",
-                    alpha=0.20, label="95% PI (+/-5%)")
-    ax.set_title(f"Naive (persistence +/-5%) — {ticker} (walk-forward 1-step)")
+                    alpha=0.20, label="95% PI (Gaussian RW)")
+    ax.set_title(f"Naive (persistence) — {ticker} (walk-forward 1-step)")
     ax.set_xlabel("Date"); ax.set_ylabel("Price"); ax.legend()
     fig.tight_layout(); fig.savefig(path, dpi=130)
     print(f"Saved plot -> {path}")
@@ -152,7 +169,7 @@ def main() -> None:
     p.add_argument("--end", default="2024-12-31")
     p.add_argument("--test-ratio", type=float, default=0.15)
     p.add_argument("--seed", type=int, default=DEFAULT_SEED,
-                   help="RNG seed for reproducible drift draws")
+                   help="kept for interface compatibility (model is deterministic)")
     p.add_argument("--next-step", action="store_true", help="only forecast the next step")
     p.add_argument("--plot", metavar="PATH", default=None, help="save a forecast plot")
     args = p.parse_args()
@@ -172,7 +189,7 @@ def main() -> None:
 
     split = int(len(prices) * (1 - args.test_ratio))
     train, test = prices.iloc[:split], prices.iloc[split:]
-    print(f"Train: {len(train)}  Test: {len(test)}  Naive (persistence +/-5%)\n")
+    print(f"Train: {len(train)}  Test: {len(test)}  Naive (persistence)\n")
 
     result = run_naive(train, test)
     print(f"=== Naive — {args.ticker} ===")
