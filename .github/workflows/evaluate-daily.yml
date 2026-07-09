@@ -1,0 +1,74 @@
+name: Evaluate daily predictions
+
+# Résout chaque jour, côté GitHub (indépendant de toute machine locale), les
+# prédictions en attente déjà échues (cf. validation/evaluate_daily.py) et
+# pousse tracking.db + business_validation.json mis à jour sur main.
+#
+# GitHub Actions ne gère pas le changement d'heure (cron toujours en UTC) :
+# on déclare donc les deux horaires UTC qui correspondent à 01:30 Paris
+# (23:30 UTC en été CEST, 00:30 UTC en hiver CET), et le step "Skip..."
+# ci-dessous n'exécute que celui qui correspond au décalage horaire réel
+# du jour (via github.event.schedule), pour rester à 01:30 Paris toute
+# l'année sans double exécution.
+on:
+  schedule:
+    - cron: "30 23 * * *"  # 01:30 Paris en heure d'été (CEST, UTC+2)
+    - cron: "30 0 * * *"   # 01:30 Paris en heure d'hiver (CET, UTC+1)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: evaluate-daily
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip the schedule that doesn't match today's Paris UTC offset
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          offset=$(TZ=Europe/Paris date +%z)
+          sched="${{ github.event.schedule }}"
+          if { [ "$offset" = "+0200" ] && [ "$sched" = "30 23 * * *" ]; } || \
+             { [ "$offset" = "+0100" ] && [ "$sched" = "30 0 * * *" ]; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Run evaluate_daily
+        if: steps.gate.outputs.run == 'true'
+        run: python -m validation.evaluate_daily
+
+      - name: Commit and push results
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add validation/tracking.db Run/*/business_validation.json
+          if git diff --cached --quiet; then
+            echo "Rien à committer."
+          else
+            git commit -m "chore: résolution quotidienne des prédictions échues (evaluate_daily)"
+            git push
+          fi
