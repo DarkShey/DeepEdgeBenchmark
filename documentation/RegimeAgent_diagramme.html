@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RegimeAgent — run_benchmark.py</title>
+<style>
+  :root{
+    --bg:#0a0e18;
+    --surface:#131a2c;
+    --surface-2:#0e1424;
+    --border:#2a3453;
+    --border-soft:#1e2740;
+    --text:#e6eaf5;
+    --text-muted:#8b93ac;
+    --text-faint:#5b6280;
+    --accent:#5b9bf0;
+    --accent-dim:#3a527c;
+    --code:#6fd7c4;
+    --code-dim:#2f6f6b;
+    --warn:#e2984f;
+    --warn-bg:#241c14;
+    --warn-border:#4a3520;
+    --good:#6fcf87;
+    --good-bg:#131f19;
+    --good-border:#2c4a37;
+    --info-bg:#12192c;
+    --info-border:#25335a;
+    --font-sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f7;
+    --surface:#ffffff;
+    --surface-2:#f4f6fb;
+    --border:#c7cede;
+    --border-soft:#d7dcea;
+    --text:#161c2c;
+    --text-muted:#565f7d;
+    --text-faint:#8a92ac;
+    --accent:#2c66c9;
+    --accent-dim:#a9c2e8;
+    --code:#0f7a68;
+    --code-dim:#bfe3db;
+    --warn:#a8621c;
+    --warn-bg:#fdf1e3;
+    --warn-border:#eccca0;
+    --good:#1f7d43;
+    --good-bg:#eaf7ee;
+    --good-border:#bfe3cb;
+    --info-bg:#eaf0fc;
+    --info-border:#c7d7f6;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#eef1f7;
+      --surface:#ffffff;
+      --surface-2:#f4f6fb;
+      --border:#c7cede;
+      --border-soft:#d7dcea;
+      --text:#161c2c;
+      --text-muted:#565f7d;
+      --text-faint:#8a92ac;
+      --accent:#2c66c9;
+      --accent-dim:#a9c2e8;
+      --code:#0f7a68;
+      --code-dim:#bfe3db;
+      --warn:#a8621c;
+      --warn-bg:#fdf1e3;
+      --warn-border:#eccca0;
+      --good:#1f7d43;
+      --good-bg:#eaf7ee;
+      --good-border:#bfe3cb;
+      --info-bg:#eaf0fc;
+      --info-border:#c7d7f6;
+    }
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:1040px;margin:0 auto;padding:48px 24px 80px;}
+
+  code, .mono{font-family:var(--font-mono);}
+
+  /* ---------- header ---------- */
+  .eyebrow{
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--code);font-family:var(--font-mono);margin:0 0 10px;
+  }
+  h1{
+    font-size:30px;line-height:1.15;margin:0 0 12px;font-weight:700;
+    text-wrap:balance;
+  }
+  .lede{color:var(--text-muted);font-size:15px;max-width:66ch;margin:0 0 28px;}
+  .lede b{color:var(--text);font-weight:600;}
+
+  .legend{
+    display:flex;flex-wrap:wrap;gap:20px;
+    padding:14px 18px;border:1px solid var(--border-soft);border-radius:4px;
+    background:var(--surface-2);margin-bottom:44px;font-size:12.5px;color:var(--text-muted);
+  }
+  .legend-item{display:flex;align-items:center;gap:8px;}
+  .swatch{width:14px;height:14px;border-radius:2px;flex:none;}
+  .swatch.common{background:var(--surface);border:1px solid var(--border);}
+  .swatch.exclusive{background:var(--surface);border:1.5px solid var(--code-dim);}
+  .swatch.spectator{background:repeating-linear-gradient(135deg, var(--text-faint) 0 2px, transparent 2px 6px);}
+
+  /* ---------- stage scaffolding ---------- */
+  .stage{margin-bottom:8px;}
+  .stage-head{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:16px;
+  }
+  .stage-num{
+    font-family:var(--font-mono);font-size:12px;color:var(--accent);
+    background:var(--info-bg);border:1px solid var(--info-border);
+    padding:2px 7px;border-radius:3px;flex:none;
+  }
+  .stage-title{
+    font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--text);font-weight:700;
+  }
+  .stage-sub{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint);}
+
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+  .box{
+    flex:1 1 200px;
+    background:var(--surface);border:1px solid var(--border);border-radius:4px;
+    padding:13px 15px;
+  }
+  .box h4{margin:0 0 4px;font-size:13.5px;font-weight:600;}
+  .box p{margin:0;font-size:12px;color:var(--text-muted);}
+
+  .connector{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    margin:0 0 18px;padding-left:2px;
+  }
+  .connector .line{flex:none;width:1px;height:22px;background:var(--border);}
+  .connector .label{
+    font-size:12.5px;color:var(--text-muted);background:var(--surface-2);
+    border:1px solid var(--border-soft);border-radius:4px;padding:7px 13px;
+  }
+  .connector .label b{color:var(--text);font-weight:600;}
+
+  .footnote{
+    font-size:11.5px;color:var(--text-faint);margin:-6px 0 24px;padding-left:2px;
+    border-left:2px solid var(--border-soft);padding-left:10px;
+  }
+  .footnote code{color:var(--code);}
+
+  /* ---------- regime branch zone ---------- */
+  .branch-zone{
+    display:grid;grid-template-columns:1fr 260px;gap:26px;margin-bottom:0;
+  }
+  @media (max-width:680px){ .branch-zone{grid-template-columns:1fr;} }
+
+  .branch-main{display:flex;flex-direction:column;}
+
+  .rail{display:flex;flex-direction:column;align-items:stretch;}
+  .regime-box{
+    background:var(--surface-2);border:1.5px solid var(--code-dim);border-radius:4px;
+    padding:14px 15px;position:relative;
+  }
+  .regime-box .tag{
+    position:absolute;top:-9px;right:10px;
+    font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;
+    background:var(--bg);color:var(--text-faint);padding:0 6px;
+    border:1px solid var(--border-soft);border-radius:3px;text-transform:uppercase;
+  }
+  .regime-box h4{margin:0 0 6px;font-size:13.5px;font-weight:700;color:var(--text);}
+  .regime-box .detectors{margin:0 0 8px;padding:0;list-style:none;font-size:11.5px;color:var(--text-muted);}
+  .regime-box .detectors li{padding:2px 0;}
+  .regime-box .detectors b{color:var(--text);font-weight:600;}
+  .regime-box .out{
+    font-size:11.5px;color:var(--text-muted);border-top:1px solid var(--border-soft);
+    padding-top:8px;margin-top:2px;
+  }
+  .regime-box .out code{color:var(--code);}
+  .anti-leak{
+    display:inline-block;margin-top:8px;font-size:10.5px;font-family:var(--font-mono);
+    color:var(--good);background:var(--good-bg);border:1px solid var(--good-border);
+    padding:2px 7px;border-radius:3px;
+  }
+
+  .rail-line{
+    flex:1;min-height:64px;display:flex;align-items:center;justify-content:center;
+    border-left:2px dashed var(--text-faint);margin-left:50%;padding:14px 0 14px 16px;
+  }
+  .rail-line span{
+    font-size:11px;color:var(--text-faint);max-width:180px;line-height:1.4;
+  }
+  .rail-line span b{color:var(--text-muted);}
+
+  /* ---------- overlay & verdict ---------- */
+  .overlay-box{
+    background:var(--surface-2);border:1.5px solid var(--code-dim);border-radius:4px;
+    padding:16px 18px;margin-bottom:14px;position:relative;
+  }
+  .overlay-box .tag{
+    position:absolute;top:-9px;right:10px;
+    font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;
+    background:var(--bg);color:var(--text-faint);padding:0 6px;
+    border:1px solid var(--border-soft);border-radius:3px;text-transform:uppercase;
+  }
+  .overlay-box h4{margin:0 0 4px;font-size:14.5px;font-weight:700;}
+  .overlay-box .formula{font-family:var(--font-mono);font-size:12.5px;color:var(--code);margin:0 0 6px;}
+  .overlay-box .absent{
+    display:inline-block;font-family:var(--font-mono);font-size:10.5px;color:var(--warn);
+    background:var(--warn-bg);border:1px solid var(--warn-border);padding:2px 7px;border-radius:3px;
+  }
+  .in-labels{display:flex;gap:18px;font-size:11px;color:var(--text-faint);margin-bottom:10px;flex-wrap:wrap;}
+
+  .critiques{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  .critique{
+    display:flex;gap:10px;padding:10px 12px;background:var(--warn-bg);
+    border:1px solid var(--warn-border);border-radius:4px;
+  }
+  .critique .n{
+    flex:none;font-family:var(--font-mono);font-size:12px;font-weight:700;
+    color:var(--warn);width:16px;
+  }
+  .critique p{margin:0;font-size:12px;color:var(--text-muted);}
+  .critique p b{color:var(--text);font-weight:600;}
+
+  .open-q{
+    display:flex;gap:10px;padding:12px 14px;background:var(--info-bg);
+    border:1px solid var(--info-border);border-radius:4px;margin:14px 0 32px;
+  }
+  .open-q .mark{flex:none;font-family:var(--font-mono);font-size:12px;color:var(--accent);}
+  .open-q p{margin:0;font-size:12px;color:var(--text-muted);}
+  .open-q p b{color:var(--text);}
+
+  /* ---------- improvements section ---------- */
+  .section-divider{
+    display:flex;align-items:center;gap:14px;margin:44px 0 20px;
+  }
+  .section-divider .line{flex:1;height:1px;background:var(--good-border);}
+  .section-divider .t{
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--good);
+    font-weight:700;white-space:nowrap;
+  }
+  .improve-lede{font-size:12.5px;color:var(--text-muted);margin:0 0 16px;max-width:70ch;}
+
+  .improve-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+  @media (max-width:760px){ .improve-grid{grid-template-columns:1fr;} }
+  .improve-card{
+    background:var(--good-bg);border:1px solid var(--good-border);border-radius:4px;
+    padding:14px 15px;
+  }
+  .improve-card .ref{
+    font-family:var(--font-mono);font-size:10px;color:var(--good);letter-spacing:.06em;
+    text-transform:uppercase;margin-bottom:6px;display:block;
+  }
+  .improve-card h4{margin:0 0 6px;font-size:13px;font-weight:700;}
+  .improve-card p{margin:0;font-size:11.5px;color:var(--text-muted);}
+  .improve-card code{color:var(--code);}
+
+  /* ---------- bottom note ---------- */
+  .final-note{
+    margin-top:40px;padding:16px 18px;border:1px solid var(--border-soft);
+    border-radius:4px;background:var(--surface-2);
+  }
+  .final-note h4{margin:0 0 8px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);}
+  .final-note p{margin:0 0 6px;font-size:12px;color:var(--text-muted);}
+  .final-note p:last-child{margin-bottom:0;}
+  .final-note .italic{font-style:italic;color:var(--text-faint);font-size:11px;}
+
+  .src{margin-top:28px;font-size:11px;color:var(--text-faint);}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="eyebrow">DeepEdgeBenchmark — pipeline développeur</p>
+  <h1>RegimeAgent dans <code class="mono">run_benchmark.py</code></h1>
+  <p class="lede">
+    Schéma mis à jour d'après le brief du 2026-07-08 et l'analyse du run 20260707.
+    Le RegimeAgent vit dans le pipeline du développeur, <b>distinct</b> du pipeline du dépôt
+    (<code class="mono">model_artifacts/pipeline.py</code>) — les deux ne produisent pas les mêmes artefacts.
+  </p>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch common"></span> commun aux deux pipelines</div>
+    <div class="legend-item"><span class="swatch exclusive"></span> <code class="mono" style="font-size:11.5px">run_benchmark.py</code> uniquement</div>
+    <div class="legend-item"><span class="swatch spectator"></span> liaison « spectateur » — aucune donnée ne remonte vers le training/validation</div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-num">1</span>
+      <span class="stage-title">Identification</span>
+      <span class="stage-sub">config.py / assets.py</span>
+    </div>
+    <div class="row">
+      <div class="box"><h4>5 actifs</h4><p>BTC, ETH, SPY, ZN=F, TLT</p></div>
+      <div class="box"><h4>Fenêtre et longueur</h4><p>2018 – aujourd'hui (~3 ans)</p></div>
+      <div class="box"><h4>Granularité</h4><p>quotidienne (1 clôture / jour)</p></div>
+      <div class="box"><h4>Horizons</h4><p>J+1..J+6, S+1..S+4, M+1/M+2</p></div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div></div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-num">2</span>
+      <span class="stage-title">Données</span>
+    </div>
+    <div class="row">
+      <div class="box"><h4>Téléchargement</h4><p>yfinance, prix OHLCV complet (l'ADX du RegimeAgent a besoin du high/low)</p></div>
+      <div class="box"><h4>Trim T</h4><p>T = 30 j mis de côté (futur caché)</p></div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div><div class="label"><b>Split chronologique</b> — 85 % train / 15 % validation</div></div>
+
+  <!-- STAGE 3 branch -->
+  <div class="branch-zone">
+    <div class="branch-main">
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">3.1</span>
+          <span class="stage-title">Training — Gate 1</span>
+        </div>
+        <div class="row">
+          <div class="box"><h4>Fit par modèle</h4><p>ARIMA-GARCH, SARIMA, Prophet, LSTM</p></div>
+          <div class="box"><h4>Contrôle qualité</h4><p>valeurs finies, sérialisation</p></div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="line"></div></div>
+
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-num">4</span>
+          <span class="stage-title">Validation — Gate 2</span>
+          <span class="stage-sub">hors-échantillon</span>
+        </div>
+        <div class="row">
+          <div class="box"><h4>D1</h4><p>walk-forward 1-step sur les 15 % validation</p></div>
+          <div class="box"><h4>D7</h4><p>10 refits max, horizon 5 j trading</p></div>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <div class="box"><h4>Métriques</h4><p>RMSE, MAPE, Dir. Acc., PI cov.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="stage-head" style="margin-bottom:10px">
+        <span class="stage-num">3.2</span>
+        <span class="stage-title">Calibration régime</span>
+      </div>
+      <div class="regime-box">
+        <span class="tag">run_benchmark.py</span>
+        <h4>RegimeAgent</h4>
+        <ul class="detectors">
+          <li><b>HMM</b> 2 états — régime haussier/baissier latent</li>
+          <li><b>GARCH</b> — niveau de volatilité</li>
+          <li><b>ADX</b> — force de tendance</li>
+          <li><b>BOCPD</b> — ruptures bayésiennes en ligne</li>
+        </ul>
+        <span class="anti-leak">✓ ajusté sur train uniquement</span>
+        <div class="out">
+          Sorties : <code>stress_score</code> continu + étiquette
+          (Calme / Haussier / Baissier / Stress) →
+          <code>regime_dashboard.html</code> (~171 segments de rupture BTC, trace du BOCPD)
+        </div>
+      </div>
+      <div class="rail-line">
+        <span><b>Spectateur</b> — contourne le training (4) et la validation (5) : ni feature, ni conditionnement d'hyperparamètres, ni sélection de modèle par régime</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div></div>
+
+  <!-- STAGE 5 overlay -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-num">5</span>
+      <span class="stage-title">Overlay régime</span>
+      <span class="stage-sub">seule interaction du RegimeAgent avec les prévisions</span>
+    </div>
+    <div class="overlay-box">
+      <span class="tag">run_benchmark.py</span>
+      <div class="in-labels">
+        <span>← métriques (4)</span>
+        <span>← <code class="mono" style="font-size:11px">stress_score</code> (3.2, via bypass)</span>
+      </div>
+      <h4>Élargit l'IC 95 %</h4>
+      <p class="formula">largeur × (1 + stress_score) — point de prévision inchangé</p>
+      <span class="absent">absent de model_artifacts/pipeline.py</span>
+
+      <div class="critiques">
+        <div class="critique">
+          <span class="n">1</span>
+          <p><b>Verdict gameable.</b> Un <code class="mono" style="font-size:11px">stress_score</code> élevé garantit mécaniquement le succès — rien ne pénalise la largeur. Winkler / CRPS corrigent ça (pénalité largeur + dépassement) : le verdict devrait reposer sur eux, pas sur la couverture brute.</p>
+        </div>
+        <div class="critique">
+          <span class="n">2</span>
+          <p><b>Dégrade une calibration déjà bonne.</b> Run 20260707 : couverture ARIMA-GARCH 94,55 % pour une cible de 95 %, largeurs = ±1,96σ GARCH nominal. Élargir produit de la sur-couverture — ou l'overlay était inactif sur ce run (à vérifier avec le développeur).</p>
+        </div>
+        <div class="critique">
+          <span class="n">3</span>
+          <p><b>Incohérence inter-pipelines.</b> Absent de <code class="mono" style="font-size:11px">model_artifacts/pipeline.py</code> : deux chemins produisent des IC différents pour les mêmes modèles — les artefacts ne sont pas comparables entre eux selon le chemin emprunté. Même famille de problème que le bruit injecté dans la baseline naïve (brief, Point 0).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="open-q">
+    <span class="mark">?</span>
+    <p><b>Question ouverte pour le développeur —</b> pendant la validation, le <code class="mono" style="font-size:11px">stress_score</code> est-il mis à jour en ligne (BOCPD ne voit que le passé à chaque origine) ou figé sur le train ? Figé, il serait périmé au bout de quelques semaines ; mis à jour, il faut vérifier qu'aucune fuite ne s'introduit à chaque origine.</p>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-num">6</span>
+      <span class="stage-title">Verdict</span>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <div class="box"><h4>success / fail / pending</h4><p>réel dans l'IC élargi ?</p></div>
+    </div>
+    <div class="footnote">à remplacer par un score <code>Winkler</code> / <code>CRPS</code> — cf. critique 1 ci-dessus</div>
+  </div>
+
+  <div class="connector"><div class="line"></div></div>
+
+  <!-- STAGE 7 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-num">7</span>
+      <span class="stage-title">Artefacts et dashboard</span>
+    </div>
+    <div class="row">
+      <div class="box"><h4>Prévision live</h4><p>fit train+val → forecast.json</p></div>
+      <div class="box"><h4>Fichiers Run/</h4><p>metrics, predictions, prices</p></div>
+      <div class="box"><h4>dashboard.html</h4><p>graphes + heatmap verdicts</p></div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="line"></div><div class="label">Répète par actif × modèle × horizon</div></div>
+
+  <!-- IMPROVEMENTS -->
+  <div class="section-divider">
+    <span class="t">Si le RegimeAgent doit servir</span>
+    <div class="line"></div>
+  </div>
+  <p class="improve-lede">
+    Aujourd'hui le RegimeAgent est un module de post-traitement cosmétique : il n'améliore aucune
+    prévision, il assouplit le critère de réussite. Trois voies utiles, déjà dans le brief, remplaceraient
+    l'overlay au lieu de l'élargir :
+  </p>
+  <div class="improve-grid">
+    <div class="improve-card">
+      <span class="ref">brief — point 2</span>
+      <h4>Ventiler les métriques par régime</h4>
+      <p>Déjà prévu via <code>volatility_regimes</code> dans <code>honest_eval</code> — le HMM/BOCPD du RegimeAgent ferait mieux que la segmentation actuelle.</p>
+    </div>
+    <div class="improve-card">
+      <span class="ref">brief — point 4</span>
+      <h4>Feature exogène des modèles</h4>
+      <p><code>stress_score</code> injecté en amont du training (étape 3.1) plutôt qu'en post-traitement à l'étape 5.</p>
+    </div>
+    <div class="improve-card">
+      <span class="ref">brief — point 4</span>
+      <h4>Comparaison de volatilité</h4>
+      <p>Confronter la vol implicite du RegimeAgent (GARCH interne) au GARCH du benchmark sur les cibles de volatilité — plutôt qu'élargir des IC pour faire passer des verdicts.</p>
+    </div>
+  </div>
+
+  <div class="final-note">
+    <h4>Note sur le lag / déphasage (ARIMA, SARIMA, LSTM)</h4>
+    <p>Les 3 modèles font du walk-forward : à chaque pas, la vraie valeur réalisée est réinjectée avant de prédire le pas suivant. Directional accuracy mesurée ≈ 52–57 % (quasi pile-ou-face) — le prix réagit comme une marche aléatoire quasi pure. Le prédicteur optimal au sens MSE converge alors vers « prix futur proche du dernier prix connu ».</p>
+    <p>Ce n'est pas un bug de code : c'est la signature d'un actif proche de l'efficience — cf. brief, Point 1 (évaluer les variations, pas les niveaux).</p>
+    <p class="italic">3.1 (training) et 3.2 (calibration régime) tournent en parallèle sur le même split — aucune dépendance entre elles, hormis l'overlay en aval (étape 5) qui ne dépend que de 3.2.</p>
+  </div>
+
+  <p class="src">Source : IMPROVEMENTS_BRIEF (2026-07-08), analyse du run 20260707 (dashboard, regime_dashboard.html), schéma pipeline d'origine.</p>
+</div>
+</body>
+</html>

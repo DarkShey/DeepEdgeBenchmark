@@ -3,7 +3,7 @@
   "pytest_filter": "lstm",
   "status": "pass",
   "exit_code": 0,
-  "summary": "11 passed, 27 deselected, 30 warnings in 3.80s",
+  "summary": "11 passed, 27 deselected, 30 warnings in 27.29s",
   "tests": [
     {
       "name": "models/test_metrics.py::test_compute_metrics_perfect_prediction_gives_zero_error[lstm_model]",

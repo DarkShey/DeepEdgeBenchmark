@@ -4,9 +4,9 @@
   "MAPE": 1.63,
   "directional_accuracy": 48.21,
   "pi_coverage_95": 83.19,
-  "pi_width_min": 39.328846,
-  "pi_width_mean": 39.328846,
-  "pi_width_max": 39.328846,
+  "pi_width_min": 39.328831,
+  "pi_width_mean": 39.328831,
+  "pi_width_max": 39.328831,
   "n_val": 113,
   "horizon": "D1",
   "asset": "SPY",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 745.400024,
-    "predicted": 741.25354,
-    "pi_lower": 720.17969,
-    "pi_upper": 762.327391
+    "predicted": 741.253418,
+    "pi_lower": 720.179566,
+    "pi_upper": 762.32727
   }
 }

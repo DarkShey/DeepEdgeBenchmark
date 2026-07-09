@@ -1,12 +1,12 @@
 {
-  "RMSE": 742.6411,
-  "MAE": 608.8764,
-  "MAPE": 32.36,
-  "directional_accuracy": 51.22,
+  "RMSE": 762.0447,
+  "MAE": 616.893,
+  "MAPE": 32.91,
+  "directional_accuracy": 50.61,
   "pi_coverage_95": 92.12,
-  "pi_width_min": 1213.479861,
-  "pi_width_mean": 2508.84397,
-  "pi_width_max": 5289.649209,
+  "pi_width_min": 1171.725979,
+  "pi_width_mean": 2620.423559,
+  "pi_width_max": 5660.820712,
   "n_val": 165,
   "horizon": "D1",
   "asset": "ETH-USD",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 1742.677612,
-    "predicted": 1570.236093,
-    "pi_lower": 1056.127027,
-    "pi_upper": 2103.064572
+    "predicted": 1592.018463,
+    "pi_lower": 1062.517526,
+    "pi_upper": 2140.799253
   }
 }

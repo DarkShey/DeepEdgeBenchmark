@@ -5,7 +5,7 @@
   "directional_accuracy": 55.56,
   "pi_coverage_95": 100.0,
   "pi_width_min": 18.865348,
-  "pi_width_mean": 19.26612,
+  "pi_width_mean": 19.266119,
   "pi_width_max": 19.890839,
   "n_val": 10,
   "horizon": "D7",

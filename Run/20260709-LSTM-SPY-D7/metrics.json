@@ -1,12 +1,12 @@
 {
   "RMSE": 15.0685,
-  "MAE": 12.1525,
+  "MAE": 12.1526,
   "MAPE": 1.74,
   "directional_accuracy": 66.67,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 81.084331,
-  "pi_width_mean": 86.449546,
-  "pi_width_max": 95.700725,
+  "pi_width_min": 81.084315,
+  "pi_width_mean": 86.449523,
+  "pi_width_max": 95.700707,
   "n_val": 10,
   "horizon": "D7",
   "asset": "SPY",
@@ -15,7 +15,7 @@
     "last_date": "2026-07-08",
     "last_price": 745.400024,
     "predicted": 741.726013,
-    "pi_lower": 694.603451,
-    "pi_upper": 788.848575
+    "pi_lower": 694.603448,
+    "pi_upper": 788.848578
   }
 }

@@ -7,6 +7,6 @@
   "garch_p": 1,
   "garch_q": 1,
   "garch_dist": "normal",
-  "aic": 530.997873,
-  "bic": 557.73849
+  "aic": 530.997687,
+  "bic": 557.738305
 }
