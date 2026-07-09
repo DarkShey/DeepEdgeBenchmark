@@ -76,8 +76,9 @@ def collect_run_data(run_root: Path) -> dict:
         metrics = json.loads(metrics_path.read_text())
         metadata_path = combo_dir / "metadata.json"
         metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        forecast_path = combo_dir / "forecast.json"
-        forecast = json.loads(forecast_path.read_text()) if forecast_path.exists() else {}
+        # Prévision hors-échantillon repliée dans metrics.json (clé "forecast") plutôt que
+        # dans un forecast.json séparé -- cf. model_artifacts/pipeline.py::process_asset_model.
+        forecast = metrics.get("forecast") or {}
         # Le préfixe du nom de dossier (YYYYMMDD-...) fait foi pour regrouper par date de
         # run — indépendant du nombre de tirets dans le nom de l'actif (BTC-USD, ZN=F...).
         run_date = combo_dir.name.split("-", 1)[0]

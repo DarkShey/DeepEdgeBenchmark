@@ -1,0 +1,21 @@
+{
+  "RMSE": 1873.1282,
+  "MAE": 1309.7472,
+  "MAPE": 1.86,
+  "directional_accuracy": 53.05,
+  "pi_coverage_95": 95.76,
+  "pi_width_min": 7136.151482,
+  "pi_width_mean": 7275.64719,
+  "pi_width_max": 7371.056944,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "SARIMA",
+  "forecast": {
+    "last_date": "2026-07-08",
+    "last_price": 62257.574219,
+    "predicted": 62319.76578,
+    "pi_lower": 58737.051788,
+    "pi_upper": 65902.479771
+  }
+}

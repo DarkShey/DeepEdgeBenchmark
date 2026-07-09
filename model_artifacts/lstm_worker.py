@@ -189,7 +189,7 @@ def main():
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    horizons = args.horizons.split(",")
+    horizons = [h for h in args.horizons.split(",") if h]
 
     result = {"gate1_ok": False, "gate2": {}}
     try:

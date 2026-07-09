@@ -1,0 +1,21 @@
+{
+  "RMSE": 3.3214,
+  "MAE": 2.9068,
+  "MAPE": 2.62,
+  "directional_accuracy": 49.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 10.870313,
+  "pi_width_mean": 11.101658,
+  "pi_width_max": 11.385938,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "Naive",
+  "forecast": {
+    "last_date": "2026-07-08",
+    "last_price": 109.0,
+    "predicted": 104.753157,
+    "pi_lower": 103.55,
+    "pi_upper": 114.45
+  }
+}

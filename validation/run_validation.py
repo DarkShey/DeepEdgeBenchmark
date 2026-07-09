@@ -4,8 +4,9 @@ validation/run_validation.py — Orchestration bout-en-bout Partie A + Partie B
 Enchaîne :
   1. init_db(db)                                  — schéma créé si absent.
   2. génération des test cases (5 actifs x 5 modèles x 2 horizons), via
-     generate_test_cases.py (Partie A, Kyrio) inchangé — appelé en sous-processus
-     pour ne pas interférer avec son propre argparse ni le modifier.
+     model_artifacts.pipeline (pipeline unique train+validate+business, cf. son
+     docstring) — appelé en sous-processus pour ne pas interférer avec son propre
+     argparse ni le modifier.
   3. evaluate_pending(price_fetcher.fetch, db)     — remplit y_true + métriques
      pour les prédictions déjà échues (target_date <= aujourd'hui).
   4. report(group_by=("model",)) puis report(group_by=("model","regime"))
@@ -41,7 +42,7 @@ def main():
 
     print("\n=== Génération des test cases (5 actifs x 5 modèles x 2 horizons) ===")
     subprocess.run(
-        [sys.executable, "-m", "validation.generate_test_cases", "--db-path", DB_PATH],
+        [sys.executable, "-m", "model_artifacts.pipeline", "--db-path", DB_PATH],
         cwd=str(REPO_ROOT), check=True,
     )
 

@@ -1,0 +1,21 @@
+{
+  "RMSE": 0.723,
+  "MAE": 0.6489,
+  "MAPE": 0.58,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 3.195885,
+  "pi_width_mean": 3.292823,
+  "pi_width_max": 3.360954,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ZN=F",
+  "model": "SARIMA",
+  "forecast": {
+    "last_date": "2026-07-08",
+    "last_price": 109.0,
+    "predicted": 109.226578,
+    "pi_lower": 107.595461,
+    "pi_upper": 110.857696
+  }
+}

@@ -12,6 +12,7 @@ preuve que l'artefact est exploitable pour un déploiement, pas juste un octet v
 # Le GPU/Metal est désactivé pour TensorFlow par model_artifacts/conftest.py
 # (chargé par pytest avant ce module) — cf. sa docstring pour le détail du bug.
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -120,6 +121,7 @@ def test_process_asset_model_produces_all_five_files_for_lstm(tmp_path, monkeypa
         run_date_str="20260101", run_date_iso="2026-01-01",
         window_start=str(train.index[0].date()), window_end=str(validation.index[-1].date()),
         seed=0, epochs=2, max_d7_origins=2, horizons=["D1", "D7"],
+        run_id="test-run", regime_tag="unknown", db_path=str(tmp_path / "tracking.db"),
     )
 
     assert len(logs) == 2
@@ -131,6 +133,11 @@ def test_process_asset_model_produces_all_five_files_for_lstm(tmp_path, monkeypa
         for filename in ("model.h5", "scaler.pkl", "hyperparams.json", "metrics.json", "metadata.json",
                          "predictions.parquet", "prices.parquet"):
             assert (out_dir / filename).exists(), f"{filename} manquant dans {out_dir}"
+        # Prévision hors-échantillon repliée dans metrics.json (pas de forecast.json séparé,
+        # cf. process_asset_model -- ex-doublon avec business_validation.json).
+        assert not (out_dir / "forecast.json").exists()
+        metrics = json.loads((out_dir / "metrics.json").read_text())
+        assert {"last_date", "last_price", "predicted", "pi_lower", "pi_upper"} <= metrics["forecast"].keys()
 
     # même modèle (fit une fois) -> model.h5/scaler.pkl identiques dans D1 et D7 (§12)
     d1_dir = Path(logs[0]["dir"])

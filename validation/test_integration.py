@@ -27,7 +27,7 @@ def _record(**overrides):
 def test_full_flow_save_evaluate_report(tmp_path):
     db_path = str(tmp_path / "integration.db")
     # pas d'appel explicite à init_db() : on vérifie l'auto-initialisation paresseuse
-    # (Étape 3) exactement comme le fait validation/generate_test_cases.py.
+    # (Étape 3) exactement comme le fait model_artifacts/pipeline.py.
 
     record = _record()
     inserted = td.save_prediction(record, db_path=db_path)

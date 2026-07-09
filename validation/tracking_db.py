@@ -2,7 +2,8 @@
 tracking_db.py — Base de suivi des prédictions (Partie B, cf. BRIEF_tracking_db.md)
 
 Bibliothèque standard uniquement (sqlite3, csv) : aucune dépendance externe, aucun
-accès réseau. Le seul point de contact avec la Partie A (Kyrio, validation/generate_test_cases.py)
+accès réseau. Le seul point de contact avec la partie entraînement/prédiction
+(model_artifacts/pipeline.py, pipeline unique depuis la fusion Partie A + pipeline ML)
 est save_prediction(record) et le contrat de champs de RECORD_FIELDS (§3 du brief).
 Source unique : ce module remplace l'ancienne version partielle de validation/tracking_db.py
 (save_prediction seul, sans evaluate_pending/report) suite à la consolidation Partie A + B.
@@ -104,7 +105,7 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
     """Valide le contrat, auto-enregistre le test_case, puis INSERT OR IGNORE
     (idempotent sur tc_id/model/cutoff_date). Retourne True si insérée, False
     si doublon ignoré."""
-    init_db(db_path)   # paresseux et idempotent : un run direct (ex. generate_test_cases.py,
+    init_db(db_path)   # paresseux et idempotent : un run direct (ex. model_artifacts.pipeline,
                        # qui n'appelle jamais init_db lui-même) ne plante pas sur "table manquante"
     missing = [f for f in RECORD_FIELDS if f not in record]
     if missing:

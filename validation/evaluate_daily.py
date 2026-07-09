@@ -5,8 +5,8 @@ Prévu pour tourner une fois par jour (cron) : pour chaque prédiction déjà en
 la date cible (target_date) est atteinte ou dépassée et dont la vraie valeur n'est pas
 encore connue (y_true IS NULL), télécharge le prix de marché réel de ce jour-là et le
 sauve dans tracking.db (cf. tracking_db.evaluate_pending, déjà utilisé par
-generate_test_cases.py juste après avoir créé de nouvelles prédictions — ce script
-couvre le cas où personne ne relance generate_test_cases.py entre-temps).
+model_artifacts/pipeline.py juste après avoir créé de nouvelles prédictions — ce
+script couvre le cas où personne ne relance le pipeline entre-temps).
 
 Idempotent : si rien n'est échu ou que le marché n'a pas encore publié le prix (jour
 férié, données pas encore à jour chez le fournisseur), ne fait rien et ne casse rien —
@@ -28,7 +28,7 @@ import argparse
 from datetime import date, timedelta
 
 from benchmarks.run_benchmark import download_full_data
-from validation import generate_test_cases as gtc
+from model_artifacts import pipeline as mp
 from validation import tracking_db as td
 
 DEFAULT_DB_PATH = "validation/tracking.db"
@@ -65,7 +65,7 @@ def main():
                    help="fenêtre de téléchargement pour retrouver le prix des target_date échues")
     p.add_argument("--no-run-refresh", action="store_true",
                    help="ne pas réécrire business_validation.json dans Run/ après résolution")
-    p.add_argument("--run-dir", default=gtc.DEFAULT_RUN_DIR,
+    p.add_argument("--run-dir", default=str(mp.RUN_ROOT),
                    help="dossier Run/ où réécrire business_validation.json (cf. Run/readme.md)")
     args = p.parse_args()
 
@@ -82,13 +82,8 @@ def main():
 
     if n_evaluated and not args.no_run_refresh:
         run_ids = td.run_ids_evaluated_on(today_iso, db_path=args.db_path)
-
-        class _Args:
-            pass
-        run_args = _Args()
-        run_args.db_path = args.db_path
         for run_id in run_ids:
-            gtc.export_business_validation(run_id, run_args, run_dir_root=args.run_dir)
+            mp.export_business_validation(run_id, db_path=args.db_path, run_dir_root=args.run_dir)
         print(f"[evaluate_daily] business_validation.json rafraîchi pour {len(run_ids)} run(s) : "
               f"{', '.join(run_ids)}")
 

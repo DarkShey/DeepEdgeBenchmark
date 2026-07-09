@@ -20,10 +20,11 @@ Gate 1 tourne une fois par (modèle, actif) et ses fichiers sont copiés à l'id
 les dossiers ...-D1 et ...-D7. Gate 2, en revanche, est spécifique à l'horizon :
   - D1 : réutilise tel quel run_<model>(train, validation) de models/*.py (walk-forward
     1-step déjà existant et testé) -> RMSE/MAE/... sur n_val = len(validation) points.
-  - D7 : jours de trading (D+7 calendaire ~ 1 semaine ~ 5 jours de trading, cohérent avec
-    la convention déjà utilisée dans validation/generate_test_cases.py). Aucune fonction
-    multi-step "sans refit" n'existe pour tous les modèles (Prophet/LSTM en particulier
-    n'ont pas d'API d'état incrémental) -> évaluation par origines glissantes : à chaque
+  - D7 : jours de trading (D+7 calendaire ~ 1 semaine ~ 5 jours de trading -- backtest
+    Gate2, distinct de l'horizon business=7 j. de bourse, cf. BUSINESS_HORIZONS_TRADING_DAYS
+    plus bas). Aucune fonction multi-step "sans refit" n'existe pour tous les modèles
+    (Prophet/LSTM en particulier n'ont pas d'API d'état incrémental) -> évaluation par
+    origines glissantes : à chaque
     origine, ré-appelle forecast_horizons_<model>(train_étendu, [7]) tel quel (refit inclus,
     exactement comme l'existant), MAX_D7_ROLLING_ORIGINS origines réparties sur la
     validation (borne le temps de calcul — limitation documentée, pas une approximation
@@ -89,17 +90,30 @@ sys.path.insert(0, str(REPO_ROOT / "models"))
 from calibration.regime.assets import ASSETS
 from benchmarks.run_benchmark import download_full_data
 from benchmarks import multi_horizon as mh
+from benchmarks.regime_overlay import fit_predict_regime
+
+from validation import tracking_db as td
+from validation import verdict_rules
 
 RUN_ROOT = REPO_ROOT / "Run"
+DEFAULT_DB_PATH = "validation/tracking.db"
 
 MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive"]
 MODEL_FOLDER_NAME = {
     "ARIMA-GARCH": "ARIMA", "SARIMA": "SARIMA", "Prophet": "Prophet",
     "LSTM": "LSTM", "Naive": "Naive",
 }
-# D+1/D+7 en jours de TRADING ; D+7 ~ 1 semaine calendaire ~ 5 jours de trading,
-# cohérent avec D_TO_TRADING_DAYS de validation/generate_test_cases.py.
+# D+1/D+7 en jours de TRADING (backtest Gate2) ; D+7 ~ 1 semaine calendaire ~ 5 jours
+# de trading -- distinct de BUSINESS_HORIZONS_TRADING_DAYS plus bas (contrat tracking.db).
 HORIZON_TRADING_DAYS = {"D1": 1, "D7": 5}
+
+# Contrat business tracking.db (BRIEF_tracking_db.md §3) : horizon = 1 ou 7 JOURS DE
+# BOURSE exactement -- distinct du "D7" Gate2 ci-dessus qui est un horizon de backtest
+# à 5 jours de bourse. On calcule donc en plus, dans la prévision live (jamais dans
+# Gate2), le point à horizon=7 jours de bourse pour nourrir tracking.db sans toucher à
+# la méthodologie Gate2 existante.
+BUSINESS_HORIZONS_TRADING_DAYS = (1, 7)
+PIPELINE_HORIZON_LABEL = {1: "D1", 7: "D7"}
 
 TRAIN_RATIO = 0.85
 WINDOW_YEARS = 3
@@ -570,17 +584,6 @@ def write_metadata_json(out_dir: Path, asset: str, asset_class: str, window_star
     (out_dir / "metadata.json").write_text(json.dumps(payload, indent=2))
 
 
-def write_forecast_json(out_dir: Path, last_date: str, last_price: float, horizon_label: str,
-                        predicted: float, pi_lower: float, pi_upper: float) -> None:
-    """Prévision hors-échantillon (au-delà de last_date, la dernière clôture connue) —
-    seule vraie prévision "future" du dashboard, distincte du backtest de Gate 2."""
-    payload = {
-        "horizon": horizon_label, "last_date": last_date, "last_price": _num(last_price),
-        "predicted": _num(predicted), "pi_lower": _num(pi_lower), "pi_upper": _num(pi_upper),
-    }
-    (out_dir / "forecast.json").write_text(json.dumps(payload, indent=2))
-
-
 def write_predictions_parquet(out_dir: Path, dates, actual, predicted, pi_lower, pi_upper) -> None:
     """Série datée réel/prédit/PI 95% de la validation Gate 2 (D1 : un point par jour de
     validation ; D7 : un point par origine glissante) — alimente le graphe du dashboard."""
@@ -673,7 +676,7 @@ def _model_unit_test_results(model_key: str) -> dict:
 
 
 def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path, seed, epochs,
-                         max_d7_origins: int, horizons: list) -> dict:
+                         max_d7_origins: int, horizons: list, business_h_days: set) -> dict:
     """LSTM tourne dans un sous-processus neuf et isolé (model_artifacts/lstm_worker.py),
     jamais dans CE process : ce module importe benchmarks.multi_horizon (donc
     arima_model/regime_overlay) sans condition dès son chargement (cf. import plus haut),
@@ -687,7 +690,11 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
         result_json = Path(tmp) / "result.json"
         with open(data_pickle, "wb") as f:
             pickle.dump((train, validation), f)
-        live_horizons_days = sorted({HORIZON_TRADING_DAYS[h] for h in horizons})
+        # Toujours inclure les horizons business (1 et 7 j. de bourse, tracking.db, décalés
+        # de business_lag si besoin -- cf. process_asset_model) en plus des horizons Gate2
+        # demandés -- une seule invocation du worker isolé couvre donc à la fois le
+        # backtest ML et la prévision live business.
+        live_horizons_days = sorted({HORIZON_TRADING_DAYS[h] for h in horizons} | business_h_days)
         cmd = [sys.executable, "-m", "model_artifacts.lstm_worker",
                "--data-pickle", str(data_pickle), "--out-dir", str(out_dir),
                "--result-json", str(result_json), "--max-d7-origins", str(max_d7_origins),
@@ -705,10 +712,97 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
         return result
 
 
+def _save_business_predictions(run_id: str, model_key: str, ticker: str, asset_class: str,
+                               regime_tag: str, full_series: pd.Series, forecasts_by_h: dict,
+                               db_path: str, business_lag: int) -> None:
+    """Persiste la prévision live à horizon=1 et horizon=7 jours de bourse dans
+    tracking.db (contrat BRIEF_tracking_db.md §3, Partie B) -- même dict forecasts_by_h
+    que celui republié dans metrics.json (clé "forecast") pour le Gate2 horizon_label,
+    mais ici horizon=1/7 jours de bourse (contrat business), potentiellement différent
+    de l'horizon Gate2 D7=5 jours de bourse (cf. BUSINESS_HORIZONS_TRADING_DAYS plus haut).
+
+    "D+1" doit toujours vouloir dire "demain PAR RAPPORT À AUJOURD'HUI", jamais "demain
+    par rapport au dernier close connu" : si le run tourne en journée (avant la clôture
+    du marché du jour même), cutoff_date = hier (dernier close déjà publié), et un
+    horizon de 1 jour de bourse à partir de là tombe sur AUJOURD'HUI, pas demain (bug
+    constaté le 2026-07-09). business_lag (calculé une fois dans process_asset_model,
+    partagé avec le worker LSTM) compense cet écart, ajouté à l'horizon business avant
+    de chercher la prévision correspondante dans forecasts_by_h."""
+    cutoff_date = full_series.index[-1].date()
+    last_close = float(full_series.iloc[-1])
+    now = datetime.now()
+
+    for h_days in BUSINESS_HORIZONS_TRADING_DAYS:
+        effective_h = h_days + business_lag
+        if effective_h not in forecasts_by_h:
+            continue
+        point, lo, hi = forecasts_by_h[effective_h]
+        target_date = cutoff_date + pd.Timedelta(days=effective_h)
+
+        record = {
+            "run_id": run_id,
+            "tc_id": f"TC_{ticker}_D{h_days}",
+            "model": model_key,
+            "asset": ticker,
+            "horizon": h_days,
+            "cutoff_date": str(cutoff_date),
+            "target_date": str(target_date),
+            "regime": regime_tag,
+            "last_close": last_close,
+            "y_pred": float(point),
+            "y_lower": float(lo),
+            "y_upper": float(hi),
+            "created_at": now.isoformat(timespec="seconds"),
+        }
+        record["verdict_integrite"] = verdict_rules.check_integrity(record)
+        record["verdict_plausibilite"] = (
+            verdict_rules.check_plausibility(record, asset_class, h_days)
+            if record["verdict_integrite"] else 0
+        )
+        td.save_prediction(record, db_path=db_path)
+
+
+def export_business_validation(run_id: str, db_path: str = DEFAULT_DB_PATH,
+                               run_dir_root=RUN_ROOT) -> list:
+    """Range les résultats de validation business (prédiction + évaluation dès que
+    connue) de ce run_id dans Run/<date>-<modèle>-<actif>-<horizon>/business_validation.json
+    (mêmes dossiers combo que combo_dir/MODEL_FOLDER_NAME ci-dessus). Appelé en fin de
+    run_pipeline() et par validation/evaluate_daily.py (cron) après résolution
+    quotidienne des prédictions échues, pour rafraîchir y_true/abs_error/... sans
+    attendre un nouveau run complet."""
+    date_str = run_id.removeprefix("run_").split("T", 1)[0]
+    rows = td.fetch_predictions_for_run(run_id, db_path=db_path)
+
+    written = []
+    for row in rows:
+        model_folder = MODEL_FOLDER_NAME.get(row["model"], row["model"])
+        horizon_label = PIPELINE_HORIZON_LABEL.get(row["horizon"], f"H{row['horizon']}")
+        out_dir = Path(run_dir_root) / f"{date_str}-{model_folder}-{row['asset']}-{horizon_label}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        payload = dict(row)
+        payload["horizon_trading_days"] = row["horizon"]
+        if row["horizon"] != HORIZON_TRADING_DAYS["D7"] and horizon_label == "D7":
+            payload["note"] = (
+                "horizon_trading_days=7 ici (test case business), à ne pas confondre "
+                "avec les métriques Gate2 D7 de ce même dossier qui portent sur "
+                f"{HORIZON_TRADING_DAYS['D7']} jours de bourse (cf. PIPELINE_HORIZON_LABEL)."
+            )
+
+        (out_dir / "business_validation.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False)
+        )
+        written.append(out_dir)
+
+    print(f"[pipeline] business_validation.json écrit dans {len(written)} dossier(s) Run/")
+    return written
+
+
 def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd.Series,
                         validation: pd.Series, run_date_str: str, run_date_iso: str,
                         window_start: str, window_end: str, seed: int, epochs,
-                        max_d7_origins: int, horizons: list) -> list:
+                        max_d7_origins: int, horizons: list, run_id: str, regime_tag: str,
+                        db_path: str) -> list:
     """Gate 1 une fois (sauf Naive, rien à entraîner) puis Gate 2 par horizon.
     Retourne la liste des logs (un par horizon)."""
     train_end = str(train.index[-1].date())
@@ -716,10 +810,19 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
 
     first_out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizons[0])
 
+    # cf. docstring de _save_business_predictions : décalage d'un jour de bourse entre
+    # cutoff (dernier close connu, ici = fin de validation) et aujourd'hui si le run
+    # tourne avant la clôture du marché du jour même -- les horizons business doivent
+    # alors viser 1 jour de bourse plus loin pour que "D+1"/"D+7" restent "demain"/"dans
+    # 1 semaine" par rapport à aujourd'hui, pas par rapport au dernier close. Calculé ici
+    # (avant l'appel LSTM) pour que le worker isolé forecaste aussi le bon horizon.
+    business_lag = 1 if validation.index[-1].date() < datetime.now().date() else 0
+    business_h_days = {h + business_lag for h in BUSINESS_HORIZONS_TRADING_DAYS}
+
     lstm_worker_result = None
     if model_key == "LSTM":
         lstm_worker_result = _run_lstm_via_worker(train, validation, first_out_dir, seed, epochs,
-                                                  max_d7_origins, horizons)
+                                                  max_d7_origins, horizons, business_h_days)
         gate1_ok = lstm_worker_result["gate1_ok"]
         if gate1_ok:
             (first_out_dir / "hyperparams.json").write_text(
@@ -738,7 +841,7 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     # donnée connue, ancre = window_end) et prévoit tous les horizons demandés d'un coup —
     # distinct de Gate 2 (backtest) qui ne voit jamais au-delà de la validation.
     full_series = pd.concat([train, validation])
-    h_days_list = sorted({HORIZON_TRADING_DAYS[h] for h in horizons})
+    h_days_list = sorted({HORIZON_TRADING_DAYS[h] for h in horizons} | business_h_days)
     if model_key == "LSTM":
         # _forecast_all_horizons("LSTM", ...) appellerait mh.forecast_horizons_lstm dans CE
         # process (celui-ci a déjà importé benchmarks.multi_horizon plus haut) -> même
@@ -751,6 +854,9 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         except Exception as exc:
             forecasts_by_h = {}
             print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
+
+    _save_business_predictions(run_id, model_key, ticker, asset_class, regime_tag,
+                               full_series, forecasts_by_h, db_path, business_lag)
 
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)
@@ -773,6 +879,19 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
             payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
                                                        seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
         if gate2_ok:
+            # Prévision hors-échantillon (au-delà de last_date, la dernière clôture connue)
+            # repliée directement dans metrics.json plutôt que dans un forecast.json séparé
+            # -- ni l'un ni l'autre n'est dans les "5 fichiers du doc" (BRIEF_model_artifacts.md
+            # §5), et un fichier à part faisait doublon avec business_validation.json (même
+            # prévision, deux endroits, risque de désynchronisation constaté en pratique).
+            h_days = HORIZON_TRADING_DAYS[horizon_label]
+            if h_days in forecasts_by_h:
+                point, lo, hi = forecasts_by_h[h_days]
+                payload["forecast"] = {
+                    "last_date": str(full_series.index[-1].date()),
+                    "last_price": _num(float(full_series.iloc[-1])),
+                    "predicted": _num(point), "pi_lower": _num(lo), "pi_upper": _num(hi),
+                }
             (out_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
             write_predictions_parquet(out_dir, **series)
 
@@ -780,12 +899,6 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         write_metadata_json(out_dir, ticker, asset_class, window_start, window_end,
                             train_end, run_date_iso, seed)
         (out_dir / "unit_tests.json").write_text(json.dumps(unit_test_result, indent=2, ensure_ascii=False))
-
-        h_days = HORIZON_TRADING_DAYS[horizon_label]
-        if h_days in forecasts_by_h:
-            point, lo, hi = forecasts_by_h[h_days]
-            write_forecast_json(out_dir, str(full_series.index[-1].date()),
-                                float(full_series.iloc[-1]), horizon_label, point, lo, hi)
 
         status = f"RMSE={payload['RMSE']} DirAcc={payload['directional_accuracy']}%" if gate2_ok else "—"
         print(f"  [{model_key:<12} {ticker:<8} {horizon_label}] Gate2 (validation) : "
@@ -799,7 +912,8 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
 
 
 def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DEFAULT_SEED,
-                 epochs=None, max_d7_origins=MAX_D7_ROLLING_ORIGINS) -> list:
+                 epochs=None, max_d7_origins=MAX_D7_ROLLING_ORIGINS, run_id=None,
+                 db_path=DEFAULT_DB_PATH) -> list:
     models = models or MODELS
     assets = assets or ASSETS
     horizons = horizons or list(HORIZON_TRADING_DAYS)
@@ -808,6 +922,10 @@ def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DE
     run_date_iso = run_date.strftime("%Y-%m-%d")
     data_end = run_date_iso
     data_start = (run_date - pd.DateOffset(years=WINDOW_YEARS)).strftime("%Y-%m-%d")
+    # Un run_id partagé entre les 2 sous-processus (non-LSTM puis LSTM, cf. main()) --
+    # passé explicitement par main() pour que les deux moitiés d'un même run complet
+    # écrivent sous le même run_id en base (tracking.db).
+    run_id = run_id or f"run_{run_date.strftime('%Y%m%dT%H%M%S')}"
 
     all_logs = []
     for asset_info in assets:
@@ -823,12 +941,22 @@ def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DE
         window_start, window_end = str(full_close.index[0].date()), str(full_close.index[-1].date())
         print(f"  fenêtre {window_start} -> {window_end}  |  train={len(train)}  validation={len(validation)}")
 
+        try:
+            # RegimeAgent.fit() indexe High/Low/Volume -- on lui passe le DataFrame
+            # OHLCV complet (full_data), pas juste la colonne Close.
+            regime_tag = fit_predict_regime(full_data, full_data.index[-1]).dominant_regime()
+        except Exception as exc:
+            print(f"  régime indisponible ({exc}) -> régime='unknown'")
+            regime_tag = "unknown"
+
         for model_key in models:
             logs = process_asset_model(model_key, ticker, asset_class, train, validation,
                                        run_date_str, run_date_iso, window_start, window_end,
-                                       seed, epochs, max_d7_origins, horizons)
+                                       seed, epochs, max_d7_origins, horizons, run_id,
+                                       regime_tag, db_path)
             all_logs.extend(logs)
 
+    export_business_validation(run_id, db_path=db_path, run_dir_root=RUN_ROOT)
     return all_logs
 
 
@@ -857,18 +985,25 @@ def main():
     p.add_argument("--run-date", default=None,
                    help="YYYY-MM-DD : date à utiliser pour le nom des dossiers Run/ (défaut : "
                         "aujourd'hui) — pour compléter rétroactivement un run passé")
+    p.add_argument("--run-id", default=None,
+                   help="run_YYYYMMDDTHHMMSS (défaut : généré) — interne, sert à partager le "
+                        "même run_id entre les 2 sous-processus non-LSTM/LSTM d'un run complet")
+    p.add_argument("--db-path", default=DEFAULT_DB_PATH,
+                   help="tracking.db où persister les prédictions business (Partie B)")
     args = p.parse_args()
     run_date = datetime.strptime(args.run_date, "%Y-%m-%d") if args.run_date else None
 
     if args.models is None and not args.no_process_isolation:
         # Run complet : on ré-invoke ce même script deux fois (sous-processus séparés) plutôt
         # que d'exécuter tous les modèles dans le process courant.
+        run_id = args.run_id or f"run_{(run_date or datetime.now()).strftime('%Y%m%dT%H%M%S')}"
         common = []
         if args.assets: common += ["--assets", args.assets]
         if args.horizons: common += ["--horizons", args.horizons]
         if args.epochs is not None: common += ["--epochs", str(args.epochs)]
         if args.run_date: common += ["--run-date", args.run_date]
-        common += ["--seed", str(args.seed), "--max-d7-origins", str(args.max_d7_origins)]
+        common += ["--seed", str(args.seed), "--max-d7-origins", str(args.max_d7_origins),
+                  "--run-id", run_id, "--db-path", args.db_path]
 
         print(f"=== Sous-processus 1/2 : {', '.join(_MODELS_BEFORE_LSTM)} ===")
         subprocess.run([sys.executable, "-m", "model_artifacts.pipeline",
@@ -887,7 +1022,8 @@ def main():
         assets = [a for a in ASSETS if a["ticker"] in wanted]
 
     logs = run_pipeline(models=models, assets=assets, horizons=horizons, run_date=run_date,
-                        seed=args.seed, epochs=args.epochs, max_d7_origins=args.max_d7_origins)
+                        seed=args.seed, epochs=args.epochs, max_d7_origins=args.max_d7_origins,
+                        run_id=args.run_id, db_path=args.db_path)
 
     n_gate1_pass = sum(1 for l in logs if l["gate1"])
     n_gate2_pass = sum(1 for l in logs if l["gate2"])
