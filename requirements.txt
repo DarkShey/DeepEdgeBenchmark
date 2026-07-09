@@ -7,6 +7,7 @@ yfinance>=0.2.40
 statsmodels>=0.14
 arch>=6.3              # arima_model.py (GARCH volatility)
 scikit-learn>=1.3
+scipy>=1.10             # honest_eval (DM/PIT/KS/binomial stats)
 matplotlib>=3.7
 prophet>=1.1           # prophet_model.py
 tensorflow>=2.12       # lstm_model.py
