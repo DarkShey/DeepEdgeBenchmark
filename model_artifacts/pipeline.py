@@ -95,6 +95,11 @@ from benchmarks.regime_overlay import fit_predict_regime
 from validation import tracking_db as td
 from validation import verdict_rules
 
+# Point 1 du brief (IMPROVEMENTS_BRIEF.md) : métriques de skill vs baseline
+# persistence — MASE, Theil's U, corrélation des variations, DirAcc±IC binomial,
+# Diebold-Mariano (Newey-West HAC + correction HLN). Pur numpy/scipy.
+from honest_eval import metrics as hm
+
 RUN_ROOT = REPO_ROOT / "Run"
 DEFAULT_DB_PATH = "validation/tracking.db"
 
@@ -487,7 +492,7 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
     n_origins = min(max_origins, max_origin)
     origins = sorted(set(np.linspace(0, max_origin - 1, n_origins, dtype=int).tolist()))
 
-    dates, actuals, preds, los, his = [], [], [], [], []
+    dates, actuals, preds, los, his, prevs = [], [], [], [], [], []
     for origin in origins:
         extended_train = pd.concat([train, validation.iloc[:origin]]) if origin > 0 else train
         target_idx = origin + h_days - 1
@@ -495,6 +500,9 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
         point, lo, hi = _forecast_horizon(model_key, extended_train, h_days, seed, epochs)
         dates.append(validation.index[target_idx])
         actuals.append(actual); preds.append(point); los.append(lo); his.append(hi)
+        # dernier prix observé à l'origine — la prévision naïve (marche aléatoire)
+        # pour cet horizon, référence des métriques de skill (Point 1 du brief)
+        prevs.append(float(extended_train.iloc[-1]))
 
     metrics = _compute_metrics_for(model_key, actuals, preds, los, his)
     # Clés préfixées `_` (même convention que `_n_val` déjà en place) : poppées par
@@ -506,14 +514,47 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
     metrics["_preds"] = preds
     metrics["_los"] = los
     metrics["_his"] = his
+    metrics["_prevs"] = prevs
     return metrics
 
 
+def _honest_skill_metrics(actual, predicted, prevs, h_days: int) -> dict:
+    """Métriques de skill vs baseline persistence (Point 1 du brief).
+
+    ``prevs`` = dernier prix observé à chaque origine : c'est la prévision de la
+    marche aléatoire pour n'importe quel horizon, donc la référence des ratios.
+    Règle de lecture : U ≈ 1 et DM non significatif ⇒ le modèle n'apporte rien
+    vs naïf (verdict explicite dans ``skill_vs_naive``).
+    """
+    a = np.asarray(actual, dtype=float)
+    p = np.asarray(predicted, dtype=float)
+    prev = np.asarray(prevs, dtype=float)
+
+    theil = hm.theil_u(a, p, prev)
+    mase_v = hm.mase(a, p, prev)
+    dacc = hm.directional_accuracy(p, prev, a)
+    dm, dm_p, dm_lag = hm.diebold_mariano(a - p, a - prev, h=h_days)
+    return {
+        "theil_u": _num(round(theil, 4)) if np.isfinite(theil) else None,
+        "MASE": _num(round(mase_v, 4)) if np.isfinite(mase_v) else None,
+        "change_corr": _num(round(hm.change_correlation(p, prev, a), 4)),
+        "dir_acc_change": _num(round(dacc["acc"] * 100, 2)) if np.isfinite(dacc["acc"]) else None,
+        "dir_acc_ci95": [_num(round(x * 100, 2)) for x in dacc["ci95"]]
+                        if np.isfinite(dacc["ci95"][0]) else None,
+        "dir_acc_p_vs_coin": _num(round(dacc["p_vs_coin"], 4)),
+        "dm_stat": _num(round(dm, 3)),
+        "dm_p": _num(round(dm_p, 4)),
+        "dm_lag": int(dm_lag),
+        "skill_vs_naive": hm.skill_verdict(theil, dm_p),
+    }
+
+
 def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label: str, n_val: int,
-                        pi_lower, pi_upper) -> dict:
+                        pi_lower, pi_upper, actual=None, predicted=None, prevs=None,
+                        h_days: int = 1) -> dict:
     pi_cov = result.get("PI Cov 95% (%)")
     widths = np.asarray(pi_upper, dtype=float) - np.asarray(pi_lower, dtype=float)
-    return {
+    payload = {
         "RMSE": _num(result.get("RMSE")),
         "MAE": _num(result.get("MAE")),
         "MAPE": _num(result.get("MAPE (%)")),
@@ -527,6 +568,13 @@ def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label:
         "asset": asset,
         "model": model_key,
     }
+    if actual is not None and predicted is not None and prevs is not None:
+        try:
+            payload.update(_honest_skill_metrics(actual, predicted, prevs, h_days))
+        except Exception as exc:                      # jamais bloquant pour Gate 2
+            print(f"    [WARN] métriques honnêtes non calculées ({model_key} "
+                  f"{horizon_label}) : {exc}")
+    return payload
 
 
 def _gate2_metrics_ok(payload: dict) -> bool:
@@ -552,6 +600,9 @@ def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.
             pred_arr = list(np.asarray(result["predictions"], dtype=float))
             lo_arr = list(np.asarray(result["lower"], dtype=float))
             hi_arr = list(np.asarray(result["upper"], dtype=float))
+            # dernier prix observé à chaque origine (walk-forward 1-step) :
+            # référence naïve des métriques de skill (Point 1 du brief)
+            prev_arr = [float(train.iloc[-1])] + actual_arr[:-1]
         else:
             result = _run_model_d7_rolling(model_key, train, validation, h_days, seed, epochs, max_d7_origins)
             n_val = result.pop("_n_val")
@@ -560,7 +611,10 @@ def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.
             pred_arr = result.pop("_preds")
             lo_arr = result.pop("_los")
             hi_arr = result.pop("_his")
-        payload = _to_metrics_payload(result, model_key, asset, horizon_label, n_val, lo_arr, hi_arr)
+            prev_arr = result.pop("_prevs")
+        payload = _to_metrics_payload(result, model_key, asset, horizon_label, n_val, lo_arr, hi_arr,
+                                      actual=actual_arr, predicted=pred_arr, prevs=prev_arr,
+                                      h_days=h_days)
         series = {"dates": dates, "actual": actual_arr, "predicted": pred_arr,
                   "pi_lower": lo_arr, "pi_upper": hi_arr}
     except Exception as exc:
@@ -614,7 +668,7 @@ MODEL_TEST_FILTER = {
     "ARIMA-GARCH": "[arima_model]", "SARIMA": "[sarima_model]", "Prophet": "[prophet_model]",
     "LSTM": "lstm",  # pas "[lstm_model]" : capte aussi les 2 tests spécifiques LSTM de
                       # test_models_common.py (noms contenant "lstm" mais hors fixture paramétrée)
-    "Naive": "naive_model",  # aucun test dédié pour naive_model dans models/ à ce jour -> 0 collecté
+    "Naive": "naive_model",  # models/test_naive_model.py — audit persistence stricte (Point 0)
 }
 
 _unit_test_cache = {}

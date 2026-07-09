@@ -94,6 +94,17 @@ def collect_run_data(run_root: Path) -> dict:
             "pi_width_mean": metrics.get("pi_width_mean"),
             "pi_width_max": metrics.get("pi_width_max"),
             "n_val": metrics.get("n_val"),
+            # Point 1 du brief — skill vs baseline persistence (peuvent être absents
+            # des runs antérieurs au correctif : le dashboard affiche alors "—")
+            "theil_u": metrics.get("theil_u"),
+            "MASE": metrics.get("MASE"),
+            "change_corr": metrics.get("change_corr"),
+            "dir_acc_change": metrics.get("dir_acc_change"),
+            "dir_acc_ci95": metrics.get("dir_acc_ci95"),
+            "dir_acc_p_vs_coin": metrics.get("dir_acc_p_vs_coin"),
+            "dm_stat": metrics.get("dm_stat"),
+            "dm_p": metrics.get("dm_p"),
+            "skill_vs_naive": metrics.get("skill_vs_naive"),
             "forecast_last_price": _num(forecast.get("last_price")),
             "forecast_last_date": forecast.get("last_date"),
             "forecast_predicted": _num(forecast.get("predicted")),
@@ -418,6 +429,12 @@ const KPI_DEFINITIONS = {
   warnthreshold: "Seuil d'alerte — si la prévision s'écarte de plus de ce pourcentage par rapport au dernier prix connu, la case est signalée en rouge comme a priori suspecte.",
   lag: "Déphasage (cross-corrélation) — corrèle prédit(t) avec réel(t−k) pour k=−5..5 sur le backtest de validation ; le k qui maximise la corrélation est le décalage effectif du modèle. k=0 : pas de déphasage. k=1 : le modèle reproduit en fait la valeur d'hier.",
   nval: "n (validation) — nombre de points de la période de validation utilisés pour calculer ces métriques.",
+  theilu: "Theil's U — RMSE(modèle) / RMSE(persistence). U < 1 : bat la marche aléatoire ; U ≈ 1 : aucun apport ; U > 1 : pire. La métrique de skill de référence (Point 1 du brief).",
+  masedef: "MASE — MAE(modèle) / MAE(persistence) sur le même jeu de validation. Même lecture que Theil's U, en erreur absolue.",
+  changecorr: "Corr. des variations — corrélation entre variation prédite (préd − dernier prix connu) et variation réalisée. ≈ 0 : le modèle n'a aucune information sur le mouvement.",
+  diraccchg: "Dir. Acc (variations) — % de bon sens sur la variation prédite vs le dernier prix connu, avec IC binomial de Wilson à 95%. Si l'IC contient 50%, indiscernable du pile-ou-face.",
+  dmdef: "Diebold-Mariano vs persistence — test de différence de perte quadratique (variance Newey-West, correction HLN). p < 0.05 et DM < 0 : le modèle bat significativement le naïf.",
+  skillverdict: "Verdict de skill — synthèse Theil's U + DM : 'beats naive' / 'no better than naive' / 'worse than naive'. Règle de lecture du Point 1 du brief.",
 };
 
 function infoDot(defKey) {
@@ -750,6 +767,10 @@ const BREAKDOWN_COLS = [
   { key: 'pi_width_min', label: 'Larg. PI min', digits: 4 },
   { key: 'pi_width_mean', label: 'Larg. PI moy.', digits: 4, def: 'piwidth' },
   { key: 'pi_width_max', label: 'Larg. PI max', digits: 4 },
+  { key: 'theil_u', label: "Theil's U", digits: 3, def: 'theilu' },
+  { key: 'MASE', label: 'MASE', digits: 3, def: 'masedef' },
+  { key: 'dm_p', label: 'DM p', digits: 3, def: 'dmdef' },
+  { key: 'skill_vs_naive', label: 'Skill vs naïf', def: 'skillverdict' },
   { key: 'n_val', label: 'n_val', digits: 0, def: 'nval' },
   { key: 'forecast_predicted', label: 'Prévision (prix)', digits: 2, def: 'forecast', warn: true },
   { key: '_pi_range', label: 'PI 95% [bas – haut]', render: piRangeText, warn: true },
@@ -801,6 +822,18 @@ function renderAssetKpis(ticker) {
           [`Exact. directionnelle ${infoDot('diracc')}`, fmt(rec.directional_accuracy, 1) + ' %'],
           [`Couverture PI 95% ${infoDot('picov')}`, fmt(rec.pi_coverage_95, 1) + ' %'],
           [`Largeur PI min/moy/max ${infoDot('piwidth')}`, `${fmt(rec.pi_width_min, 2)} / ${fmt(rec.pi_width_mean, 2)} / ${fmt(rec.pi_width_max, 2)}`],
+          [`Theil's U ${infoDot('theilu')}`, rec.theil_u != null ? fmt(rec.theil_u, 3) : '—',
+           rec.theil_u != null && rec.theil_u >= 1],
+          [`MASE ${infoDot('masedef')}`, rec.MASE != null ? fmt(rec.MASE, 3) : '—'],
+          [`Corr. variations ${infoDot('changecorr')}`, rec.change_corr != null ? fmt(rec.change_corr, 3) : '—'],
+          [`Dir. Acc variations ${infoDot('diraccchg')}`,
+           rec.dir_acc_change != null
+             ? `${fmt(rec.dir_acc_change, 1)} %` + (rec.dir_acc_ci95 ? ` [${fmt(rec.dir_acc_ci95[0], 1)}–${fmt(rec.dir_acc_ci95[1], 1)}]` : '')
+             : '—'],
+          [`DM vs naïf ${infoDot('dmdef')}`,
+           rec.dm_p != null ? `p=${fmt(rec.dm_p, 3)}` : '—'],
+          [`Skill vs naïf ${infoDot('skillverdict')}`, rec.skill_vs_naive ?? '—',
+           rec.skill_vs_naive != null && rec.skill_vs_naive !== 'beats naive'],
           ['n (validation)', rec.n_val ?? '—'],
           [`Prévision ${infoDot('forecast')}`, fmt(rec.forecast_predicted, 2) + pctText, warn],
           ['PI 95% [bas – haut]', piRangeText(rec), warn],
@@ -1281,6 +1314,10 @@ const TABLE_COLS = [
   { key: 'MAPE', label: 'MAPE (%)', digits: 2 },
   { key: 'directional_accuracy', label: 'Exact. dir. (%)', digits: 2 },
   { key: 'pi_coverage_95', label: 'Couv. PI 95 (%)', digits: 2 },
+  { key: 'theil_u', label: "Theil's U", digits: 3 },
+  { key: 'MASE', label: 'MASE', digits: 3 },
+  { key: 'dm_p', label: 'DM p', digits: 3 },
+  { key: 'skill_vs_naive', label: 'Skill vs naïf' },
   { key: 'n_val', label: 'n_val', digits: 0 },
 ];
 let sortState = { key: 'asset', dir: 1 };
