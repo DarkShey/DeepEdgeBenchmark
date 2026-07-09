@@ -1,0 +1,14 @@
+{
+  "RMSE": 112.3024,
+  "MAE": 93.3918,
+  "MAPE": 4.52,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 1112.128906,
+  "pi_width_mean": 1242.472648,
+  "pi_width_max": 1950.684715,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "LSTM"
+}

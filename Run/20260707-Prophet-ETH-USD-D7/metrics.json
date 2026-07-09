@@ -1,0 +1,14 @@
+{
+  "RMSE": 415.4684,
+  "MAE": 355.3578,
+  "MAPE": 16.62,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 80.0,
+  "pi_width_min": 963.858754,
+  "pi_width_mean": 1140.808221,
+  "pi_width_max": 1377.143333,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "Prophet"
+}

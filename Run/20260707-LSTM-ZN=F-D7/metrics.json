@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.472,
+  "MAE": 0.3763,
+  "MAPE": 0.34,
+  "directional_accuracy": 77.78,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 4.452068,
+  "pi_width_mean": 5.632113,
+  "pi_width_max": 7.53296,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ZN=F",
+  "model": "LSTM"
+}

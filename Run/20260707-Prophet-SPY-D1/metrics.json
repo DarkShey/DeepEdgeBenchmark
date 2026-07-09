@@ -1,0 +1,14 @@
+{
+  "RMSE": 22.5422,
+  "MAE": 19.0086,
+  "MAPE": 2.73,
+  "directional_accuracy": 52.68,
+  "pi_coverage_95": 82.3,
+  "pi_width_min": 27.582288,
+  "pi_width_mean": 90.192417,
+  "pi_width_max": 206.907351,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "Prophet"
+}

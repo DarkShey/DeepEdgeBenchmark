@@ -1,0 +1,57 @@
+{
+  "model": "LSTM",
+  "pytest_filter": "lstm",
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "11 passed, 27 deselected, 30 warnings in 3.96s",
+  "tests": [
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_perfect_prediction_gives_zero_error[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_directional_accuracy_known_case[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_pi_coverage_full_when_bounds_enclose_actual[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_pi_coverage_partial_when_one_point_outside[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_inconsistent_lengths_raises_clear_error[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_fetch_data_monkeypatched_no_network[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_run_model_returns_expected_contract[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_next_step_returns_finite_point_and_interval[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_point_in_time_no_lookahead[lstm_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_lstm_run_raises_clear_error_when_series_shorter_than_lookback",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_lstm_next_step_raises_clear_error_when_series_shorter_than_lookback",
+      "outcome": "passed"
+    }
+  ],
+  "what_these_tests_check": {
+    "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift."
+  }
+}

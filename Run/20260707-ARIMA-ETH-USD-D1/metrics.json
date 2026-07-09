@@ -1,0 +1,14 @@
+{
+  "RMSE": 75.307,
+  "MAE": 52.8369,
+  "MAPE": 2.55,
+  "directional_accuracy": 50.0,
+  "pi_coverage_95": 96.36,
+  "pi_width_min": 196.615487,
+  "pi_width_mean": 325.485568,
+  "pi_width_max": 464.147093,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "ETH-USD",
+  "model": "ARIMA-GARCH"
+}

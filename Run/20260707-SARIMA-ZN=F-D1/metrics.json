@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.3132,
+  "MAE": 0.2393,
+  "MAPE": 0.22,
+  "directional_accuracy": 40.71,
+  "pi_coverage_95": 99.12,
+  "pi_width_min": 1.525337,
+  "pi_width_mean": 1.546193,
+  "pi_width_max": 1.576698,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "SARIMA"
+}

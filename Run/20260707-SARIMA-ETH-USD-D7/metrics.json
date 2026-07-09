@@ -1,0 +1,14 @@
+{
+  "RMSE": 141.9575,
+  "MAE": 113.8037,
+  "MAPE": 5.55,
+  "directional_accuracy": 77.78,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 859.760968,
+  "pi_width_mean": 876.614475,
+  "pi_width_max": 895.816995,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "SARIMA"
+}

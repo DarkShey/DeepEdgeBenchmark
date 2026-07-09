@@ -1,0 +1,14 @@
+{
+  "RMSE": 1.3433,
+  "MAE": 1.0681,
+  "MAPE": 1.24,
+  "directional_accuracy": 50.0,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 4.519801,
+  "pi_width_mean": 20.589081,
+  "pi_width_max": 47.801521,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "Prophet"
+}

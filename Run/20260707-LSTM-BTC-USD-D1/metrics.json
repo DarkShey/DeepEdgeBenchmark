@@ -1,0 +1,14 @@
+{
+  "RMSE": 4417.1601,
+  "MAE": 3271.8095,
+  "MAPE": 4.73,
+  "directional_accuracy": 57.32,
+  "pi_coverage_95": 92.73,
+  "pi_width_min": 17014.689421,
+  "pi_width_mean": 17014.689421,
+  "pi_width_max": 17014.689421,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "LSTM"
+}

@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.894,
+  "MAE": 0.6132,
+  "MAPE": 0.55,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 80.0,
+  "pi_width_min": 2.158706,
+  "pi_width_mean": 2.275045,
+  "pi_width_max": 2.436897,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ZN=F",
+  "model": "Prophet"
+}

@@ -1,0 +1,14 @@
+{
+  "RMSE": 2.1416,
+  "MAE": 1.7796,
+  "MAPE": 2.06,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 18.693806,
+  "pi_width_mean": 19.174829,
+  "pi_width_max": 19.809312,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "TLT",
+  "model": "Naive"
+}

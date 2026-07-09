@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.5226,
+  "MAE": 0.4157,
+  "MAPE": 0.48,
+  "directional_accuracy": 43.75,
+  "pi_coverage_95": 93.81,
+  "pi_width_min": 2.015968,
+  "pi_width_mean": 2.127705,
+  "pi_width_max": 2.252659,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "ARIMA-GARCH"
+}

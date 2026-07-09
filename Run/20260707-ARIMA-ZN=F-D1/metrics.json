@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.3129,
+  "MAE": 0.2396,
+  "MAPE": 0.22,
+  "directional_accuracy": 39.82,
+  "pi_coverage_95": 90.35,
+  "pi_width_min": 0.936806,
+  "pi_width_mean": 1.105283,
+  "pi_width_max": 1.267208,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "ARIMA-GARCH"
+}

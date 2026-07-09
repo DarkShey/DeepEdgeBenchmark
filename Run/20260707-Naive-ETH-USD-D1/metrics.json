@@ -1,0 +1,14 @@
+{
+  "RMSE": 96.7342,
+  "MAE": 75.2785,
+  "MAPE": 3.56,
+  "directional_accuracy": 51.83,
+  "pi_coverage_95": 89.09,
+  "pi_width_min": 156.481665,
+  "pi_width_mean": 208.925296,
+  "pi_width_max": 302.221094,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "ETH-USD",
+  "model": "Naive"
+}

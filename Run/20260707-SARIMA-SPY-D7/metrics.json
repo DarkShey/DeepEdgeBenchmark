@@ -1,0 +1,14 @@
+{
+  "RMSE": 14.3565,
+  "MAE": 12.2351,
+  "MAPE": 1.73,
+  "directional_accuracy": 66.67,
+  "pi_coverage_95": 90.0,
+  "pi_width_min": 44.079289,
+  "pi_width_mean": 44.861447,
+  "pi_width_max": 45.963927,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "SPY",
+  "model": "SARIMA"
+}

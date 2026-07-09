@@ -1,0 +1,14 @@
+{
+  "RMSE": 22.0113,
+  "MAE": 19.5461,
+  "MAPE": 2.77,
+  "directional_accuracy": 53.57,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 63.034607,
+  "pi_width_mean": 70.244506,
+  "pi_width_max": 75.761823,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "Naive"
+}

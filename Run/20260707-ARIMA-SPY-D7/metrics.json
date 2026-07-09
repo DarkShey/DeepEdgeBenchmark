@@ -1,0 +1,14 @@
+{
+  "RMSE": 12.8484,
+  "MAE": 10.9517,
+  "MAPE": 1.56,
+  "directional_accuracy": 66.67,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 48.336227,
+  "pi_width_mean": 55.107017,
+  "pi_width_max": 63.872914,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "SPY",
+  "model": "ARIMA-GARCH"
+}

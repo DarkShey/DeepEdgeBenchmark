@@ -4,6 +4,6 @@ __pycache__/
 .pytest_cache/
 .venv
 *.db
+!validation/tracking.db
 tracking_demo_export.csv
 tracking_export.csv
-Run/

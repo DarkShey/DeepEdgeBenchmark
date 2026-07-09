@@ -1,0 +1,14 @@
+{
+  "RMSE": 0.8784,
+  "MAE": 0.7042,
+  "MAPE": 0.82,
+  "directional_accuracy": 50.89,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 5.687791,
+  "pi_width_mean": 5.687791,
+  "pi_width_max": 5.687791,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "LSTM"
+}

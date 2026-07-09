@@ -1,0 +1,14 @@
+{
+  "RMSE": 3.177,
+  "MAE": 2.966,
+  "MAPE": 2.67,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 24.439524,
+  "pi_width_mean": 24.807078,
+  "pi_width_max": 25.333951,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ZN=F",
+  "model": "Naive"
+}

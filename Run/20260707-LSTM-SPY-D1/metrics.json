@@ -1,0 +1,14 @@
+{
+  "RMSE": 13.343,
+  "MAE": 10.8757,
+  "MAPE": 1.56,
+  "directional_accuracy": 48.21,
+  "pi_coverage_95": 85.84,
+  "pi_width_min": 38.868668,
+  "pi_width_mean": 38.868668,
+  "pi_width_max": 38.868668,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "LSTM"
+}
