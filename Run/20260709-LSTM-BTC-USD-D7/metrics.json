@@ -1,12 +1,12 @@
 {
-  "RMSE": 3632.5711,
-  "MAE": 3134.3262,
+  "RMSE": 3632.5678,
+  "MAE": 3134.3242,
   "MAPE": 4.27,
   "directional_accuracy": 77.78,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 24683.122274,
-  "pi_width_mean": 37121.265245,
-  "pi_width_max": 64023.181855,
+  "pi_width_min": 24683.122701,
+  "pi_width_mean": 37121.266308,
+  "pi_width_max": 64023.186319,
   "n_val": 10,
   "horizon": "D7",
   "asset": "BTC-USD",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 62257.574219,
-    "predicted": 62390.054688,
-    "pi_lower": 49843.840369,
-    "pi_upper": 74936.269006
+    "predicted": 62390.050781,
+    "pi_lower": 49843.835728,
+    "pi_upper": 74936.265834
   }
 }

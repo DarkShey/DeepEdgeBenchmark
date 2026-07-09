@@ -1,12 +1,12 @@
 {
-  "RMSE": 9939.88,
-  "MAE": 8477.6142,
-  "MAPE": 12.64,
-  "directional_accuracy": 50.0,
-  "pi_coverage_95": 81.21,
-  "pi_width_min": 15860.180523,
-  "pi_width_mean": 54963.922701,
-  "pi_width_max": 124278.665589,
+  "RMSE": 10557.2849,
+  "MAE": 8923.0935,
+  "MAPE": 13.35,
+  "directional_accuracy": 49.39,
+  "pi_coverage_95": 80.61,
+  "pi_width_min": 16004.586502,
+  "pi_width_mean": 55402.547885,
+  "pi_width_max": 128231.54047,
   "n_val": 165,
   "horizon": "D1",
   "asset": "BTC-USD",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 62257.574219,
-    "predicted": 62427.239207,
-    "pi_lower": 53801.669767,
-    "pi_upper": 71178.388155
+    "predicted": 62720.783189,
+    "pi_lower": 53385.591061,
+    "pi_upper": 71942.796392
   }
 }

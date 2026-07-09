@@ -4,9 +4,9 @@
   "MAPE": 8.18,
   "directional_accuracy": 48.78,
   "pi_coverage_95": 94.55,
-  "pi_width_min": 881.337512,
-  "pi_width_mean": 881.337512,
-  "pi_width_max": 881.337512,
+  "pi_width_min": 881.33751,
+  "pi_width_mean": 881.33751,
+  "pi_width_max": 881.33751,
   "n_val": 165,
   "horizon": "D1",
   "asset": "ETH-USD",
@@ -15,7 +15,7 @@
     "last_date": "2026-07-08",
     "last_price": 1742.677612,
     "predicted": 1790.244019,
-    "pi_lower": 1542.161513,
-    "pi_upper": 2038.326525
+    "pi_lower": 1542.161522,
+    "pi_upper": 2038.326516
   }
 }

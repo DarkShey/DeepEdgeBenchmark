@@ -4,9 +4,9 @@
   "MAPE": 1.44,
   "directional_accuracy": 33.33,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 6.235469,
-  "pi_width_mean": 6.40398,
-  "pi_width_max": 6.580137,
+  "pi_width_min": 6.235474,
+  "pi_width_mean": 6.403982,
+  "pi_width_max": 6.580133,
   "n_val": 10,
   "horizon": "D7",
   "asset": "TLT",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 84.360001,
-    "predicted": 84.462211,
-    "pi_lower": 81.34118,
-    "pi_upper": 87.583242
+    "predicted": 84.462236,
+    "pi_lower": 81.341206,
+    "pi_upper": 87.583265
   }
 }
