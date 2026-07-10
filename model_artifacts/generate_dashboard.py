@@ -25,15 +25,15 @@ import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive"]
-# Palette catégorielle validée (skill dataviz) — slots 1..5 dans l'ordre fixe.
+MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
+# Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
 MODEL_COLORS_LIGHT = {
     "ARIMA-GARCH": "#2a78d6", "SARIMA": "#1baf7a", "Prophet": "#eda100",
-    "LSTM": "#008300", "Naive": "#4a3aa7",
+    "LSTM": "#008300", "Naive": "#4a3aa7", "TSDiff": "#d64550",
 }
 MODEL_COLORS_DARK = {
     "ARIMA-GARCH": "#3987e5", "SARIMA": "#199e70", "Prophet": "#c98500",
-    "LSTM": "#008300", "Naive": "#9085e9",
+    "LSTM": "#008300", "Naive": "#9085e9", "TSDiff": "#e5606b",
 }
 
 

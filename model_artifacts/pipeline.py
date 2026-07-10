@@ -103,10 +103,10 @@ from honest_eval import metrics as hm
 RUN_ROOT = REPO_ROOT / "Run"
 DEFAULT_DB_PATH = "validation/tracking.db"
 
-MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive"]
+MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
 MODEL_FOLDER_NAME = {
     "ARIMA-GARCH": "ARIMA", "SARIMA": "SARIMA", "Prophet": "Prophet",
-    "LSTM": "LSTM", "Naive": "Naive",
+    "LSTM": "LSTM", "Naive": "Naive", "TSDiff": "TSDiff",
 }
 # D+1/D+7 en jours de TRADING (backtest Gate2) ; D+7 ~ 1 semaine calendaire ~ 5 jours
 # de trading -- distinct de BUSINESS_HORIZONS_TRADING_DAYS plus bas (contrat tracking.db).
@@ -429,6 +429,10 @@ def _run_model_d1(model_key: str, train: pd.Series, validation: pd.Series, seed,
         import naive_model
         naive_model.set_seed(seed or naive_model.DEFAULT_SEED)
         return naive_model.run_naive(train, validation)
+    if model_key == "TSDiff":
+        import tsdiff_model
+        tsdiff_model.set_seed(seed or tsdiff_model.DEFAULT_SEED)
+        return tsdiff_model.run_tsdiff(train, validation)
     raise ValueError(model_key)
 
 
@@ -439,6 +443,7 @@ def _compute_metrics_for(model_key: str, actual, predicted, pi_lower, pi_upper) 
     module_name = {
         "ARIMA-GARCH": "arima_model", "SARIMA": "sarima_model",
         "Prophet": "prophet_model", "LSTM": "lstm_model", "Naive": "naive_model",
+        "TSDiff": "tsdiff_model",
     }[model_key]
     mod = importlib.import_module(module_name)
     return mod.compute_metrics(actual, predicted, pi_lower=pi_lower, pi_upper=pi_upper)
@@ -455,6 +460,8 @@ def _forecast_horizon(model_key: str, train_extended: pd.Series, h_days: int, se
         return mh.forecast_horizons_lstm(train_extended, [h_days], epochs=epochs, seed=seed)[h_days]
     if model_key == "Naive":
         return mh.forecast_horizons_naive(train_extended, [h_days])[h_days]
+    if model_key == "TSDiff":
+        return mh.forecast_horizons_tsdiff(train_extended, [h_days], seed=seed)[h_days]
     raise ValueError(model_key)
 
 
@@ -474,6 +481,8 @@ def _forecast_all_horizons(model_key: str, train_extended: pd.Series, horizons_d
         return mh.forecast_horizons_lstm(train_extended, horizons_days, epochs=epochs, seed=seed)
     if model_key == "Naive":
         return mh.forecast_horizons_naive(train_extended, horizons_days)
+    if model_key == "TSDiff":
+        return mh.forecast_horizons_tsdiff(train_extended, horizons_days, seed=seed)
     raise ValueError(model_key)
 
 
@@ -669,6 +678,7 @@ MODEL_TEST_FILTER = {
     "LSTM": "lstm",  # pas "[lstm_model]" : capte aussi les 2 tests spécifiques LSTM de
                       # test_models_common.py (noms contenant "lstm" mais hors fixture paramétrée)
     "Naive": "naive_model",  # models/test_naive_model.py — audit persistence stricte (Point 0)
+    "TSDiff": "tsdiff_model",  # models/test_tsdiff_model.py — port diffusion (DEITA)
 }
 
 _unit_test_cache = {}
@@ -885,7 +895,10 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
             print(f"    [Gate1 FAIL] LSTM : {lstm_worker_result.get('gate1_error')}")
     else:
         fitted, gate1_ok = None, True
-        if model_key != "Naive":
+        # Naive n'a rien à entraîner ; TSDiff (port diffusion léger) suit le même patron —
+        # pas d'artefact Gate 1 sérialisé, l'entraînement réel a lieu en Gate 2 (run_tsdiff)
+        # et en prévision live (forecast_horizons_tsdiff).
+        if model_key not in ("Naive", "TSDiff"):
             fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
     print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : {'PASS' if gate1_ok else 'FAIL'}")
 
@@ -915,7 +928,7 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)
         out_dir.mkdir(parents=True, exist_ok=True)
-        if model_key != "Naive" and gate1_ok and out_dir != first_out_dir:
+        if model_key not in ("Naive", "TSDiff") and gate1_ok and out_dir != first_out_dir:
             copy_serialized_artifacts(first_out_dir, out_dir, model_key)
 
         if model_key == "LSTM":

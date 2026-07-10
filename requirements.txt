@@ -11,6 +11,7 @@ scipy>=1.10             # honest_eval (DM/PIT/KS/binomial stats)
 matplotlib>=3.7
 prophet>=1.1           # prophet_model.py
 tensorflow>=2.12       # lstm_model.py
+torch>=2.0             # tsdiff_model.py (diffusion denoiser, DEITA port)
 
 # Dependencies for calibration/regime (RegimeHMM engine)
 hmmlearn>=0.3.0

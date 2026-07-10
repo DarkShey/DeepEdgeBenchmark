@@ -235,6 +235,46 @@ def forecast_horizons_naive(train: pd.Series, horizons: list) -> dict:
     return results
 
 
+# ── TSDiff (diffusion, DEITA port) ──────────────────────────────────────────────
+def forecast_horizons_tsdiff(train: pd.Series, horizons: list, epochs: int = None,
+                             seed: int = None) -> dict:
+    """Fit le denoiser de diffusion une fois sur les log-returns du train, puis
+    échantillonne N chemins de retours (DDIM) et lit le prix à chaque horizon depuis
+    le retour cumulé des `h` premiers pas. Point = moyenne du nuage d'échantillons ;
+    IC95 = quantiles 2.5/97.5 (distribution prédictive du modèle). L'horizon généré
+    (tsdiff_model.HORIZON) borne l'horizon exploitable — au-delà, on plafonne."""
+    import tsdiff_model as td
+    if seed is not None:
+        td.set_seed(seed)
+    ep = td.EPOCHS if epochs is None else epochs
+
+    prices = train.values.astype(float)
+    r = td._log_returns(prices)
+    mu, sd = float(r.mean()), float(r.std())
+    sd = sd if sd > 1e-8 else 1.0
+    z = (r - mu) / sd
+
+    H_win, T_win = td._make_windows(z, td.SEQ_LEN, td.HORIZON)
+    if len(H_win) == 0:
+        raise ValueError("not enough return history to build TSDiff training windows.")
+
+    model = td.TSDiff()
+    model.train(H_win, T_win, epochs=ep)
+    paths = model.sample_paths(z[-td.SEQ_LEN:].astype(np.float32),
+                               n_samples=td.N_SAMPLES)   # [N, HORIZON] std step-returns
+
+    last_price = float(prices[-1])
+    results = {}
+    for h in horizons:
+        hh = min(int(h), td.HORIZON)                     # model generates HORIZON steps
+        cum_r = paths[:, :hh].sum(axis=1) * sd + hh * mu  # de-standardized cumulative log-return
+        price_samples = last_price * np.exp(cum_r)
+        results[h] = (float(np.mean(price_samples)),
+                      float(np.quantile(price_samples, 0.025)),
+                      float(np.quantile(price_samples, 0.975)))
+    return results
+
+
 # ── Registre des modèles (point d'extension) ─────────────────────────────────
 MODEL_ADAPTERS = {
     "ARIMA-GARCH": forecast_horizons_arima,
@@ -242,4 +282,5 @@ MODEL_ADAPTERS = {
     "Prophet":     forecast_horizons_prophet,
     "LSTM":        forecast_horizons_lstm,
     "Naive":       forecast_horizons_naive,
+    "TSDiff":      forecast_horizons_tsdiff,
 }
