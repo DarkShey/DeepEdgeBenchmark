@@ -1,12 +1,12 @@
 {
-  "RMSE": 3.0482,
-  "MAE": 2.5599,
-  "MAPE": 2.98,
+  "RMSE": 1.1748,
+  "MAE": 1.0168,
+  "MAPE": 1.18,
   "directional_accuracy": 55.56,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 18.958918,
-  "pi_width_mean": 19.317466,
-  "pi_width_max": 20.012032,
+  "pi_width_min": 6.451987,
+  "pi_width_mean": 6.580126,
+  "pi_width_max": 6.709819,
   "n_val": 10,
   "horizon": "D7",
   "asset": "TLT",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 84.489998,
-    "predicted": 81.498784,
-    "pi_lower": 75.043729,
-    "pi_upper": 93.936267
+    "predicted": 84.489998,
+    "pi_lower": 81.272167,
+    "pi_upper": 87.707828
   }
 }

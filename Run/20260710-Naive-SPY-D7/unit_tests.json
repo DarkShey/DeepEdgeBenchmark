@@ -1,12 +1,34 @@
 {
   "model": "Naive",
   "pytest_filter": "naive_model",
-  "status": "no_tests_collected",
-  "exit_code": 5,
-  "summary": "38 deselected in 0.01s",
-  "tests": [],
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "5 passed, 38 deselected in 0.27s",
+  "tests": [
+    {
+      "name": "models/test_naive_model.py::test_predictions_equal_previous_actual_exactly",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_pi_matches_gaussian_1_96_sigma_of_train_diffs",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_next_step_matches_run_naive_convention",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_walk_forward_uses_realised_prices_never_own_predictions",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_returns_expected_contract",
+      "outcome": "passed"
+    }
+  ],
   "what_these_tests_check": {
     "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
-    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift."
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift.",
+    "models/test_naive_model.py": "Tests dédiés à naive_model.py — verrouillent le critère d'acceptation du Point 0 du\nbrief d'amélioration (2026-07-08) : la baseline Naive doit être une persistance\nstricte (pred_t = actual_{t-1} exactement, aucun tirage aléatoire) avec un PI 95%\ngaussien (+/- 1.96 * sigma des variations du train), pas le +/-5% uniforme d'origine.\n\nZéro réseau : fetch_data n'est jamais appelé, les données viennent de synthetic_series()\n(cf. conftest.py, partagé avec test_models_common.py)."
   }
 }

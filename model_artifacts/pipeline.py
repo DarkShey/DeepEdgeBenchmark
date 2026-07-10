@@ -614,13 +614,15 @@ MODEL_TEST_FILTER = {
     "ARIMA-GARCH": "[arima_model]", "SARIMA": "[sarima_model]", "Prophet": "[prophet_model]",
     "LSTM": "lstm",  # pas "[lstm_model]" : capte aussi les 2 tests spécifiques LSTM de
                       # test_models_common.py (noms contenant "lstm" mais hors fixture paramétrée)
-    "Naive": "naive_model",  # aucun test dédié pour naive_model dans models/ à ce jour -> 0 collecté
+    "Naive": "naive_model",  # matche models/test_naive_model.py (5 tests dédiés, cf. Point 0
+                              # du brief d'amélioration -- persistance stricte + PI gaussien)
 }
 
 _unit_test_cache = {}
 
 # Fichiers de tests couvrant models/*.py, sourcés par MODEL_TEST_FILTER ci-dessus.
-UNIT_TEST_SOURCE_FILES = ["models/test_models_common.py", "models/test_metrics.py"]
+UNIT_TEST_SOURCE_FILES = ["models/test_models_common.py", "models/test_metrics.py",
+                          "models/test_naive_model.py"]
 
 
 def _module_docstring(relative_path: str) -> str:

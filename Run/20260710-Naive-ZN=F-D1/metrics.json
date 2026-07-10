@@ -1,12 +1,12 @@
 {
-  "RMSE": 3.2719,
-  "MAE": 2.9007,
-  "MAPE": 2.61,
-  "directional_accuracy": 50.44,
-  "pi_coverage_95": 100.0,
-  "pi_width_min": 10.870313,
-  "pi_width_mean": 11.099383,
-  "pi_width_max": 11.385938,
+  "RMSE": 0.3175,
+  "MAE": 0.2459,
+  "MAPE": 0.22,
+  "directional_accuracy": 38.05,
+  "pi_coverage_95": 99.12,
+  "pi_width_min": 1.585262,
+  "pi_width_mean": 1.585262,
+  "pi_width_max": 1.585262,
   "n_val": 114,
   "horizon": "D1",
   "asset": "ZN=F",
@@ -14,8 +14,8 @@
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 109.265625,
-    "predicted": 107.291333,
-    "pi_lower": 103.802344,
-    "pi_upper": 114.728906
+    "predicted": 109.265625,
+    "pi_lower": 108.496336,
+    "pi_upper": 110.034914
   }
 }
