@@ -1,0 +1,34 @@
+{
+  "RMSE": 0.3179,
+  "MAE": 0.2453,
+  "MAPE": 0.22,
+  "directional_accuracy": 38.94,
+  "pi_coverage_95": 99.12,
+  "pi_width_min": 1.523965,
+  "pi_width_mean": 1.544761,
+  "pi_width_max": 1.569065,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "SARIMA",
+  "theil_u": 1.0017,
+  "MASE": 0.998,
+  "change_corr": 0.0482,
+  "dir_acc_change": 54.55,
+  "dir_acc_ci95": [
+    45.24,
+    63.54
+  ],
+  "dir_acc_p_vs_coin": 0.3909,
+  "dm_stat": 0.269,
+  "dm_p": 0.7887,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 109.25,
+    "predicted": 109.253919,
+    "pi_lower": 108.490411,
+    "pi_upper": 110.017427
+  }
+}

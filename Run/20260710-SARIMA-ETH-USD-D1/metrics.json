@@ -1,0 +1,34 @@
+{
+  "RMSE": 73.8723,
+  "MAE": 51.3916,
+  "MAPE": 2.48,
+  "directional_accuracy": 51.83,
+  "pi_coverage_95": 98.18,
+  "pi_width_min": 385.630639,
+  "pi_width_mean": 396.619938,
+  "pi_width_max": 412.562538,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "ETH-USD",
+  "model": "SARIMA",
+  "theil_u": 1.003,
+  "MASE": 1.0054,
+  "change_corr": 0.0464,
+  "dir_acc_change": 44.24,
+  "dir_acc_ci95": [
+    36.88,
+    51.87
+  ],
+  "dir_acc_p_vs_coin": 0.1609,
+  "dm_stat": 0.915,
+  "dm_p": 0.3616,
+  "dm_lag": 5,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-08",
+    "last_price": 1742.677612,
+    "predicted": 1742.769749,
+    "pi_lower": 1549.912236,
+    "pi_upper": 1935.627261
+  }
+}

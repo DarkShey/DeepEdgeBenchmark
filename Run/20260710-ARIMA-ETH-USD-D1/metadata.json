@@ -1,0 +1,21 @@
+{
+  "asset": "ETH-USD",
+  "asset_class": "crypto",
+  "frequency": "1d",
+  "window_start": "2023-07-10",
+  "window_end": "2026-07-08",
+  "train_end": "2026-01-24",
+  "run_date": "2026-07-10",
+  "git_commit": "d71ee7d14c2de95ac7ca70aabed6abcba6a8e8af",
+  "seed": 42,
+  "lib_versions": {
+    "numpy": "1.26.4",
+    "pandas": "3.0.3",
+    "statsmodels": "0.14.6",
+    "sklearn": "1.9.0",
+    "arch": "8.0.0",
+    "yfinance": "1.5.1",
+    "tensorflow": "2.16.2",
+    "prophet": "1.3.0"
+  }
+}
