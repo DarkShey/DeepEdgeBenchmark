@@ -4,18 +4,36 @@
   "MAPE": 0.85,
   "directional_accuracy": 51.79,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 5.779493,
-  "pi_width_mean": 5.779493,
-  "pi_width_max": 5.779493,
+  "pi_width_min": 5.779495,
+  "pi_width_mean": 5.779495,
+  "pi_width_max": 5.779495,
   "n_val": 113,
   "horizon": "D1",
   "asset": "TLT",
   "model": "LSTM",
+  "honest_eval": {
+    "mase": 1.7786,
+    "theils_u": 1.7421,
+    "variation_correlation": 0.1102,
+    "directional_accuracy_variations": {
+      "accuracy": 50.44,
+      "ci_low": 41.36,
+      "ci_high": 59.49,
+      "n": 113
+    },
+    "diebold_mariano": {
+      "dm_stat": -5.5143,
+      "p_value": 0.0,
+      "n": 113,
+      "verdict": "worse_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 84.489998,
-    "predicted": 84.568138,
-    "pi_lower": 82.76335,
-    "pi_upper": 86.372926
+    "predicted": 84.568069,
+    "pi_lower": 82.763277,
+    "pi_upper": 86.372862
   }
 }

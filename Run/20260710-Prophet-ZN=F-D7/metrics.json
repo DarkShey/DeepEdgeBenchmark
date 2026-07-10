@@ -4,18 +4,36 @@
   "MAPE": 0.69,
   "directional_accuracy": 55.56,
   "pi_coverage_95": 60.0,
-  "pi_width_min": 2.085201,
-  "pi_width_mean": 2.209457,
-  "pi_width_max": 2.379502,
+  "pi_width_min": 2.087392,
+  "pi_width_mean": 2.238435,
+  "pi_width_max": 2.363019,
   "n_val": 10,
   "horizon": "D7",
   "asset": "ZN=F",
   "model": "Prophet",
+  "honest_eval": {
+    "mase": 1.3759,
+    "theils_u": 1.3877,
+    "variation_correlation": -0.6189,
+    "directional_accuracy_variations": {
+      "accuracy": 50.0,
+      "ci_low": 23.66,
+      "ci_high": 76.34,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": -1.3228,
+      "p_value": 0.2185,
+      "n": 10,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 109.265625,
     "predicted": 109.214463,
-    "pi_lower": 108.103155,
-    "pi_upper": 110.305521
+    "pi_lower": 108.149974,
+    "pi_upper": 110.385856
   }
 }

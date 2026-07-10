@@ -4,18 +4,36 @@
   "MAPE": 1.18,
   "directional_accuracy": 55.56,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 4.303119,
-  "pi_width_mean": 4.730471,
-  "pi_width_max": 5.494446,
+  "pi_width_min": 4.303122,
+  "pi_width_mean": 4.730459,
+  "pi_width_max": 5.494441,
   "n_val": 10,
   "horizon": "D7",
   "asset": "TLT",
   "model": "ARIMA-GARCH",
+  "honest_eval": {
+    "mase": 0.9996,
+    "theils_u": 0.995,
+    "variation_correlation": -0.0412,
+    "directional_accuracy_variations": {
+      "accuracy": 40.0,
+      "ci_low": 16.82,
+      "ci_high": 68.73,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": 0.5269,
+      "p_value": 0.611,
+      "n": 10,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": true
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 84.489998,
-    "predicted": 84.438908,
-    "pi_lower": 82.145231,
-    "pi_upper": 86.796629
+    "predicted": 84.438928,
+    "pi_lower": 82.145252,
+    "pi_upper": 86.796648
   }
 }

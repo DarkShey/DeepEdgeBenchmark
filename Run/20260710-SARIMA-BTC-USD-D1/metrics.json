@@ -11,6 +11,24 @@
   "horizon": "D1",
   "asset": "BTC-USD",
   "model": "SARIMA",
+  "honest_eval": {
+    "mase": 1.0045,
+    "theils_u": 1.003,
+    "variation_correlation": -0.0222,
+    "directional_accuracy_variations": {
+      "accuracy": 46.67,
+      "ci_low": 39.22,
+      "ci_high": 54.27,
+      "n": 165
+    },
+    "diebold_mariano": {
+      "dm_stat": -0.5369,
+      "p_value": 0.592,
+      "n": 165,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": true
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 63193.148438,

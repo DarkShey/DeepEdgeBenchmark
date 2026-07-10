@@ -6,7 +6,7 @@
   "window_end": "2026-07-09",
   "train_end": "2026-01-26",
   "run_date": "2026-07-10",
-  "git_commit": "8fea9ee5632725c1b25e7e7e02ed7c8d4b6c3a36",
+  "git_commit": "28df25be85bbd2b5d7019331030b7c23e3cc6b40",
   "seed": 42,
   "lib_versions": {
     "numpy": "2.2.6",

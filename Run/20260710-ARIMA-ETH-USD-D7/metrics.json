@@ -11,6 +11,24 @@
   "horizon": "D7",
   "asset": "ETH-USD",
   "model": "ARIMA-GARCH",
+  "honest_eval": {
+    "mase": 1.0084,
+    "theils_u": 1.0147,
+    "variation_correlation": -0.3655,
+    "directional_accuracy_variations": {
+      "accuracy": 50.0,
+      "ci_low": 23.66,
+      "ci_high": 76.34,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": -1.2693,
+      "p_value": 0.2362,
+      "n": 10,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": true
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 1744.484619,

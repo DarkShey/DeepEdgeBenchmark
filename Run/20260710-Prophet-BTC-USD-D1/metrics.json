@@ -3,19 +3,37 @@
   "MAE": 8314.1422,
   "MAPE": 12.36,
   "directional_accuracy": 53.05,
-  "pi_coverage_95": 81.21,
-  "pi_width_min": 16652.935629,
-  "pi_width_mean": 55806.200294,
-  "pi_width_max": 122874.978038,
+  "pi_coverage_95": 82.42,
+  "pi_width_min": 15755.740653,
+  "pi_width_mean": 56767.348752,
+  "pi_width_max": 127752.204784,
   "n_val": 165,
   "horizon": "D1",
   "asset": "BTC-USD",
   "model": "Prophet",
+  "honest_eval": {
+    "mase": 6.4275,
+    "theils_u": 5.1689,
+    "variation_correlation": 0.084,
+    "directional_accuracy_variations": {
+      "accuracy": 43.64,
+      "ci_low": 36.3,
+      "ci_high": 51.26,
+      "n": 165
+    },
+    "diebold_mariano": {
+      "dm_stat": -13.0443,
+      "p_value": 0.0,
+      "n": 165,
+      "verdict": "worse_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 63193.148438,
     "predicted": 62632.226715,
-    "pi_lower": 53299.467165,
-    "pi_upper": 72150.210072
+    "pi_lower": 54439.897694,
+    "pi_upper": 71666.175778
   }
 }

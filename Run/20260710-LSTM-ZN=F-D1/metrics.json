@@ -11,6 +11,24 @@
   "horizon": "D1",
   "asset": "ZN=F",
   "model": "LSTM",
+  "honest_eval": {
+    "mase": 1.8329,
+    "theils_u": 1.8013,
+    "variation_correlation": 0.1026,
+    "directional_accuracy_variations": {
+      "accuracy": 53.51,
+      "ci_low": 44.39,
+      "ci_high": 62.4,
+      "n": 114
+    },
+    "diebold_mariano": {
+      "dm_stat": -5.7888,
+      "p_value": 0.0,
+      "n": 114,
+      "verdict": "worse_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 109.265625,

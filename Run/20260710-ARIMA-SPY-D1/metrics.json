@@ -4,18 +4,36 @@
   "MAPE": 0.71,
   "directional_accuracy": 43.75,
   "pi_coverage_95": 92.04,
-  "pi_width_min": 20.22923,
-  "pi_width_mean": 24.229587,
-  "pi_width_max": 30.945789,
+  "pi_width_min": 20.229258,
+  "pi_width_mean": 24.229593,
+  "pi_width_max": 30.945792,
   "n_val": 113,
   "horizon": "D1",
   "asset": "SPY",
   "model": "ARIMA-GARCH",
+  "honest_eval": {
+    "mase": 1.0225,
+    "theils_u": 1.0054,
+    "variation_correlation": -0.0042,
+    "directional_accuracy_variations": {
+      "accuracy": 46.02,
+      "ci_low": 37.11,
+      "ci_high": 55.19,
+      "n": 113
+    },
+    "diebold_mariano": {
+      "dm_stat": -0.3725,
+      "p_value": 0.7102,
+      "n": 113,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": true
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 751.710022,
-    "predicted": 751.484837,
-    "pi_lower": 739.252415,
-    "pi_upper": 763.919669
+    "predicted": 751.484884,
+    "pi_lower": 739.2525,
+    "pi_upper": 763.919676
   }
 }

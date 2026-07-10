@@ -21,3 +21,6 @@ pytest-timeout>=2
 
 # model_artifacts/ (résidus ARIMA/SARIMA sérialisés en residuals.parquet)
 pyarrow>=14
+
+# honest_eval/ (Diebold-Mariano, jusque-là dépendance transitive via statsmodels/arch)
+scipy>=1.11

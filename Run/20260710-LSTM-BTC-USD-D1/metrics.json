@@ -11,6 +11,24 @@
   "horizon": "D1",
   "asset": "BTC-USD",
   "model": "LSTM",
+  "honest_eval": {
+    "mase": 2.6204,
+    "theils_u": 2.4784,
+    "variation_correlation": 0.0176,
+    "directional_accuracy_variations": {
+      "accuracy": 43.64,
+      "ci_low": 36.3,
+      "ci_high": 51.26,
+      "n": 165
+    },
+    "diebold_mariano": {
+      "dm_stat": -5.933,
+      "p_value": 0.0,
+      "n": 165,
+      "verdict": "worse_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 63193.148438,

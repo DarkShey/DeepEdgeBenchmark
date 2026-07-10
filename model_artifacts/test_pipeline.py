@@ -25,7 +25,11 @@ MODELS_TO_TEST = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM"]
 EXPECTED_METRICS_KEYS = {
     "RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
     "pi_width_min", "pi_width_mean", "pi_width_max",
-    "n_val", "horizon", "asset", "model",
+    "n_val", "horizon", "asset", "model", "honest_eval",
+}
+EXPECTED_HONEST_EVAL_KEYS = {
+    "mase", "theils_u", "variation_correlation",
+    "directional_accuracy_variations", "diebold_mariano", "no_better_than_naive",
 }
 
 
@@ -78,6 +82,15 @@ def test_gate2_passes_and_metrics_have_expected_keys(model_key, horizon_label, s
               ("RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
                "pi_width_min", "pi_width_mean", "pi_width_max"))
     assert payload["pi_width_min"] <= payload["pi_width_mean"] <= payload["pi_width_max"]
+
+    # Point 1 du brief d'amélioration : métriques vs baseline naïve sur les variations.
+    assert payload["honest_eval"] is not None, "honest_eval n'a pas pu être calculé"
+    assert set(payload["honest_eval"].keys()) == EXPECTED_HONEST_EVAL_KEYS
+    if model_key == "Naive":
+        # Naive comparé à lui-même : aucun skill par construction (U=1, MASE=1).
+        assert payload["honest_eval"]["theils_u"] == pytest.approx(1.0)
+        assert payload["honest_eval"]["mase"] == pytest.approx(1.0)
+        assert payload["honest_eval"]["diebold_mariano"]["verdict"] == "identical_predictions"
 
     # series alimente predictions.parquet (cf. write_predictions_parquet) : un point par
     # jour de validation (D1) ou par origine glissante (D7), toutes les listes alignées.

@@ -4,18 +4,36 @@
   "MAPE": 1.53,
   "directional_accuracy": 77.78,
   "pi_coverage_95": 90.0,
-  "pi_width_min": 45.793488,
-  "pi_width_mean": 46.412792,
-  "pi_width_max": 47.386875,
+  "pi_width_min": 45.793526,
+  "pi_width_mean": 46.412828,
+  "pi_width_max": 47.386908,
   "n_val": 10,
   "horizon": "D7",
   "asset": "SPY",
   "model": "Naive",
+  "honest_eval": {
+    "mase": 1.0,
+    "theils_u": 1.0,
+    "variation_correlation": null,
+    "directional_accuracy_variations": {
+      "accuracy": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 27.75,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": null,
+      "p_value": null,
+      "n": 10,
+      "verdict": "identical_predictions"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 751.710022,
     "predicted": 751.710022,
-    "pi_lower": 728.057854,
-    "pi_upper": 775.36219
+    "pi_lower": 728.057838,
+    "pi_upper": 775.362206
   }
 }

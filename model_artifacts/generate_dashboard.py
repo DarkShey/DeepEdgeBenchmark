@@ -94,6 +94,10 @@ def collect_run_data(run_root: Path) -> dict:
             "pi_width_mean": metrics.get("pi_width_mean"),
             "pi_width_max": metrics.get("pi_width_max"),
             "n_val": metrics.get("n_val"),
+            # Point 1 du brief d'amélioration : métriques vs baseline Naive sur les
+            # variations (MASE, Theil's U, corrélation, DirAcc+IC Wilson, DM) --
+            # None pour les runs générés avant l'introduction du Point 1.
+            "honest_eval": metrics.get("honest_eval"),
             "forecast_last_price": _num(forecast.get("last_price")),
             "forecast_last_date": forecast.get("last_date"),
             "forecast_predicted": _num(forecast.get("predicted")),
@@ -296,6 +300,16 @@ tbody tr:hover { background: rgba(128,128,128,0.06); }
 .subtabbar button.active { background: var(--text-primary); color: var(--surface-1); font-weight: 600; }
 .sub-panel { display: none; }
 .sub-panel.active { display: block; }
+.variations-note {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+  border-left: 3px solid var(--text-primary); padding: 10px 14px;
+}
+.levels-chart-caption {
+  font-size: 12.5px; color: #a06a00; background: rgba(224,158,0,0.12);
+  border: 1px solid rgba(224,158,0,0.35); border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 10px;
+}
+@media (prefers-color-scheme: dark) { .levels-chart-caption { color: #ffcc66; } }
 .field-label { font-size: 13px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 8px; }
 .model-checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
 .model-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
@@ -418,6 +432,11 @@ const KPI_DEFINITIONS = {
   warnthreshold: "Seuil d'alerte — si la prévision s'écarte de plus de ce pourcentage par rapport au dernier prix connu, la case est signalée en rouge comme a priori suspecte.",
   lag: "Déphasage (cross-corrélation) — corrèle prédit(t) avec réel(t−k) pour k=−5..5 sur le backtest de validation ; le k qui maximise la corrélation est le décalage effectif du modèle. k=0 : pas de déphasage. k=1 : le modèle reproduit en fait la valeur d'hier.",
   nval: "n (validation) — nombre de points de la période de validation utilisés pour calculer ces métriques.",
+  mase: "MASE — Mean Absolute Scaled Error = MAE(modèle) / MAE(naïf). < 1 : bat le naïf en erreur absolue moyenne. ≈ 1 : aucun gain. > 1 : pire que le naïf.",
+  theilsu: "Theil's U — RMSE(modèle) / RMSE(naïf). < 1 : bat le naïf. ≈ 1 (à ±5% près) : aucun skill démontré vs naïf. > 1 : pire que le naïf.",
+  corrvar: "Corrélation des variations — corrélation entre Δprédit (prédit − ancre naïve) et Δréel (réel − ancre naïve), PAS entre les niveaux de prix. Proche de 0 : le modèle ne capture aucun mouvement, même si sa corrélation en niveaux est ~1.",
+  diraccvar: "Exactitude directionnelle sur les variations — % de fois où signe(Δprédit) == signe(Δréel), avec IC binomial de Wilson à 95% (plus fiable que Wald sur petit n). 50% = pile ou face.",
+  dm: "Test de Diebold-Mariano vs naïf (correction Harvey-Leybourne-Newbold, p-value via Student(n−1)) — H0 : aucune différence de skill avec le naïf. p < 0.05 ET le modèle gagne en moyenne ⇒ 'bat le naïf' ; sinon 'aucun skill vs naïf' même si RMSE/MAE semblent meilleurs en niveaux.",
 };
 
 function infoDot(defKey) {
@@ -484,7 +503,9 @@ function buildTabBar() {
 function switchAssetTab(ticker) {
   document.querySelectorAll('.asset-panel').forEach(p => p.classList.toggle('active', p.dataset.asset === ticker));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.asset === ticker));
-  if (ticker !== 'COMPARISON' && assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+  if (ticker === 'COMPARISON') return;
+  if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+  if (assetState[ticker].subtab === 'variations') renderAssetVariations(ticker);
 }
 
 function assetPanelSkeleton(a) {
@@ -493,7 +514,8 @@ function assetPanelSkeleton(a) {
     <div class="card controls-row">
       <div class="subtabbar" id="subtab-${s}">
         <button class="active" data-sub="kpis">KPIs</button>
-        <button data-sub="chart">Graphique</button>
+        <button data-sub="variations">Variations</button>
+        <button data-sub="chart">Graphique (niveaux)</button>
       </div>
       <label class="field-label">Date de run
         <select class="select-box" id="date-${s}"></select>
@@ -517,8 +539,31 @@ function assetPanelSkeleton(a) {
       </div>
     </div>
 
+    <div class="sub-panel" id="sub-variations-${s}">
+      <div class="card variations-note">
+        Un modèle qui "prédit le prix d'hier ± ε" a une excellente corrélation en
+        <b>niveaux</b> sans avoir aucun pouvoir prédictif réel (cf. onglet KPIs, colonnes
+        MASE / Theil's U / Diebold-Mariano). Ce panneau compare les <b>variations</b> —
+        Δprédit = prédit − ancre naïve, Δréel = réel − ancre naïve — seule vue qui révèle
+        un vrai skill directionnel.
+      </div>
+      <div class="card">
+        <h2>Δprédit vs Δréel (nuage de points)</h2>
+        <div class="chart-wrap" id="chart-scatter-${s}"></div>
+      </div>
+      <div class="card">
+        <h2>Variations dans le temps</h2>
+        <div class="chart-wrap" id="chart-variations-ts-${s}"></div>
+      </div>
+    </div>
+
     <div class="sub-panel" id="sub-chart-${s}">
       <div class="card">
+        <div class="levels-chart-caption">
+          ⚠️ Graphe en niveaux — trompeur pour juger du skill d'un modèle (une simple
+          persistance a l'air "précise" ici). Se référer à l'onglet <b>Variations</b> ou
+          aux colonnes MASE / Theil's U / Diebold-Mariano de l'onglet KPIs.
+        </div>
         <div class="chart-daterange" id="chart-daterange-${s}"></div>
         <div class="controls-row" style="margin-bottom:12px;">
           <div class="chart-checks" id="chart-checks-${s}">
@@ -643,8 +688,10 @@ function wireAssetPanel(a) {
       document.getElementById(`subtab-${s}`).querySelectorAll('button')
         .forEach(b => b.classList.toggle('active', b === btn));
       document.getElementById(`sub-kpis-${s}`).classList.toggle('active', btn.dataset.sub === 'kpis');
+      document.getElementById(`sub-variations-${s}`).classList.toggle('active', btn.dataset.sub === 'variations');
       document.getElementById(`sub-chart-${s}`).classList.toggle('active', btn.dataset.sub === 'chart');
       if (btn.dataset.sub === 'chart') renderAssetChart(ticker);
+      if (btn.dataset.sub === 'variations') renderAssetVariations(ticker);
     });
   });
 
@@ -683,6 +730,7 @@ function wireAssetPanel(a) {
 function refreshAssetTab(ticker) {
   renderAssetKpis(ticker);
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+  if (assetState[ticker].subtab === 'variations') renderAssetVariations(ticker);
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
@@ -697,6 +745,34 @@ function isWarn(rec, threshold) {
 function piRangeText(rec) {
   if (rec.forecast_pi_lower == null || rec.forecast_pi_upper == null) return '—';
   return `${fmt(rec.forecast_pi_lower, 2)} – ${fmt(rec.forecast_pi_upper, 2)}`;
+}
+
+// ---- Point 1 : métriques "honnêtes" vs baseline naïve (honest_eval) --------
+const DM_VERDICT_LABEL = {
+  beats_naive: 'bat le naïf', worse_than_naive: 'pire que le naïf',
+  no_better_than_naive: 'aucun skill vs naïf', identical_predictions: 'identique au naïf',
+  insufficient_data: 'n insuffisant',
+};
+function heField(rec, path) {
+  if (!rec || !rec.honest_eval) return null;
+  return path.split('.').reduce((o, k) => (o == null ? null : o[k]), rec.honest_eval);
+}
+function diraccVarText(rec) {
+  const acc = heField(rec, 'directional_accuracy_variations.accuracy');
+  const lo = heField(rec, 'directional_accuracy_variations.ci_low');
+  const hi = heField(rec, 'directional_accuracy_variations.ci_high');
+  if (acc == null) return '—';
+  return `${fmt(acc, 1)}% [${fmt(lo, 1)}–${fmt(hi, 1)}]`;
+}
+function dmText(rec) {
+  const verdict = heField(rec, 'diebold_mariano.verdict');
+  const p = heField(rec, 'diebold_mariano.p_value');
+  if (!verdict) return '—';
+  const label = DM_VERDICT_LABEL[verdict] || verdict;
+  return p == null ? label : `${label} (p=${fmt(p, 3)})`;
+}
+function isNoSkillVsNaive(rec) {
+  return heField(rec, 'no_better_than_naive') === true;
 }
 
 function pearson(xs, ys) {
@@ -751,6 +827,11 @@ const BREAKDOWN_COLS = [
   { key: 'pi_width_mean', label: 'Larg. PI moy.', digits: 4, def: 'piwidth' },
   { key: 'pi_width_max', label: 'Larg. PI max', digits: 4 },
   { key: 'n_val', label: 'n_val', digits: 0, def: 'nval' },
+  { key: '_mase', label: 'MASE', def: 'mase', render: r => fmt(heField(r, 'mase'), 3) },
+  { key: '_theilsu', label: "Theil's U", def: 'theilsu', render: r => fmt(heField(r, 'theils_u'), 3) },
+  { key: '_corrvar', label: 'Corr. variations', def: 'corrvar', render: r => fmt(heField(r, 'variation_correlation'), 3) },
+  { key: '_diraccvar', label: 'Exact. dir. (variations)', def: 'diraccvar', render: diraccVarText },
+  { key: '_dm', label: 'Diebold-Mariano vs naïf', def: 'dm', render: dmText, noSkillWarn: true },
   { key: 'forecast_predicted', label: 'Prévision (prix)', digits: 2, def: 'forecast', warn: true },
   { key: '_pi_range', label: 'PI 95% [bas – haut]', render: piRangeText, warn: true },
 ];
@@ -794,6 +875,7 @@ function renderAssetKpis(ticker) {
         const predSeries = ((DATA.predictions[st.date] || {})[ticker] || {})[m] || {};
         const backtestPoints = predSeries[st.horizon] || [];
         const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
+        const noSkill = isNoSkillVsNaive(rec);
         rowsHtml = [
           [`RMSE ${infoDot('rmse')}`, fmt(rec.RMSE, 4)],
           [`MAE ${infoDot('mae')}`, fmt(rec.MAE, 4)],
@@ -802,6 +884,11 @@ function renderAssetKpis(ticker) {
           [`Couverture PI 95% ${infoDot('picov')}`, fmt(rec.pi_coverage_95, 1) + ' %'],
           [`Largeur PI min/moy/max ${infoDot('piwidth')}`, `${fmt(rec.pi_width_min, 2)} / ${fmt(rec.pi_width_mean, 2)} / ${fmt(rec.pi_width_max, 2)}`],
           ['n (validation)', rec.n_val ?? '—'],
+          [`MASE ${infoDot('mase')}`, fmt(heField(rec, 'mase'), 3)],
+          [`Theil's U ${infoDot('theilsu')}`, fmt(heField(rec, 'theils_u'), 3)],
+          [`Corr. variations ${infoDot('corrvar')}`, fmt(heField(rec, 'variation_correlation'), 3)],
+          [`Exact. dir. (variations) ${infoDot('diraccvar')}`, diraccVarText(rec)],
+          [`Diebold-Mariano ${infoDot('dm')}`, dmText(rec), noSkill],
           [`Prévision ${infoDot('forecast')}`, fmt(rec.forecast_predicted, 2) + pctText, warn],
           ['PI 95% [bas – haut]', piRangeText(rec), warn],
           [`Déphasage ${infoDot('lag')}`, lag && lag.corr !== null ? `k=${lag.lag} (corr=${fmt(lag.corr, 2)}) — ${lagLabel(lag.lag)}` : '—'],
@@ -847,6 +934,7 @@ function renderBreakdownTable(ticker) {
   recs.forEach(r => {
     const tr = document.createElement('tr');
     const warnRow = isWarn(r, st.warnThreshold);
+    const noSkillRow = isNoSkillVsNaive(r);
     BREAKDOWN_COLS.forEach(c => {
       const td = document.createElement('td');
       if (c.render) {
@@ -856,12 +944,108 @@ function renderBreakdownTable(ticker) {
         td.textContent = c.digits !== undefined ? fmt(v, c.digits) : (v ?? '—');
       }
       if (c.warn && warnRow) td.classList.add('warn-cell');
+      if (c.noSkillWarn && noSkillRow) td.classList.add('warn-cell');
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
+}
+
+// ---- Variations : Δprédit vs Δréel (Point 1 du brief) -----------------------
+// L'ancre naïve (persistance stricte depuis le Point 0) sert de référence "prix
+// d'hier" pour delta_pred/delta_real -- récupérée depuis la série 'Naive' déjà
+// présente dans DATA.predictions (mêmes dates que tout autre modèle pour un même
+// asset+horizon+run_date, cf. évaluate_gate2/_run_model_d7_rolling côté pipeline),
+// aucun champ backend supplémentaire nécessaire.
+function renderAssetVariations(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short, st = assetState[ticker];
+  const predBucket = (DATA.predictions[st.date] || {})[ticker] || {};
+  const naiveSeries = (predBucket['Naive'] || {})[st.horizon] || [];
+  const scatterEl = document.getElementById(`chart-scatter-${s}`);
+  const tsEl = document.getElementById(`chart-variations-ts-${s}`);
+
+  if (!naiveSeries.length) {
+    scatterEl.innerHTML = '<div class="no-data">Pas de baseline Naive pour cette sélection (nécessaire comme ancre des variations).</div>';
+    tsEl.innerHTML = '';
+    return;
+  }
+  const naiveByDate = new Map(naiveSeries.map(p => [p.date, p]));
+  const checked = MODELS.filter(m => st.models.has(m));
+
+  const scatterTraces = [];
+  const tsTraces = [];
+  let deltaRealPlotted = false;
+  let allDeltaPred = [], allDeltaReal = [];
+
+  checked.forEach(m => {
+    const series = (predBucket[m] || {})[st.horizon] || [];
+    if (!series.length) return;
+    const color = MODEL_COLORS[m];
+    const dates = [], deltaPred = [], deltaReal = [];
+    series.forEach(p => {
+      const anchor = naiveByDate.get(p.date);
+      if (!anchor || p.predicted == null || anchor.predicted == null || anchor.actual == null) return;
+      dates.push(p.date);
+      deltaPred.push(p.predicted - anchor.predicted);
+      deltaReal.push(anchor.actual - anchor.predicted);
+    });
+    if (!dates.length) return;
+    allDeltaPred = allDeltaPred.concat(deltaPred);
+    allDeltaReal = allDeltaReal.concat(deltaReal);
+
+    scatterTraces.push({
+      x: deltaPred, y: deltaReal, mode: 'markers', name: m,
+      marker: { color, size: 7, opacity: 0.75 },
+      hovertemplate: 'Δprédit=%{x:.3f}<br>Δréel=%{y:.3f}<extra>' + m + '</extra>',
+    });
+
+    if (!deltaRealPlotted) {
+      tsTraces.push({
+        x: dates, y: deltaReal, mode: 'lines', name: 'Δréel',
+        line: { color: ACTUAL_COLOR, width: 2 },
+        hovertemplate: '%{x}<br>%{y:.3f}<extra>Δréel</extra>',
+      });
+      deltaRealPlotted = true;
+    }
+    tsTraces.push({
+      x: dates, y: deltaPred, mode: 'lines+markers', name: `Δprédit (${m})`,
+      line: { color, width: 1.6, dash: 'dot' }, marker: { color, size: 4 },
+      hovertemplate: '%{x}<br>%{y:.3f}<extra>Δprédit — ' + m + '</extra>',
+    });
+  });
+
+  if (!scatterTraces.length) {
+    scatterEl.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
+    tsEl.innerHTML = '';
+    return;
+  }
+
+  const span = Math.max(1e-9, ...allDeltaPred.map(Math.abs), ...allDeltaReal.map(Math.abs)) * 1.1;
+  const commonFont = { color: AXIS_TEXT_COLOR, family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 12 };
+
+  Plotly.newPlot(`chart-scatter-${s}`, [
+    { x: [-span, span], y: [-span, span], mode: 'lines', line: { color: AXIS_TEXT_COLOR, width: 1, dash: 'dash' },
+      name: 'Skill parfait (Δprédit=Δréel)', hoverinfo: 'skip' },
+    ...scatterTraces,
+  ], {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: commonFont,
+    margin: { l: 55, r: 20, t: 20, b: 45 },
+    xaxis: { title: 'Δprédit (prédit − ancre naïve)', gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: GRID_COLOR, range: [-span, span] },
+    yaxis: { title: 'Δréel (réel − ancre naïve)', gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: GRID_COLOR, range: [-span, span] },
+    legend: { orientation: 'h', y: -0.2 },
+  }, { responsive: true, displaylogo: false });
+
+  Plotly.newPlot(`chart-variations-ts-${s}`, tsTraces, {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: commonFont,
+    margin: { l: 55, r: 20, t: 20, b: 40 },
+    xaxis: { gridcolor: GRID_COLOR },
+    yaxis: { title: 'Variation vs ancre naïve', gridcolor: GRID_COLOR, zeroline: true, zerolinecolor: GRID_COLOR },
+    legend: { orientation: 'h', y: -0.25 },
+    hovermode: 'x unified',
+  }, { responsive: true, displaylogo: false });
 }
 
 // ---- Graphique : prix réel + prédictions par modèle (Plotly, zoomable) ------

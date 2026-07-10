@@ -11,6 +11,24 @@
   "horizon": "D7",
   "asset": "BTC-USD",
   "model": "ARIMA-GARCH",
+  "honest_eval": {
+    "mase": 1.0428,
+    "theils_u": 1.048,
+    "variation_correlation": -0.3282,
+    "directional_accuracy_variations": {
+      "accuracy": 40.0,
+      "ci_low": 16.82,
+      "ci_high": 68.73,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": -1.2986,
+      "p_value": 0.2264,
+      "n": 10,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": true
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 63193.148438,

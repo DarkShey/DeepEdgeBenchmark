@@ -1,21 +1,39 @@
 {
-  "RMSE": 19.9716,
-  "MAE": 15.7964,
-  "MAPE": 2.25,
+  "RMSE": 20.4339,
+  "MAE": 16.4288,
+  "MAPE": 2.33,
   "directional_accuracy": 55.56,
-  "pi_coverage_95": 60.0,
-  "pi_width_min": 28.160216,
-  "pi_width_mean": 31.677259,
-  "pi_width_max": 37.142964,
+  "pi_coverage_95": 50.0,
+  "pi_width_min": 27.310059,
+  "pi_width_mean": 32.303692,
+  "pi_width_max": 38.430093,
   "n_val": 10,
   "horizon": "D7",
   "asset": "SPY",
   "model": "Prophet",
+  "honest_eval": {
+    "mase": 1.5404,
+    "theils_u": 1.6365,
+    "variation_correlation": -0.1666,
+    "directional_accuracy_variations": {
+      "accuracy": 40.0,
+      "ci_low": 16.82,
+      "ci_high": 68.73,
+      "n": 10
+    },
+    "diebold_mariano": {
+      "dm_stat": -1.7897,
+      "p_value": 0.1071,
+      "n": 10,
+      "verdict": "no_better_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 751.710022,
-    "predicted": 769.133468,
-    "pi_lower": 749.419962,
-    "pi_upper": 788.149845
+    "predicted": 769.013075,
+    "pi_lower": 749.624609,
+    "pi_upper": 788.354852
   }
 }

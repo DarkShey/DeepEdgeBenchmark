@@ -3,19 +3,37 @@
   "MAE": 585.0453,
   "MAPE": 30.91,
   "directional_accuracy": 53.66,
-  "pi_coverage_95": 95.76,
-  "pi_width_min": 1189.935456,
-  "pi_width_mean": 2555.825146,
-  "pi_width_max": 5454.351461,
+  "pi_coverage_95": 98.18,
+  "pi_width_min": 1161.248332,
+  "pi_width_mean": 2628.445238,
+  "pi_width_max": 5499.820273,
   "n_val": 165,
   "horizon": "D1",
   "asset": "ETH-USD",
   "model": "Prophet",
+  "honest_eval": {
+    "mase": 11.6258,
+    "theils_u": 9.6594,
+    "variation_correlation": 0.0415,
+    "directional_accuracy_variations": {
+      "accuracy": 49.7,
+      "ci_low": 42.16,
+      "ci_high": 57.25,
+      "n": 165
+    },
+    "diebold_mariano": {
+      "dm_stat": -11.1497,
+      "p_value": 0.0,
+      "n": 165,
+      "verdict": "worse_than_naive"
+    },
+    "no_better_than_naive": false
+  },
   "forecast": {
     "last_date": "2026-07-09",
     "last_price": 1744.484619,
     "predicted": 1618.801914,
-    "pi_lower": 1096.102228,
-    "pi_upper": 2160.53381
+    "pi_lower": 1126.900193,
+    "pi_upper": 2160.806863
   }
 }

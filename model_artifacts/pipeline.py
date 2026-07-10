@@ -94,6 +94,7 @@ from benchmarks.regime_overlay import fit_predict_regime
 
 from validation import tracking_db as td
 from validation import verdict_rules
+from honest_eval import metrics as he_metrics
 
 RUN_ROOT = REPO_ROOT / "Run"
 DEFAULT_DB_PATH = "validation/tracking.db"
@@ -509,6 +510,26 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
     return metrics
 
 
+def _naive_baseline_for_comparison(model_key: str, train: pd.Series, validation: pd.Series,
+                                   horizon_label: str, h_days: int, seed, epochs,
+                                   max_d7_origins: int, pred_arr, payload) -> tuple:
+    """Prévisions Naive alignées sur les mêmes dates que le modèle évalué (mêmes
+    train/validation/horizon -> mêmes origines D7, cf. _run_model_d7_rolling), pour
+    les métriques honest_eval (Point 1 du brief d'amélioration). Naive n'a aucun coût
+    de fit : recalculer sa série pour chaque modèle plutôt que de la partager entre
+    modèles est trivial en coût CPU et évite tout risque de désalignement de dates."""
+    if model_key == "Naive":
+        return pred_arr, payload["MAE"], payload["RMSE"]
+    if horizon_label == "D1":
+        naive_result = _run_model_d1("Naive", train, validation, seed, epochs)
+        naive_pred_arr = list(np.asarray(naive_result["predictions"], dtype=float))
+    else:
+        naive_result = _run_model_d7_rolling("Naive", train, validation, h_days, seed, epochs,
+                                             max_d7_origins)
+        naive_pred_arr = naive_result.pop("_preds")
+    return naive_pred_arr, naive_result["MAE"], naive_result["RMSE"]
+
+
 def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label: str, n_val: int,
                         pi_lower, pi_upper) -> dict:
     pi_cov = result.get("PI Cov 95% (%)")
@@ -566,6 +587,23 @@ def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.
     except Exception as exc:
         print(f"    [Gate2 FAIL] {model_key} {horizon_label} : {exc}")
         return None, False, None
+
+    # Point 1 du brief d'amélioration : le modèle n'a de skill que s'il bat la baseline
+    # Naive sur les VARIATIONS, pas les niveaux (cf. honest_eval/metrics.py). Best-effort
+    # : un échec ici (ex. baseline Naive elle-même en échec pour cet actif) ne doit pas
+    # faire échouer tout Gate 2, qui a déjà ses propres métriques en niveaux valides.
+    try:
+        naive_pred_arr, naive_mae, naive_rmse = _naive_baseline_for_comparison(
+            model_key, train, validation, horizon_label, h_days, seed, epochs,
+            max_d7_origins, pred_arr, payload)
+        payload["honest_eval"] = he_metrics.variation_metrics(
+            actual=actual_arr, predicted=pred_arr, naive_predicted=naive_pred_arr,
+            mae_model=payload["MAE"], mae_naive=naive_mae,
+            rmse_model=payload["RMSE"], rmse_naive=naive_rmse,
+        )
+    except Exception as exc:
+        print(f"    [honest_eval] {model_key} {horizon_label} : échec métriques vs naïf ({exc})")
+        payload["honest_eval"] = None
 
     ok = _gate2_metrics_ok(payload)
     if not ok:
@@ -874,6 +912,23 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                 gate2_ok = _gate2_metrics_ok(payload)
                 series = {"dates": g2["dates"], "actual": g2["actual"], "predicted": g2["predicted"],
                           "pi_lower": g2["pi_lower"], "pi_upper": g2["pi_upper"]}
+                # LSTM tourne dans un sous-process isolé (cf. _run_lstm_via_worker) et ne
+                # passe jamais par evaluate_gate2 -- honest_eval (Point 1) doit donc être
+                # recalculé ici explicitement, sinon LSTM resterait le seul modèle sans ces
+                # métriques (constaté : honest_eval=None sur le run réel du 2026-07-10).
+                try:
+                    naive_pred_arr, naive_mae, naive_rmse = _naive_baseline_for_comparison(
+                        model_key, train, validation, horizon_label,
+                        HORIZON_TRADING_DAYS[horizon_label], seed, epochs, max_d7_origins,
+                        g2["predicted"], payload)
+                    payload["honest_eval"] = he_metrics.variation_metrics(
+                        actual=g2["actual"], predicted=g2["predicted"], naive_predicted=naive_pred_arr,
+                        mae_model=payload["MAE"], mae_naive=naive_mae,
+                        rmse_model=payload["RMSE"], rmse_naive=naive_rmse,
+                    )
+                except Exception as exc:
+                    print(f"    [honest_eval] LSTM {horizon_label} : échec métriques vs naïf ({exc})")
+                    payload["honest_eval"] = None
             else:
                 payload, gate2_ok, series = None, False, None
                 print(f"    [Gate2 FAIL] LSTM {horizon_label} : {g2.get('error')}")
