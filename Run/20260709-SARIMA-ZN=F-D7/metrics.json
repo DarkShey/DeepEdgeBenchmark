@@ -5,17 +5,30 @@
   "directional_accuracy": 55.56,
   "pi_coverage_95": 100.0,
   "pi_width_min": 3.195886,
-  "pi_width_mean": 3.29282,
+  "pi_width_mean": 3.292822,
   "pi_width_max": 3.360958,
   "n_val": 10,
   "horizon": "D7",
   "asset": "ZN=F",
   "model": "SARIMA",
+  "theil_u": 0.971,
+  "MASE": 0.946,
+  "change_corr": 0.3935,
+  "dir_acc_change": 60.0,
+  "dir_acc_ci95": [
+    31.27,
+    83.18
+  ],
+  "dir_acc_p_vs_coin": 0.7539,
+  "dm_stat": 0.0,
+  "dm_p": 1.0,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 109.0,
-    "predicted": 109.226632,
-    "pi_lower": 107.595502,
-    "pi_upper": 110.857762
+    "predicted": 109.226625,
+    "pi_lower": 107.595538,
+    "pi_upper": 110.857713
   }
 }

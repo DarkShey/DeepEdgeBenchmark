@@ -4,9 +4,9 @@
   "MAPE": 0.52,
   "directional_accuracy": 33.33,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 4.593024,
+  "pi_width_min": 4.593025,
   "pi_width_mean": 5.985822,
-  "pi_width_max": 7.568721,
+  "pi_width_max": 7.568722,
   "n_val": 10,
   "horizon": "D7",
   "asset": "ZN=F",
@@ -16,6 +16,6 @@
     "last_price": 109.0,
     "predicted": 109.44783,
     "pi_lower": 105.673846,
-    "pi_upper": 113.221814
+    "pi_upper": 113.221815
   }
 }

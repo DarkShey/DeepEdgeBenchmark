@@ -1,21 +1,34 @@
 {
-  "RMSE": 75.3335,
-  "MAE": 53.0085,
+  "RMSE": 75.3336,
+  "MAE": 53.0086,
   "MAPE": 2.56,
   "directional_accuracy": 48.78,
   "pi_coverage_95": 94.55,
-  "pi_width_min": 195.070905,
-  "pi_width_mean": 288.167571,
-  "pi_width_max": 462.682592,
+  "pi_width_min": 195.071103,
+  "pi_width_mean": 288.167874,
+  "pi_width_max": 462.682424,
   "n_val": 165,
   "horizon": "D1",
   "asset": "ETH-USD",
   "model": "ARIMA-GARCH",
+  "theil_u": 1.0228,
+  "MASE": 1.037,
+  "change_corr": -0.0709,
+  "dir_acc_change": 46.06,
+  "dir_acc_ci95": [
+    38.63,
+    53.67
+  ],
+  "dir_acc_p_vs_coin": 0.3502,
+  "dm_stat": 1.787,
+  "dm_p": 0.0757,
+  "dm_lag": 5,
+  "skill_vs_naive": "no better than naive",
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 1742.677612,
-    "predicted": 1742.837388,
-    "pi_lower": 1642.149937,
-    "pi_upper": 1849.69843
+    "predicted": 1742.837389,
+    "pi_lower": 1642.149951,
+    "pi_upper": 1849.698416
   }
 }

@@ -4,18 +4,31 @@
   "MAPE": 1.44,
   "directional_accuracy": 33.33,
   "pi_coverage_95": 100.0,
-  "pi_width_min": 6.235474,
-  "pi_width_mean": 6.403982,
-  "pi_width_max": 6.580133,
+  "pi_width_min": 6.235467,
+  "pi_width_mean": 6.403977,
+  "pi_width_max": 6.580126,
   "n_val": 10,
   "horizon": "D7",
   "asset": "TLT",
   "model": "SARIMA",
+  "theil_u": 0.9963,
+  "MASE": 1.0006,
+  "change_corr": 0.0634,
+  "dir_acc_change": 60.0,
+  "dir_acc_ci95": [
+    31.27,
+    83.18
+  ],
+  "dir_acc_p_vs_coin": 0.7539,
+  "dm_stat": -0.149,
+  "dm_p": 0.8846,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
   "forecast": {
     "last_date": "2026-07-08",
     "last_price": 84.360001,
-    "predicted": 84.462236,
-    "pi_lower": 81.341206,
-    "pi_upper": 87.583265
+    "predicted": 84.462214,
+    "pi_lower": 81.341167,
+    "pi_upper": 87.583261
   }
 }
