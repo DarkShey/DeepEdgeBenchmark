@@ -86,6 +86,7 @@ def collect_run_data(run_root: Path) -> dict:
 
         records.append({
             "model": model, "asset": asset, "asset_class": metadata.get("asset_class", ""),
+            "rmse_vs_naive": None,
             "horizon": horizon,
             "RMSE": metrics.get("RMSE"), "MAE": metrics.get("MAE"), "MAPE": metrics.get("MAPE"),
             "directional_accuracy": metrics.get("directional_accuracy"),
@@ -139,6 +140,25 @@ def collect_run_data(run_root: Path) -> dict:
                     "window_end": metadata.get("window_end"),
                 }
                 prices[run_date] = asset_bucket
+
+    context_map = {}
+    for record in records:
+        context_key = (record["asset"], record["horizon"], record["run_date"])
+        context_map.setdefault(context_key, {})[record["model"]] = record
+
+    for (asset, horizon, run_date), models in context_map.items():
+        naive_rmse = None
+        naive_record = models.get("Naive")
+        if naive_record is not None:
+            naive_rmse = _num(naive_record.get("RMSE"))
+        if naive_rmse is None or naive_rmse == 0:
+            continue
+        for model_name, record in models.items():
+            if model_name == "Naive":
+                record["rmse_vs_naive"] = None
+                continue
+            model_rmse = _num(record.get("RMSE"))
+            record["rmse_vs_naive"] = None if model_rmse is None else model_rmse / naive_rmse
 
     run_dates = sorted({r["run_date"] for r in records})
     return {"records": records, "predictions": predictions, "prices": prices, "run_dates": run_dates}
@@ -760,6 +780,7 @@ const BREAKDOWN_COLS = [
   { key: 'model', label: 'Modèle' },
   { key: 'horizon', label: 'Horizon' },
   { key: 'RMSE', label: 'RMSE', digits: 4, def: 'rmse' },
+  { key: 'rmse_vs_naive', label: 'RMSE / RMSE naïf', digits: 3, render: v => v == null ? '—' : `${fmt(v, 3)}×` },
   { key: 'MAE', label: 'MAE', digits: 4, def: 'mae' },
   { key: 'MAPE', label: 'MAPE (%)', digits: 2, def: 'mape' },
   { key: 'directional_accuracy', label: 'Exact. dir. (%)', digits: 2, def: 'diracc' },
@@ -817,6 +838,7 @@ function renderAssetKpis(ticker) {
         const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
         rowsHtml = [
           [`RMSE ${infoDot('rmse')}`, fmt(rec.RMSE, 4)],
+          [`RMSE / RMSE naïf`, rec.rmse_vs_naive != null ? `${fmt(rec.rmse_vs_naive, 3)}×` : '—'],
           [`MAE ${infoDot('mae')}`, fmt(rec.MAE, 4)],
           [`MAPE ${infoDot('mape')}`, fmt(rec.MAPE, 2) + ' %'],
           [`Exact. directionnelle ${infoDot('diracc')}`, fmt(rec.directional_accuracy, 1) + ' %'],
