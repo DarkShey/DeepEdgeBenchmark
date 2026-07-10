@@ -1,0 +1,21 @@
+{
+  "RMSE": 1.1839,
+  "MAE": 1.0378,
+  "MAPE": 1.21,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 6.23753,
+  "pi_width_mean": 6.403085,
+  "pi_width_max": 6.575653,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "TLT",
+  "model": "SARIMA",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 84.489998,
+    "predicted": 84.538499,
+    "pi_lower": 81.419942,
+    "pi_upper": 87.657056
+  }
+}

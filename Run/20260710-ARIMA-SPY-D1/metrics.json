@@ -1,0 +1,21 @@
+{
+  "RMSE": 6.3332,
+  "MAE": 4.9842,
+  "MAPE": 0.71,
+  "directional_accuracy": 43.75,
+  "pi_coverage_95": 92.04,
+  "pi_width_min": 20.22923,
+  "pi_width_mean": 24.229587,
+  "pi_width_max": 30.945789,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "ARIMA-GARCH",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 751.710022,
+    "predicted": 751.484837,
+    "pi_lower": 739.252415,
+    "pi_upper": 763.919669
+  }
+}

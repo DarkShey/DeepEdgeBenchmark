@@ -1,0 +1,21 @@
+{
+  "RMSE": 97.2649,
+  "MAE": 81.0778,
+  "MAPE": 3.83,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 860.48026,
+  "pi_width_mean": 879.844119,
+  "pi_width_max": 926.063896,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "SARIMA",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 1744.484619,
+    "predicted": 1744.923419,
+    "pi_lower": 1317.27696,
+    "pi_upper": 2172.569877
+  }
+}

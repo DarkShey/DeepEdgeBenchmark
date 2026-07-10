@@ -1,0 +1,21 @@
+{
+  "RMSE": 1.077,
+  "MAE": 0.7654,
+  "MAPE": 0.69,
+  "directional_accuracy": 55.56,
+  "pi_coverage_95": 60.0,
+  "pi_width_min": 2.085201,
+  "pi_width_mean": 2.209457,
+  "pi_width_max": 2.379502,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ZN=F",
+  "model": "Prophet",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 109.265625,
+    "predicted": 109.214463,
+    "pi_lower": 108.103155,
+    "pi_upper": 110.305521
+  }
+}

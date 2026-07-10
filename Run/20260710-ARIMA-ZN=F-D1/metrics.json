@@ -1,0 +1,21 @@
+{
+  "RMSE": 0.316,
+  "MAE": 0.245,
+  "MAPE": 0.22,
+  "directional_accuracy": 38.05,
+  "pi_coverage_95": 90.35,
+  "pi_width_min": 0.927184,
+  "pi_width_mean": 1.134796,
+  "pi_width_max": 1.307465,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "ARIMA-GARCH",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 109.265625,
+    "predicted": 109.255735,
+    "pi_lower": 108.639234,
+    "pi_upper": 109.875735
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "RMSE": 6.2978,
+  "MAE": 4.8914,
+  "MAPE": 0.7,
+  "directional_accuracy": 46.43,
+  "pi_coverage_95": 89.38,
+  "pi_width_min": 20.452174,
+  "pi_width_mean": 20.764081,
+  "pi_width_max": 21.197561,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "SARIMA",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 751.710022,
+    "predicted": 751.003778,
+    "pi_lower": 740.424815,
+    "pi_upper": 761.58274
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "RMSE": 96.0549,
+  "MAE": 79.2561,
+  "MAPE": 3.74,
+  "directional_accuracy": 66.67,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 532.69066,
+  "pi_width_mean": 656.738928,
+  "pi_width_max": 972.257891,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "ARIMA-GARCH",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 1744.484619,
+    "predicted": 1743.450382,
+    "pi_lower": 1517.230379,
+    "pi_upper": 2003.399929
+  }
+}

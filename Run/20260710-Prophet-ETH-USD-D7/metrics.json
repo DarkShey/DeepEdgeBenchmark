@@ -1,0 +1,21 @@
+{
+  "RMSE": 401.0079,
+  "MAE": 322.5494,
+  "MAPE": 15.66,
+  "directional_accuracy": 66.67,
+  "pi_coverage_95": 70.0,
+  "pi_width_min": 927.388428,
+  "pi_width_mean": 1111.152168,
+  "pi_width_max": 1296.778818,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "Prophet",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 1744.484619,
+    "predicted": 1711.685632,
+    "pi_lower": 1140.132663,
+    "pi_upper": 2264.178691
+  }
+}

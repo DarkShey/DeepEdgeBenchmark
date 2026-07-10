@@ -1,0 +1,21 @@
+{
+  "RMSE": 1862.4388,
+  "MAE": 1310.0996,
+  "MAPE": 1.87,
+  "directional_accuracy": 52.44,
+  "pi_coverage_95": 94.55,
+  "pi_width_min": 4570.462731,
+  "pi_width_mean": 6873.06482,
+  "pi_width_max": 9370.687313,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "ARIMA-GARCH",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 63193.148438,
+    "predicted": 63160.713881,
+    "pi_lower": 60725.89194,
+    "pi_upper": 65693.160703
+  }
+}

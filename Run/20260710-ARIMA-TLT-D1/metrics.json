@@ -1,0 +1,21 @@
+{
+  "RMSE": 0.5268,
+  "MAE": 0.4173,
+  "MAPE": 0.49,
+  "directional_accuracy": 42.86,
+  "pi_coverage_95": 93.81,
+  "pi_width_min": 1.881709,
+  "pi_width_mean": 2.118706,
+  "pi_width_max": 2.443075,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "ARIMA-GARCH",
+  "forecast": {
+    "last_date": "2026-07-09",
+    "last_price": 84.489998,
+    "predicted": 84.451973,
+    "pi_lower": 83.420569,
+    "pi_upper": 85.49613
+  }
+}
