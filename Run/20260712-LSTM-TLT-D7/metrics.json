@@ -1,0 +1,21 @@
+{
+  "RMSE": 1.2895,
+  "MAE": 1.0681,
+  "MAPE": 1.25,
+  "directional_accuracy": 44.44,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 8.866536,
+  "pi_width_mean": 10.811634,
+  "pi_width_max": 14.366438,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "TLT",
+  "model": "LSTM",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 84.470001,
+    "predicted": 84.054298,
+    "pi_lower": 79.749595,
+    "pi_upper": 88.359001
+  }
+}

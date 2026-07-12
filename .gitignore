@@ -7,3 +7,5 @@ __pycache__/
 !validation/tracking.db
 tracking_demo_export.csv
 tracking_export.csv
+.DS_Store
+**/.DS_Store

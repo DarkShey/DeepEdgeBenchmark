@@ -1,0 +1,34 @@
+{
+  "RMSE": 2.0112,
+  "MAE": 1.801,
+  "MAPE": 2.1,
+  "directional_accuracy": 50.89,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 4.582394,
+  "pi_width_mean": 19.875427,
+  "pi_width_max": 46.134326,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "Prophet",
+  "theil_u": 3.8748,
+  "MASE": 4.4738,
+  "change_corr": 0.1357,
+  "dir_acc_change": 50.44,
+  "dir_acc_ci95": [
+    41.36,
+    59.49
+  ],
+  "dir_acc_p_vs_coin": 1.0,
+  "dm_stat": 6.516,
+  "dm_p": 0.0,
+  "dm_lag": 4,
+  "skill_vs_naive": "worse than naive",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 84.470001,
+    "predicted": 84.798861,
+    "pi_lower": 82.405078,
+    "pi_upper": 87.112149
+  }
+}

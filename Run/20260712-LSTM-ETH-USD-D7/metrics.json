@@ -1,0 +1,21 @@
+{
+  "RMSE": 259.9293,
+  "MAE": 160.7067,
+  "MAPE": 7.79,
+  "directional_accuracy": 100.0,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 1116.419205,
+  "pi_width_mean": 1231.097621,
+  "pi_width_max": 1927.834186,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "ETH-USD",
+  "model": "LSTM",
+  "forecast": {
+    "last_date": "2026-07-11",
+    "last_price": 1788.099609,
+    "predicted": 1815.831787,
+    "pi_lower": 1249.421535,
+    "pi_upper": 2382.242039
+  }
+}

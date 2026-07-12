@@ -1,0 +1,21 @@
+{
+  "RMSE": 14.5383,
+  "MAE": 10.6303,
+  "MAPE": 1.53,
+  "directional_accuracy": 88.89,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 81.931251,
+  "pi_width_mean": 86.355966,
+  "pi_width_max": 95.965573,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "SPY",
+  "model": "LSTM",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 754.950012,
+    "predicted": 741.832703,
+    "pi_lower": 700.361427,
+    "pi_upper": 783.303978
+  }
+}
