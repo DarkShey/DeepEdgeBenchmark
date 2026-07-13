@@ -413,3 +413,353 @@ def test_kpi_report_allows_regime_groupby_on_live_source(tmp_path):
     # ne doit pas lever, même si la table est vide
     report = st.kpi_report(db_path=db_path, source="live", group_by=("asset", "regime"))
     assert report == []
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Sideways (sideways_d1) — BRIEF_sideways_d1.md §9. Test de justesse pur : roi et
+# direction_ok sont TOUJOURS None. Exemple mental repris du §4 du brief :
+# ref=100, pi_low=96, pi_high=104 (W=8), predicted=100.3, k=0.10 -> eps=0.8, m=2, h=4.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SW_REF, SW_PI_LOW, SW_PI_HIGH = 100.0, 96.0, 104.0   # W=8
+
+
+# ── test_sideways_signal_flat_vs_directional ─────────────────────────────────
+
+def test_sideways_signal_flat_vs_directional():
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=100.5)
+    assert signal is True   # |100.3-100|=0.3 <= eps=0.8
+
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=105.0, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=100.5)
+    assert signal is False  # |105-100|=5 > eps=0.8 : mouvement directionnel, pas sideways
+    assert branch is None
+    assert counter == 0
+
+
+# ── test_sideways_signal_requires_ref_in_band ────────────────────────────────
+
+def test_sideways_signal_requires_ref_in_band():
+    # |predicted-ref| minuscule mais ref hors bande -> jamais Sideways (§5.2)
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=90.0, predicted=90.05, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=90.1)
+    assert signal is False
+
+
+# ── test_sideways_branches_exhaustives ───────────────────────────────────────
+
+@pytest.mark.parametrize("realized,expected_branch", [
+    (100.5, 1),   # quasi immobile : |100.5-100|=0.5 <= m=2
+    (103.0, 2),   # dans la bande, hors coeur
+    (106.0, 3),   # hors bande, dist=106-104=2 <= h=4
+    (111.0, 4),   # hors bande, dist=111-104=7 > h=4
+])
+def test_sideways_branches_exhaustives(realized, expected_branch):
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=realized)
+    assert signal is True
+    assert branch == expected_branch
+    # une seule zone vraie (§3 exhaustivité)
+    in_band_check = SW_PI_LOW <= realized <= SW_PI_HIGH
+    core_check = in_band_check and abs(realized - SW_REF) <= 2.0
+    small_breakout = (not in_band_check) and min(abs(SW_PI_LOW - realized), abs(realized - SW_PI_HIGH)) <= 4.0
+    big_breakout = (not in_band_check) and not small_breakout
+    assert sum([core_check, in_band_check and not core_check, small_breakout, big_breakout]) == 1
+
+
+# ── test_sideways_frontieres ──────────────────────────────────────────────────
+
+def test_sideways_frontieres_pi_high_and_pi_low_are_in_band_inclusive():
+    # realized == pi_high (104) : dans la bande (inclusif), hors coeur (dist=4 > m=2) -> branche 2
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=104.0)
+    assert in_band == 1
+    assert branch == 2
+
+    # realized == pi_low (96) : idem, symétrique
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=96.0)
+    assert in_band == 1
+    assert branch == 2
+
+
+def test_sideways_frontieres_m_boundary_inclusive_in_branch_1():
+    # realized == ref + m (100+2=102) : |102-100|=2 <= m=2 -> branche 1 inclusif
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=102.0)
+    assert branch == 1
+
+
+def test_sideways_frontieres_h_boundary_inclusive_in_branch_3():
+    # realized == pi_high + h (104+4=108) : dist=4 <= h=4 -> branche 3 inclusif (pas 4)
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=108.0)
+    assert branch == 3
+
+    # juste au-delà -> branche 4
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=108.01)
+    assert branch == 4
+
+
+# ── test_sideways_counter_values ─────────────────────────────────────────────
+
+@pytest.mark.parametrize("realized,expected_counter", [
+    (100.5, 2), (103.0, 1), (106.0, -1), (111.0, -2),
+])
+def test_sideways_counter_values(realized, expected_counter):
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=realized)
+    assert counter == expected_counter
+
+
+# ── test_sideways_symmetry ────────────────────────────────────────────────────
+
+def test_sideways_symmetry_small_breakout_same_counter_both_directions():
+    # dist=4 des deux côtés (h=4) -> même branche/counter, haussier ou baissier
+    _, branch_up, counter_up, *_ = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=108.0)
+    _, branch_down, counter_down, *_ = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=92.0)
+    assert (branch_up, counter_up) == (branch_down, counter_down) == (3, -1)
+
+
+def test_sideways_symmetry_big_breakout_same_counter_both_directions():
+    # dist=7 des deux côtés -> même branche/counter
+    _, branch_up, counter_up, *_ = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=111.0)
+    _, branch_down, counter_down, *_ = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=89.0)
+    assert (branch_up, counter_up) == (branch_down, counter_down) == (4, -2)
+
+
+# ── test_sideways_roi_is_none ─────────────────────────────────────────────────
+
+@pytest.mark.parametrize("realized", [100.5, 103.0, 106.0, 111.0, None])
+def test_sideways_roi_is_none(realized):
+    result = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=realized)
+    roi = result[3]
+    assert roi is None
+
+
+# ── test_sideways_direction_ok_is_none (niveau DB : direction_ok n'existe même pas
+#    dans le retour de sideways_d1, seul le stockage sim_trades peut le vérifier) ──
+
+def test_sideways_direction_ok_is_none_in_sim_trades(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual": [100.0, 100.5], "predicted": [999.0, 100.3],
+        "pi_lower": [999.0, 96.0], "pi_upper": [999.0, 104.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    n = st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
+    assert n == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trade = conn.execute("SELECT * FROM sim_trades WHERE rule_version='sideways_d1'").fetchone()
+    conn.close()
+    assert trade["direction_ok"] is None
+    assert trade["roi"] is None
+    assert trade["in_band"] == 1
+    assert trade["branch"] == 1
+    assert trade["counter"] == 2
+
+
+# ── test_sideways_no_lookahead ────────────────────────────────────────────────
+
+def test_sideways_no_lookahead_reference_price_is_actual_t_minus_1(tmp_path):
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02", "2026-02-03"]),
+        "actual":    [100.0, 100.5, 999.0],   # actual[t=2] volontairement absurde
+        "predicted": [999.0, 100.3, 100.2],
+        "pi_lower":  [999.0,  96.0,  96.0],
+        "pi_upper":  [999.0, 104.0, 104.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path, rows=rows)
+    log_rows, n_dropped = st.build_daily_oos_log_rows(run_dir)
+
+    assert n_dropped == 0
+    row_t1 = log_rows[0]
+    assert row_t1["reference_price"] == pytest.approx(100.0)   # actual[t-1=0], pas actual[t=1]
+    assert row_t1["realized_price"] == pytest.approx(100.5)
+
+    # si le code (buggé) utilisait actual[t] comme référence, on lirait 100.5 pour t=2, pas 100.5 (t-1=1)
+    row_t2 = log_rows[1]
+    assert row_t2["reference_price"] == pytest.approx(100.5)   # actual[t-1=1]
+    assert row_t2["reference_price"] != pytest.approx(999.0)
+
+
+# ── test_sideways_live_open ───────────────────────────────────────────────────
+
+def test_sideways_live_open_when_realized_is_none():
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=SW_REF, predicted=100.3, pi_low=SW_PI_LOW, pi_high=SW_PI_HIGH, realized=None)
+    assert signal is True
+    assert branch is None
+    assert counter is None
+    assert roi is None
+    assert in_band is None
+
+
+def test_sideways_live_open_trade_stored_with_open_status(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    td.save_prediction(make_prediction_record(
+        target_date="2099-01-01", last_close=100.0, y_pred=100.3, y_lower=96.0, y_upper=104.0,
+    ), db_path=db_path)
+
+    st.ingest_live_daily_oos_log(db_path=db_path)
+    n_new = st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="live")
+    assert n_new == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trade = conn.execute("SELECT * FROM sim_trades WHERE rule_version='sideways_d1'").fetchone()
+    conn.close()
+    assert trade["status"] == "open"
+    assert trade["realized_price"] is None
+    assert trade["branch"] is None
+    assert trade["counter"] is None
+    assert trade["roi"] is None
+    assert trade["in_band"] is None
+
+    report = st.kpi_report(db_path=db_path, source="live", rule_version="sideways_d1", group_by=("asset",))
+    assert report[0]["n_signaux"] == 0   # non résolu -> hors KPIs (§5.4)
+
+
+# ── test_sideways_degenerate_pi ───────────────────────────────────────────────
+
+def test_sideways_degenerate_pi_when_w_is_zero():
+    signal, branch, counter, roi, in_band, degenerate = st.sideways_d1(
+        ref=100.0, predicted=100.0, pi_low=100.0, pi_high=100.0, realized=100.0)
+    assert degenerate == 1
+
+
+# ── test_sideways_k_sensitivity ───────────────────────────────────────────────
+
+def test_sideways_k_sensitivity_is_monotonic_in_number_of_signals(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    # écarts |predicted-ref| croissants relatifs à W=8 : 0.3 (6.25% de piste), 1.0, 1.5, 3.0
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05"]),
+        "actual":    [100.0, 100.5, 101.0, 100.8, 100.2],
+        "predicted": [999.0, 100.3, 102.0, 102.3, 103.8],
+        "pi_lower":  [999.0,  96.0,  97.0,  96.8,  96.2],
+        "pi_upper":  [999.0, 104.0, 105.0, 104.8, 104.2],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    st.insert_daily_oos_log(log_rows, db_path=db_path)
+
+    report = st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1",
+                           group_by=("asset",), k_values=(0.05, 0.10, 0.15, 0.20))
+    sensitivity = report[0]["k_sensitivity"]
+    assert [s["k"] for s in sensitivity] == [0.05, 0.10, 0.15, 0.20]
+    n_signals = [s["n_signaux"] for s in sensitivity]
+    assert n_signals == sorted(n_signals)   # monotone non-décroissant
+    assert n_signals[0] < n_signals[-1]     # variation réelle sur ce jeu de données
+
+
+def test_sideways_k_values_rejected_for_other_rule_version(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    with pytest.raises(ValueError):
+        st.kpi_report(db_path=db_path, source="oos", rule_version="bull_calm_d1",
+                      group_by=("asset",), k_values=(0.10,))
+
+
+# ── kpi_report variante justesse (pas de ROI) ────────────────────────────────
+
+def test_sideways_kpi_report_has_no_roi_fields(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual": [100.0, 100.5], "predicted": [999.0, 100.3],
+        "pi_lower": [999.0, 96.0], "pi_upper": [999.0, 104.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
+
+    report = st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1", group_by=("asset",))
+    entry = report[0]
+    assert "roi_sum" not in entry
+    assert "roi_mean" not in entry
+    assert entry["n_signaux"] == 1
+    assert entry["taux_justesse"] == 1.0     # counter=+2 >= 1
+    assert entry["taux_immobile"] == 1.0     # counter==+2
+    assert entry["taux_breakout"] == 0.0
+    assert entry["taux_breakout_haussier"] == 0.0
+    assert entry["taux_breakout_baissier"] == 0.0
+    assert entry["in_band_coverage"] == 1.0
+
+
+def test_sideways_kpi_report_breakout_decomposed_haussier_baissier(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02", "2026-02-03"]),
+        "actual":    [100.0, 111.0, 89.0],   # t1 : breakout haussier fort ; t2 : ref=111 (hors bande, pas sideways)
+        "predicted": [999.0, 100.3, 100.3],
+        "pi_lower":  [999.0,  96.0,  96.0],
+        "pi_upper":  [999.0, 104.0, 104.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trades = conn.execute("SELECT * FROM sim_trades WHERE rule_version='sideways_d1'").fetchall()
+    conn.close()
+    # seul t=1 (ref=100, dans la bande) est un signal sideways ; t=2 a ref=111 hors bande -> pas de trade
+    assert len(trades) == 1
+    assert trades[0]["branch"] == 4   # realized=111, dist=7 > h=4
+    assert trades[0]["counter"] == -2
+
+    report = st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1", group_by=("asset",))
+    entry = report[0]
+    assert entry["taux_breakout"] == 1.0
+    assert entry["taux_breakout_haussier"] == 1.0
+    assert entry["taux_breakout_baissier"] == 0.0
+
+
+# ── k_values ne doit rien écrire (lecture seule) ─────────────────────────────
+
+def test_sideways_k_sweep_does_not_write_sim_trades(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02", "2026-02-03"]),
+        "actual":    [100.0, 100.5, 101.0],
+        "predicted": [999.0, 100.3, 102.0],
+        "pi_lower":  [999.0,  96.0,  97.0],
+        "pi_upper":  [999.0, 104.0, 105.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    st.insert_daily_oos_log(log_rows, db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    n_before = conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0]
+    conn.close()
+    assert n_before == 0
+
+    st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1",
+                  group_by=("asset",), k_values=(0.05, 0.10, 0.15, 0.20))
+
+    conn = sqlite3.connect(db_path)
+    n_after = conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0]
+    conn.close()
+    assert n_after == 0   # le balayage k_values ne persiste rien

@@ -94,6 +94,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 branch            INTEGER,
                 counter           INTEGER,
                 roi               REAL,
+                in_band           INTEGER,
                 degenerate_pi     INTEGER NOT NULL,
                 status            TEXT NOT NULL,
                 created_at        TEXT NOT NULL,
@@ -101,6 +102,13 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 UNIQUE (rule_version, source, run_id, model, asset, horizon, d_date)
             )
         """)
+        # Migration légère (BRIEF_sideways_d1.md §10) : une sim_trades créée avant
+        # l'ajout de in_band (Bull-Calm seul) n'a pas la colonne -- l'ajouter si absente,
+        # jamais de perte de données puisqu'aucune ligne existante n'a besoin de backfill
+        # (roi/in_band restent NULL par défaut pour les lignes déjà en base).
+        existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(sim_trades)")}
+        if "in_band" not in existing_cols:
+            conn.execute("ALTER TABLE sim_trades ADD COLUMN in_band INTEGER")
         conn.commit()
     finally:
         conn.close()
@@ -164,7 +172,66 @@ def pi95_conf(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     return True, branch, counter, roi, degenerate_pi
 
 
-RULES = {"bull_calm_d1": bull_calm_d1, "pi95_conf": pi95_conf}
+def sideways_d1(ref, predicted, pi_low, pi_high, realized, k=0.10, m_frac=0.25, h_frac=0.50):
+    """Test de justesse d'une journée plate (BRIEF_sideways_d1.md §7, pseudo-code exact).
+    Retourne (signal_sideways, branch, counter, roi, in_band, degenerate_pi). roi est
+    TOUJOURS None (pas de position directionnelle) ; realized peut être None (live)."""
+    W = pi_high - pi_low
+    degenerate_pi = int(W <= 0)
+
+    # --- Signal à D : P(D) dans la bande ET mouvement prédit négligeable ---
+    eps = k * W
+    signal = (pi_low <= ref <= pi_high) and (abs(predicted - ref) <= eps)
+    if not signal:
+        return False, None, 0, None, None, degenerate_pi
+
+    if realized is None:
+        return True, None, None, None, None, degenerate_pi   # jour plat, non résolu
+
+    # --- Résolution à D+1 : counter symétrique, pas de ROI ---
+    in_band = int(pi_low <= realized <= pi_high)
+    m, h = m_frac * W, h_frac * W
+    if in_band and abs(realized - ref) <= m:       # 1 : quasi immobile
+        branch, counter = 1, 2
+    elif in_band:                                    # 2 : resté dans la bande
+        branch, counter = 2, 1
+    else:
+        dist = (pi_low - realized) if realized < pi_low else (realized - pi_high)
+        if dist <= h:                                # 3 : petit breakout
+            branch, counter = 3, -1
+        else:                                          # 4 : gros breakout
+            branch, counter = 4, -2
+
+    return True, branch, counter, None, in_band, degenerate_pi
+
+
+# ── Dispatch rule_version -> fonction, normalisé pour generate_sim_trades/resolve_open_
+# sim_trades : (signal_valid, branch, counter, roi, direction_ok, in_band, degenerate_pi).
+# bull_calm_d1/pi95_conf ne sont PAS modifiées : ces adaptateurs les enveloppent sans
+# toucher à leur code ni à leur signature (appelables directement tels quels, cf. tests).
+
+def _adapt_bull_like(fn):
+    def call(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0, **_ignored):
+        signal_valid, branch, counter, roi, degenerate = fn(
+            ref, predicted, pi_low, pi_high, realized, fee_bps=fee_bps)
+        direction_ok = int(realized > ref) if (signal_valid and realized is not None) else None
+        return signal_valid, branch, counter, roi, direction_ok, None, degenerate
+    return call
+
+
+def _adapt_sideways(fn):
+    def call(ref, predicted, pi_low, pi_high, realized, k=0.10, m_frac=0.25, h_frac=0.50, **_ignored):
+        signal_valid, branch, counter, roi, in_band, degenerate = fn(
+            ref, predicted, pi_low, pi_high, realized, k=k, m_frac=m_frac, h_frac=h_frac)
+        return signal_valid, branch, counter, roi, None, in_band, degenerate
+    return call
+
+
+RULES = {
+    "bull_calm_d1": _adapt_bull_like(bull_calm_d1),
+    "pi95_conf": _adapt_bull_like(pi95_conf),
+    "sideways_d1": _adapt_sideways(sideways_d1),
+}
 
 
 # ── Construction daily_oos_log — source="oos" (Run/*-D1/predictions.parquet) ───
@@ -321,10 +388,13 @@ def refresh_live_realized_prices(db_path=DEFAULT_DB_PATH) -> int:
 # ── sim_trades : génération + résolution ────────────────────────────────────────
 
 def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
-                        fee_bps=0.0, source=None) -> int:
+                        fee_bps=0.0, source=None, **rule_kwargs) -> int:
     """Applique la règle à chaque ligne daily_oos_log n'ayant pas encore de sim_trade
     pour cette rule_version. Les flats (signal_valid=False) ne génèrent pas de ligne
-    (§7.2). Idempotent (UNIQUE + LEFT JOIN ... IS NULL). Retourne le nombre inséré."""
+    (§7.2). Idempotent (UNIQUE + LEFT JOIN ... IS NULL). `**rule_kwargs` passe les
+    paramètres spécifiques à la règle (k/m_frac/h_frac pour sideways_d1) ; les
+    adaptateurs de RULES ignorent ceux qui ne les concernent pas. Retourne le nombre
+    de lignes insérées."""
     init_db(db_path)
     rule_fn = RULES[rule_version]
     conn = _connect(db_path)
@@ -347,13 +417,12 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
         n_inserted = 0
         for row in rows:
             realized = row["realized_price"]
-            signal_valid, branch, counter, roi, degenerate = rule_fn(
+            signal_valid, branch, counter, roi, direction_ok, in_band, degenerate = rule_fn(
                 row["reference_price"], row["predicted"], row["pi_lower"], row["pi_upper"],
-                realized, fee_bps=fee_bps)
+                realized, fee_bps=fee_bps, **rule_kwargs)
             if not signal_valid:
                 continue
 
-            direction_ok = int(realized > row["reference_price"]) if realized is not None else None
             status = "closed" if branch is not None else "open"
             evaluated_at = now if status == "closed" else None
 
@@ -361,13 +430,13 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
                 INSERT OR IGNORE INTO sim_trades (
                     rule_version, run_id, model, asset, horizon, regime, source,
                     d_date, target_date, reference_price, predicted, pi_lower, pi_upper,
-                    realized_price, signal_valid, direction_ok, branch, counter, roi,
+                    realized_price, signal_valid, direction_ok, branch, counter, roi, in_band,
                     degenerate_pi, status, created_at, evaluated_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (rule_version, row["run_id"], row["model"], row["asset"], row["horizon"],
                   row["regime"], row["source"], row["d_date"], row["target_date"],
                   row["reference_price"], row["predicted"], row["pi_lower"], row["pi_upper"],
-                  realized, 1, direction_ok, branch, counter, roi, degenerate, status,
+                  realized, 1, direction_ok, branch, counter, roi, in_band, degenerate, status,
                   now, evaluated_at))
             n_inserted += cur.rowcount
         conn.commit()
@@ -377,7 +446,7 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
 
 
 def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
-                            fee_bps=0.0) -> int:
+                            fee_bps=0.0, **rule_kwargs) -> int:
     """Réévalue les sim_trades status='open' dont le realized_price est maintenant
     connu dans daily_oos_log (mis à jour au préalable par refresh_live_realized_prices).
     Idempotent : ne touche jamais un trade déjà 'closed'."""
@@ -402,15 +471,14 @@ def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1"
                 continue
 
             realized = log_row["realized_price"]
-            _, branch, counter, roi, _ = rule_fn(
+            _, branch, counter, roi, direction_ok, in_band, _ = rule_fn(
                 trade["reference_price"], trade["predicted"], trade["pi_lower"],
-                trade["pi_upper"], realized, fee_bps=fee_bps)
-            direction_ok = int(realized > trade["reference_price"])
+                trade["pi_upper"], realized, fee_bps=fee_bps, **rule_kwargs)
 
             conn.execute("""
                 UPDATE sim_trades SET realized_price=?, direction_ok=?, branch=?, counter=?,
-                    roi=?, status='closed', evaluated_at=? WHERE id=?
-            """, (realized, direction_ok, branch, counter, roi, now, trade["id"]))
+                    roi=?, in_band=?, status='closed', evaluated_at=? WHERE id=?
+            """, (realized, direction_ok, branch, counter, roi, in_band, now, trade["id"]))
             n_resolved += 1
         conn.commit()
         return n_resolved
@@ -418,28 +486,42 @@ def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1"
         conn.close()
 
 
-def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1", fee_bps=0.0) -> dict:
+def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1", fee_bps=0.0,
+                     **rule_kwargs) -> dict:
     """Point d'entrée appelé par evaluate_daily.py : ingère les nouvelles prédictions
     live horizon=1, rafraîchit les realized_price connus, génère les nouveaux sim_trades
     et résout les 'open' devenus résolubles. Idempotent de bout en bout."""
     init_db(db_path)
     n_log = ingest_live_daily_oos_log(db_path=db_path)
     refresh_live_realized_prices(db_path=db_path)
-    n_new = generate_sim_trades(db_path=db_path, rule_version=rule_version, fee_bps=fee_bps, source="live")
-    n_resolved = resolve_open_sim_trades(db_path=db_path, rule_version=rule_version, fee_bps=fee_bps)
+    n_new = generate_sim_trades(db_path=db_path, rule_version=rule_version, fee_bps=fee_bps,
+                                source="live", **rule_kwargs)
+    n_resolved = resolve_open_sim_trades(db_path=db_path, rule_version=rule_version,
+                                         fee_bps=fee_bps, **rule_kwargs)
     return {"new_log_rows": n_log, "new_trades": n_new, "resolved": n_resolved}
 
 
 # ── KPIs (§9) ────────────────────────────────────────────────────────────────────
 
 def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1",
-              group_by=("asset", "model"), include_degenerate=False) -> list:
-    """KPIs §9.1-9.7, par group_by (sous-ensemble de {asset, model, regime}) — appeler
-    avec group_by=() pour l'agrégat global (§11.5, les deux niveaux sont à reporter).
-    Ne mélange jamais source='oos' et 'live' (paramètre obligatoire, pas de défaut
-    combiné). group_by='regime' interdit pour source='oos' (regime y est toujours
-    'unknown', cf. docstring module). Les signaux non résolus (status='open') sont
-    exclus de tous les KPIs, y compris n_signaux (§6.5) ; comptés séparément en n_open."""
+              group_by=("asset", "model"), include_degenerate=False,
+              k_values=None, m_frac=0.25, h_frac=0.50) -> list:
+    """KPIs par group_by (sous-ensemble de {asset, model, regime}) — appeler avec
+    group_by=() pour l'agrégat global (§11.5 Bull-Calm, les deux niveaux sont à
+    reporter). Ne mélange jamais source='oos' et 'live' (paramètre obligatoire, pas de
+    défaut combiné). group_by='regime' interdit pour source='oos' (regime y est
+    toujours 'unknown', cf. docstring module). Les signaux non résolus (status='open')
+    sont exclus de tous les KPIs, y compris n_signaux ; comptés séparément en n_open.
+
+    Pour rule_version="bull_calm_d1"/"pi95_conf" (BRIEF_bull_calm_d1.md §9) : KPIs
+    orientés ROI. Pour rule_version="sideways_d1" (BRIEF_sideways_d1.md §8) : variante
+    "justesse" sans ROI (taux_justesse/immobile/breakout haussier-baissier, in_band).
+
+    k_values : balayage de sensibilité §8.7 du brief Sideways (uniquement valide avec
+    rule_version="sideways_d1"). Recalcule taux_signal/taux_justesse pour chaque k
+    DIRECTEMENT depuis daily_oos_log (le k des sim_trades déjà générés est figé à la
+    génération) -- purement en lecture, n'écrit jamais dans sim_trades. Résultat
+    attaché à chaque groupe sous la clé 'k_sensitivity'."""
     if source not in VALID_SOURCES:
         raise ValueError(f"source invalide : {source!r} (attendu parmi {VALID_SOURCES})")
     invalid = set(group_by) - _GROUP_BY_COLUMNS
@@ -450,6 +532,8 @@ def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1
             "group_by='regime' n'a pas de sens pour source='oos' (regime y est toujours "
             "'unknown' -- business_validation.json ne décrit que la prévision live la plus "
             "récente, pas les jours historiques du backtest). Utiliser source='live'.")
+    if k_values is not None and rule_version != "sideways_d1":
+        raise ValueError("k_values n'a de sens que pour rule_version='sideways_d1'")
 
     init_db(db_path)
     conn = _connect(db_path)
@@ -476,12 +560,45 @@ def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1
         else:
             g["n_open"] += 1
 
+    summarize_fn = _summarize_group_sideways if rule_version == "sideways_d1" else _summarize_group
+
     results = []
     for key, data in sorted(groups.items()):
         entry = dict(zip(group_by, key))
-        entry.update(_summarize_group(data["log"], data["signals"], data["n_open"]))
+        entry.update(summarize_fn(data["log"], data["signals"], data["n_open"]))
+        if k_values is not None:
+            entry["k_sensitivity"] = _sideways_k_sweep(
+                data["log"], k_values, m_frac, h_frac, include_degenerate)
         results.append(entry)
     return results
+
+
+def _sideways_k_sweep(log_rows, k_values, m_frac, h_frac, include_degenerate) -> list:
+    """Recalcule en mémoire, pour chaque k, le nombre de signaux et le taux de justesse
+    sideways_d1 sur les lignes daily_oos_log fournies -- jamais persisté (§8.7)."""
+    sweep = []
+    for k in k_values:
+        n_total = len(log_rows)
+        n_signaux = 0
+        n_juste = 0
+        for row in log_rows:
+            signal, branch, counter, roi, in_band, degenerate = sideways_d1(
+                row["reference_price"], row["predicted"], row["pi_lower"], row["pi_upper"],
+                row["realized_price"], k=k, m_frac=m_frac, h_frac=h_frac)
+            if not signal or (not include_degenerate and degenerate):
+                continue
+            if branch is None:   # signal ouvert (live non résolu) : compte hors justesse
+                continue
+            n_signaux += 1
+            if counter >= 1:
+                n_juste += 1
+        sweep.append({
+            "k": k,
+            "n_signaux": n_signaux,
+            "taux_signal": round(n_signaux / n_total, 4) if n_total else None,
+            "taux_justesse": round(n_juste / n_signaux, 4) if n_signaux else None,
+        })
+    return sweep
 
 
 def _summarize_group(log_rows, signals, n_open) -> dict:
@@ -541,6 +658,54 @@ def _summarize_group(log_rows, signals, n_open) -> dict:
         "roi_min": round(min(rois), 6),
         "sharpe": round(sharpe, 4) if sharpe is not None else None,
         "pi_coverage_95": round(sum(coverage) / n, 4),
+    })
+    return entry
+
+
+def _summarize_group_sideways(log_rows, signals, n_open) -> dict:
+    """Variante "justesse" (BRIEF_sideways_d1.md §8) : pas de ROI. Taux de breakout
+    décomposé haussier (realized > pi_upper) / baissier (realized < pi_lower)."""
+    n_total = len(log_rows)
+    n_signaux = len(signals)
+    entry = {
+        "n_total": n_total,
+        "n_signaux": n_signaux,
+        "n_open": n_open,
+        "n_flat": n_total - n_signaux - n_open,
+        "taux_signal": round(n_signaux / n_total, 4) if n_total else None,
+    }
+    if not signals:
+        entry.update({
+            "taux_justesse": None, "taux_immobile": None,
+            "taux_breakout": None, "taux_breakout_haussier": None, "taux_breakout_baissier": None,
+            "counter_sum": None, "counter_mean": None,
+            "branch_distribution": {1: 0, 2: 0, 3: 0, 4: 0},
+            "in_band_coverage": None,
+        })
+        return entry
+
+    n = len(signals)
+    counters = [t["counter"] for t in signals]
+    branch_dist = {1: 0, 2: 0, 3: 0, 4: 0}
+    for t in signals:
+        branch_dist[t["branch"]] += 1
+    in_band_vals = [t["in_band"] for t in signals]
+
+    n_breakout_haussier = sum(
+        1 for t in signals if t["branch"] in (3, 4) and t["realized_price"] > t["pi_upper"])
+    n_breakout_baissier = sum(
+        1 for t in signals if t["branch"] in (3, 4) and t["realized_price"] < t["pi_lower"])
+
+    entry.update({
+        "taux_justesse": round(sum(1 for c in counters if c >= 1) / n, 4),
+        "taux_immobile": round(sum(1 for c in counters if c == 2) / n, 4),
+        "taux_breakout": round(sum(1 for c in counters if c < 0) / n, 4),
+        "taux_breakout_haussier": round(n_breakout_haussier / n, 4),
+        "taux_breakout_baissier": round(n_breakout_baissier / n, 4),
+        "counter_sum": sum(counters),
+        "counter_mean": round(sum(counters) / n, 4),
+        "branch_distribution": branch_dist,
+        "in_band_coverage": round(sum(in_band_vals) / n, 4),
     })
     return entry
 
