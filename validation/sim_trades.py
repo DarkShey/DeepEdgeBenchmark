@@ -131,7 +131,10 @@ def tcb1_bull_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     """cf. §8 du brief. Retourne (signal_valid, branch, counter, roi, degenerate_pi)."""
     degenerate_pi = int(pi_high <= ref)
 
-    signal_valid = predicted > ref
+    # Garde-fou d'étanchéité (taxonomie TC1.1-TC1.5) : bull calm exclut les jours
+    # ref < pi_low, qui relèvent de TC1.2 (bull stress). Sans `ref >= pi_low`, TC1.1
+    # et TC1.2 compteraient deux fois les mêmes journées.
+    signal_valid = (predicted > ref) and (ref >= pi_low)
     if not signal_valid:
         return False, None, 0, 0.0, degenerate_pi
 

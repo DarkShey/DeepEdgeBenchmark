@@ -69,15 +69,46 @@ En **live** (`tracking.db`), l'alignement est déjà propre par construction : `
 ## 3. Signal — décision à D
 
 ```
-signal_valid  ⇔  predicted(D+1) > reference_price(D)
+signal_valid  ⇔  predicted(D+1) > reference_price(D)  ET  reference_price(D) ≥ PI_low(D+1)
 ```
 
 - `signal_valid = True`  → **valid buy signal** : on prend une position **longue** à D (au close de D, à `reference_price`).
 - `signal_valid = False` → **flat** : aucun trade, la ligne ne génère pas de `sim_trade` (mais reste comptée dans `N_total`).
 
-**Variante plus stricte `pi95_conf`** (documentée, *non* activée par défaut dans `tcb1_bull_d1`) :
-`pi_lower(D+1) > reference_price(D)`, c.-à-d. hausse quasi-certaine même au pire bas de l'intervalle.
-À conserver comme règle sœur pour comparaison (elle génère moins de signaux mais de meilleure qualité attendue).
+**Garde-fou d'étanchéité `reference_price ≥ PI_low` (taxonomie TC1.1–TC1.5).** Sans lui, `predicted > ref`
+inclut les journées où `ref < PI_low`, qui relèvent en fait de **TC1.2 (bull stress)** : TC1.1 et TC1.2
+compteraient alors deux fois les mêmes journées. Chaque jour doit tomber dans **une seule** case (cf. §3bis).
+Impact mesuré sur le backtest OOS : 6 896 → **6 613 signaux** (les 283 journées retirées = candidats bull stress).
+
+**Variante plus stricte `pi95_conf` = TC1.2 (bull stress).** Signal `pi_lower(D+1) > reference_price(D)`,
+c.-à-d. `P(D) < PI_low` : toute la bande prédite est au-dessus d'aujourd'hui, hausse quasi-certaine même
+au pire bas de l'intervalle. Déjà implémentée comme règle sœur dans `sim_trades.py` ; reste à la promouvoir
+en test case à part entière avec son propre reporting.
+
+---
+
+## 3bis. Taxonomie des test cases TC1.1–TC1.5 (position de P(D) vs bande prédite)
+
+Les cinq test cases partitionnent **une seule** grandeur : où se situe `P(D)` par rapport à
+`[PI_low, PI_high]` et à `PI_mid = predicted`. Plus `P(D)` est bas sous la bande, plus c'est haussier ;
+plus il est haut au-dessus, plus c'est baissier ; au centre, c'est plat. Partition étanche et exhaustive :
+
+| Test case | Condition sur P(D) (connue à D) | Stratégie | Statut |
+|---|---|---|---|
+| **TC1.2 Bull stress** | `P(D) < PI_low` | long forte conviction | règle `pi95_conf` codée, à promouvoir |
+| **TC1.1 Bull calm** | `PI_low ≤ P(D) < PI_mid` | long léger | ✅ implémenté (`tcb1_bull_d1`) |
+| **TC1.5 Sideways** | `P(D) ≈ PI_mid` (`|PI_mid − P(D)| < ε`) | range / justesse | à concevoir (cf. note ROI) |
+| **TC1.3 Bear calm** | `PI_mid < P(D) ≤ PI_high` | short léger | à faire (miroir de TC1.1) |
+| **TC1.4 Bear stress** | `P(D) > PI_high` | short forte conviction | à faire (miroir de TC1.2) |
+
+**Bear = miroir du bull** : même mécanique de counter, signes inversés (ROI = `(P(D) − realized)/P(D)`,
++2 si `realized < PI_low`, +1 si `realized < P(D)`, −1 si `P(D) ≤ realized ≤ PI_high`, −2 si `realized > PI_high`).
+
+**Sideways = cas non directionnel.** Sur actions/sous-jacents (pas d'options dans ce benchmark), une prédiction
+« pas de mouvement » n'a pas de P&L directionnel exploitable, et le mean-reversion intra-bande exigerait de
+l'OHLC intraday (indisponible, close quotidien seul). Décision de design ouverte : **justesse pure**
+(counter seulement, `realized` proche de `P(D)` / resté dans la bande, sans ROI) ou **ROI « coût d'opportunité
+évité »**. Reco : justesse pure en v1.
 
 ---
 
