@@ -417,6 +417,273 @@ def test_kpi_report_allows_regime_groupby_on_live_source(tmp_path):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Bear (bear_calm_d1 = TC1.3, bear_stress_d1 = TC1.4) — miroir exact des tests Bull
+# ci-dessus (BRIEF_bull_calm_d1.md §3bis) : position courte, profit quand le prix baisse,
+# ROI = (ref - exit_px)/ref, +2 si realized<PI_low, +1 si realized<ref, -1 si
+# ref<=realized<=PI_high, -2 si realized>PI_high.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── 1. test_bear_branches_exhaustives ────────────────────────────────────────
+
+@pytest.mark.parametrize("realized,expected_branch", [
+    (80.0, 1),    # realized < pi_low (90)
+    (95.0, 2),    # pi_low <= realized < ref
+    (100.0, 3),   # ref <= realized <= pi_high
+    (120.0, 4),   # realized > pi_high (110)
+])
+def test_bear_branches_exhaustives(realized, expected_branch):
+    ref, pi_low, pi_high = 100.0, 90.0, 110.0
+    branch, counter, exit_px = st._resolve_branches_bear(ref, pi_low, pi_high, realized)
+    assert branch == expected_branch
+    conditions = [
+        realized < pi_low,
+        pi_low <= realized < ref,
+        ref <= realized <= pi_high,
+        realized > pi_high,
+    ]
+    assert sum(conditions) == 1
+
+
+# ── 2. test_bear_frontieres ───────────────────────────────────────────────────
+
+def test_bear_frontieres_realized_equals_pi_low_is_branch_2_not_1():
+    branch, counter, exit_px = st._resolve_branches_bear(100.0, 90.0, 110.0, 90.0)
+    assert branch == 2
+    assert counter == 1
+    assert exit_px == 90.0
+
+
+def test_bear_frontieres_realized_equals_ref_is_branch_3():
+    branch, counter, exit_px = st._resolve_branches_bear(100.0, 90.0, 110.0, 100.0)
+    assert branch == 3
+    assert counter == -1
+
+
+def test_bear_frontieres_realized_equals_pi_high_is_branch_3_not_4():
+    branch, counter, exit_px = st._resolve_branches_bear(100.0, 90.0, 110.0, 110.0)
+    assert branch == 3
+    assert counter == -1
+
+
+# ── 3. test_bear_counter_values ───────────────────────────────────────────────
+
+@pytest.mark.parametrize("realized,expected_counter", [
+    (80.0, 2), (95.0, 1), (100.0, -1), (120.0, -2),
+])
+def test_bear_counter_values(realized, expected_counter):
+    _, counter, _ = st._resolve_branches_bear(100.0, 90.0, 110.0, realized)
+    assert counter == expected_counter
+
+
+# ── 4. test_bear_roi_formulas ─────────────────────────────────────────────────
+
+def test_bear_roi_formula_branch_1_capped_at_pi_low():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=70.0)
+    assert branch == 1
+    assert roi == pytest.approx((100.0 - 90.0) / 100.0)
+
+
+def test_bear_roi_formula_branch_2():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=96.0)
+    assert branch == 2
+    assert roi == pytest.approx((100.0 - 96.0) / 100.0)
+
+
+def test_bear_roi_formula_branch_3():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=105.0)
+    assert branch == 3
+    assert roi == pytest.approx((100.0 - 105.0) / 100.0)
+
+
+def test_bear_roi_formula_branch_4_uses_realized_close_not_pi_high_in_v1():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=120.0)
+    assert branch == 4
+    # décision v1 (miroir §8/§11.1) : exit_px = realized (daily close prudent), PAS pi_high
+    assert roi == pytest.approx((100.0 - 120.0) / 100.0)
+    assert roi != pytest.approx((100.0 - 110.0) / 100.0)
+
+
+def test_bear_roi_formula_applies_fee_bps():
+    _, _, _, roi_no_fee, _ = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=96.0, fee_bps=0.0)
+    _, _, _, roi_with_fee, _ = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=96.0, fee_bps=10.0)
+    assert roi_no_fee - roi_with_fee == pytest.approx(10.0 / 1e4)
+
+
+# ── 5. test_bear_signal_flat ──────────────────────────────────────────────────
+
+def test_bear_signal_flat_when_predicted_not_below_ref():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=100.0, pi_low=90.0, pi_high=110.0, realized=95.0)
+    assert signal_valid is False
+    assert branch is None
+    assert counter == 0
+    assert roi == 0.0
+
+
+def test_bear_signal_requires_ref_leq_pi_high():
+    # ref > pi_high -> relève de TC1.4 (bear_stress_d1), pas de TC1.3 (garde-fou d'étanchéité)
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=112.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=95.0)
+    assert signal_valid is False
+
+
+# ── 6. test_bear_degenerate_pi ────────────────────────────────────────────────
+
+def test_bear_degenerate_pi_flag_when_pi_low_geq_ref():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=99.0, pi_low=100.0, pi_high=110.0, realized=98.0)
+    assert degenerate == 1
+    assert signal_valid is True   # la règle s'exécute quand même (miroir §6.2)
+    assert branch is not None
+
+
+def test_bear_degenerate_pi_excluded_from_kpis_by_default(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual":    [100.0, 98.0],
+        "predicted": [999.0, 99.0],
+        "pi_lower":  [999.0, 100.0],   # pi_low(100) >= ref(100) -> dégénéré
+        "pi_upper":  [999.0, 110.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
+    st.generate_sim_trades(db_path=db_path, rule_version="bear_calm_d1", source="oos")
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trade = conn.execute("SELECT * FROM sim_trades WHERE rule_version='bear_calm_d1'").fetchone()
+    conn.close()
+    assert trade["degenerate_pi"] == 1
+
+    report = st.kpi_report(db_path=db_path, source="oos", rule_version="bear_calm_d1", group_by=("asset",))
+    assert report[0]["n_signaux"] == 0
+
+
+# ── 7. test_bear_live_open ────────────────────────────────────────────────────
+
+def test_bear_live_open_when_realized_is_none():
+    signal_valid, branch, counter, roi, degenerate = st.bear_calm_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=None)
+    assert signal_valid is True
+    assert branch is None
+    assert counter is None
+    assert roi is None
+
+
+def test_bear_live_open_trade_stored_with_open_status(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    td.save_prediction(make_prediction_record(
+        target_date="2099-01-01", last_close=100.0, y_pred=95.0, y_lower=90.0, y_upper=110.0,
+    ), db_path=db_path)
+
+    n_new = st.generate_sim_trades(db_path=db_path, rule_version="bear_calm_d1", source="live")
+    assert n_new == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trade = conn.execute("SELECT * FROM sim_trades WHERE rule_version='bear_calm_d1'").fetchone()
+    conn.close()
+    assert trade["status"] == "open"
+    assert trade["realized_price"] is None
+    assert trade["branch"] is None
+    assert trade["counter"] is None
+
+    report = st.kpi_report(db_path=db_path, source="live", rule_version="bear_calm_d1", group_by=("asset",))
+    assert report[0]["n_signaux"] == 0
+
+
+# ── 8. test_bear_idempotent_resolution ────────────────────────────────────────
+
+def test_bear_idempotent_resolution_no_duplicate_and_no_reprocess(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    td.save_prediction(make_prediction_record(
+        target_date="2026-06-02", last_close=100.0, y_pred=95.0,
+        y_lower=90.0, y_upper=110.0,
+    ), db_path=db_path)
+
+    result1 = st.sync_live_trades(db_path=db_path, rule_version="bear_calm_d1")
+    assert result1["new_trades"] == 1
+    assert result1["resolved"] == 0
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trade = conn.execute("SELECT * FROM sim_trades WHERE rule_version='bear_calm_d1'").fetchone()
+    conn.close()
+    assert trade["status"] == "open"
+
+    # le marché résout la prédiction : le prix baisse (thèse courte confirmée)
+    td.evaluate_pending(lambda asset, target_date: 96.0, db_path=db_path, today="2026-06-03")
+
+    result2 = st.sync_live_trades(db_path=db_path, rule_version="bear_calm_d1")
+    assert result2["new_trades"] == 0
+    assert result2["resolved"] == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    trades = conn.execute("SELECT * FROM sim_trades WHERE rule_version='bear_calm_d1'").fetchall()
+    conn.close()
+    assert len(trades) == 1
+    assert trades[0]["status"] == "closed"
+    assert trades[0]["branch"] == 2
+    assert trades[0]["roi"] == pytest.approx((100.0 - 96.0) / 100.0)
+
+    result3 = st.sync_live_trades(db_path=db_path, rule_version="bear_calm_d1")
+    assert result3["new_trades"] == 0
+    assert result3["resolved"] == 0
+
+
+# ── 9. bear_stress_d1 (TC1.4) — signal de conviction forte, résolution partagée ──
+
+def test_bear_stress_signal_requires_pi_high_below_ref():
+    # pi_high < ref -> toute la bande est sous ref, baisse quasi certaine
+    signal_valid, branch, counter, roi, degenerate = st.bear_stress_d1(
+        ref=112.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=95.0)
+    assert signal_valid is True
+
+    # pi_high >= ref -> pas de conviction forte (relève de bear_calm_d1 ou flat)
+    signal_valid, branch, counter, roi, degenerate = st.bear_stress_d1(
+        ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=95.0)
+    assert signal_valid is False
+
+
+def test_bear_stress_shares_resolution_branches_bear_helper():
+    # bear_calm_d1 et bear_stress_d1 sont mutuellement exclusives par construction (la
+    # même journée ne peut valider qu'une seule des deux, cf. garde-fous d'étanchéité) --
+    # ce test vérifie qu'elles délèguent bien à la MÊME fonction de résolution
+    # (_resolve_branches_bear), pas qu'elles donnent le même résultat sur un jour donné.
+    ref, pi_low, pi_high, realized = 112.0, 90.0, 110.0, 95.0
+    expected = st._resolve_branches_bear(ref, pi_low, pi_high, realized)
+
+    _, branch_stress, counter_stress, roi_stress, _ = st.bear_stress_d1(
+        ref=ref, predicted=95.0, pi_low=pi_low, pi_high=pi_high, realized=realized)
+    assert (branch_stress, counter_stress) == (expected[0], expected[1])
+    assert roi_stress == pytest.approx((ref - expected[2]) / ref)
+
+
+# ── 10. RULES dispatch registers the two new rule versions ──────────────────
+
+def test_bear_rules_registered_in_dispatch():
+    assert "bear_calm_d1" in st.RULES
+    assert "bear_stress_d1" in st.RULES
+    result = st.RULES["bear_calm_d1"](ref=100.0, predicted=95.0, pi_low=90.0, pi_high=110.0, realized=96.0)
+    signal_valid, branch, counter, roi, direction_ok, in_band, degenerate = result
+    assert signal_valid is True
+    assert direction_ok == 1   # realized(96) < ref(100) : thèse courte confirmée
+    assert in_band is None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Sideways (sideways_d1) — BRIEF_sideways_d1.md §9. Test de justesse pur : roi et
 # direction_ok sont TOUJOURS None. Exemple mental repris du §4 du brief :
 # ref=100, pi_low=96, pi_high=104 (W=8), predicted=100.3, k=0.10 -> eps=0.8, m=2, h=4.

@@ -214,6 +214,60 @@ def pi95_conf(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     return True, branch, counter, roi, degenerate_pi
 
 
+def _resolve_branches_bear(ref: float, pi_low: float, pi_high: float, realized: float):
+    """Miroir de `_resolve_branches` pour une position courte (short) : profit quand le
+    prix baisse. Branches §3bis de BRIEF_bull_calm_d1.md, évaluées dans l'ordre,
+    exhaustives et sans recouvrement. Retourne (branch, counter, exit_px)."""
+    if realized < pi_low:                        # 1
+        return 1, 2, pi_low
+    if realized < ref:                            # 2
+        return 2, 1, realized
+    if realized <= pi_high:                        # 3 (ref <= realized <= PI_high)
+        return 3, -1, realized
+    return 4, -2, realized                          # 4 (v1 : close réalisé, PAS pi_high)
+
+
+def bear_calm_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
+    """TC1.3 Bear-Calm — miroir de bull_calm_d1 (§3bis du brief) : position courte légère.
+    Retourne (signal_valid, branch, counter, roi, degenerate_pi)."""
+    # Miroir de bull_calm_d1 (degenerate_pi = pi_high<=ref, la borne "côté profit" pour un
+    # long) : pour un short, la borne "côté profit" est PI_low -- dégénéré si elle
+    # n'est même pas sous ref (incohérent avec une prévision de baisse).
+    degenerate_pi = int(pi_low >= ref)
+
+    # Garde-fou d'étanchéité (miroir de bull_calm_d1) : bear calm exclut les jours
+    # ref > pi_high, qui relèvent de TC1.4 (bear stress). Sans `ref <= pi_high`, TC1.3
+    # et TC1.4 compteraient deux fois les mêmes journées.
+    signal_valid = (predicted < ref) and (ref <= pi_high)
+    if not signal_valid:
+        return False, None, 0, 0.0, degenerate_pi
+
+    if realized is None:
+        return True, None, None, None, degenerate_pi
+
+    branch, counter, exit_px = _resolve_branches_bear(ref, pi_low, pi_high, realized)
+    roi = (ref - exit_px) / ref - fee_bps / 1e4
+    return True, branch, counter, roi, degenerate_pi
+
+
+def bear_stress_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
+    """TC1.4 Bear-Stress — miroir de pi95_conf (§3bis du brief) : signal plus strict
+    (baisse quasi certaine même au meilleur haut de l'IC) -- `pi_high < ref` au lieu de
+    `predicted < ref`. Résolution identique (mêmes branches miroir)."""
+    degenerate_pi = int(pi_low >= ref)
+
+    signal_valid = pi_high < ref
+    if not signal_valid:
+        return False, None, 0, 0.0, degenerate_pi
+
+    if realized is None:
+        return True, None, None, None, degenerate_pi
+
+    branch, counter, exit_px = _resolve_branches_bear(ref, pi_low, pi_high, realized)
+    roi = (ref - exit_px) / ref - fee_bps / 1e4
+    return True, branch, counter, roi, degenerate_pi
+
+
 def sideways_d1(ref, predicted, pi_low, pi_high, realized, k=0.10, m_frac=0.25, h_frac=0.50):
     """Test de justesse d'une journée plate (BRIEF_sideways_d1.md §7, pseudo-code exact).
     Retourne (signal_sideways, branch, counter, roi, in_band, degenerate_pi). roi est
@@ -261,6 +315,17 @@ def _adapt_bull_like(fn):
     return call
 
 
+def _adapt_bear_like(fn):
+    """Miroir de _adapt_bull_like : direction_ok = le prix a bien baissé sous ref
+    (thèse courte confirmée), pas au-dessus."""
+    def call(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0, **_ignored):
+        signal_valid, branch, counter, roi, degenerate = fn(
+            ref, predicted, pi_low, pi_high, realized, fee_bps=fee_bps)
+        direction_ok = int(realized < ref) if (signal_valid and realized is not None) else None
+        return signal_valid, branch, counter, roi, direction_ok, None, degenerate
+    return call
+
+
 def _adapt_sideways(fn):
     def call(ref, predicted, pi_low, pi_high, realized, k=0.10, m_frac=0.25, h_frac=0.50, **_ignored):
         signal_valid, branch, counter, roi, in_band, degenerate = fn(
@@ -270,9 +335,11 @@ def _adapt_sideways(fn):
 
 
 RULES = {
-    "bull_calm_d1": _adapt_bull_like(bull_calm_d1),
-    "pi95_conf": _adapt_bull_like(pi95_conf),
-    "sideways_d1": _adapt_sideways(sideways_d1),
+    "bull_calm_d1": _adapt_bull_like(bull_calm_d1),      # TC1.1 Bull-Calm
+    "pi95_conf": _adapt_bull_like(pi95_conf),             # TC1.2 Bull-Stress
+    "bear_calm_d1": _adapt_bear_like(bear_calm_d1),       # TC1.3 Bear-Calm
+    "bear_stress_d1": _adapt_bear_like(bear_stress_d1),   # TC1.4 Bear-Stress
+    "sideways_d1": _adapt_sideways(sideways_d1),          # TC1.5 Sideways
 }
 
 
@@ -754,6 +821,127 @@ def naive_always_long_report(db_path=DEFAULT_DB_PATH, source="oos", model="Naive
             "branch_distribution": branch_dist,
         })
         results.append(entry)
+    return results
+
+
+def naive_always_short_report(db_path=DEFAULT_DB_PATH, source="oos", model="Naive",
+                              group_by=("asset",)) -> list:
+    """Miroir de naive_always_long_report (KPI 8 côté Bear) : applique la résolution des
+    branches courtes (§3bis) à CHAQUE ligne du log Naive, sans filtre de signal, pour
+    mesurer la valeur ajoutée du filtre predicted<ref des autres modèles (est-on meilleur
+    qu'être short tous les jours ?). Jamais persisté dans sim_trades."""
+    invalid = set(group_by) - _GROUP_BY_COLUMNS
+    if invalid:
+        raise ValueError(f"group_by invalide : {invalid} (attendu parmi {_GROUP_BY_COLUMNS})")
+    if source == "oos" and "regime" in group_by:
+        raise ValueError("group_by='regime' n'a pas de sens pour source='oos'")
+
+    init_db(db_path)
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM all_predictions WHERE source=? AND model=? AND realized_price IS NOT NULL",
+            (source, model),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    groups = {}
+    for row in rows:
+        groups.setdefault(tuple(row[c] for c in group_by), []).append(row)
+
+    results = []
+    for key, group_rows in sorted(groups.items()):
+        entry = dict(zip(group_by, key))
+        rois = []
+        branch_dist = {1: 0, 2: 0, 3: 0, 4: 0}
+        for row in group_rows:
+            branch, _counter, exit_px = _resolve_branches_bear(
+                row["reference_price"], row["pi_lower"], row["pi_upper"], row["realized_price"])
+            rois.append((row["reference_price"] - exit_px) / row["reference_price"])
+            branch_dist[branch] += 1
+
+        n = len(rois)
+        compound = 1.0
+        for r in rois:
+            compound *= (1 + r)
+        compound -= 1.0
+
+        entry.update({
+            "n_days": n,
+            "roi_sum": round(sum(rois), 6) if n else None,
+            "roi_mean": round(sum(rois) / n, 6) if n else None,
+            "roi_compound": round(compound, 6) if n else None,
+            "branch_distribution": branch_dist,
+        })
+        results.append(entry)
+    return results
+
+
+RULE_TC_ID = {
+    "bull_calm_d1": "TC1.1", "pi95_conf": "TC1.2",
+    "bear_calm_d1": "TC1.3", "bear_stress_d1": "TC1.4", "sideways_d1": "TC1.5",
+}
+
+
+def daily_detail(db_path=DEFAULT_DB_PATH, asset=None, models=None) -> list:
+    """Vue jour par jour (une ligne = un jour de `all_predictions`, horizon=1) avec le(s)
+    test case(s) TC1.1-TC1.5 qui ont généré un signal ce jour-là et leur `counter`, pour
+    l'inspection détaillée (dashboard Run/, tableau "Test cases (D+1)"). `all_predictions`
+    filtre déjà horizon=1 (BRIEF_db_unification.md §2.4 -- seul horizon supporté par les 5
+    règles, l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin). Un jour
+    peut ne correspondre à aucune règle (`signals` vide -- flat pour les 5) ou, en
+    bordure, à plus d'une (léger recouvrement Bull-Calm/Sideways documenté dans
+    BRIEF_sideways_d1.md §0) : `signals` est donc une liste, jamais une valeur unique
+    supposée."""
+    init_db(db_path)
+    conn = _connect(db_path)
+    try:
+        query = "SELECT * FROM all_predictions"
+        params: list = []
+        clauses = []
+        if asset is not None:
+            clauses.append("asset = ?")
+            params.append(asset)
+        if models is not None:
+            clauses.append(f"model IN ({','.join('?' * len(models))})")
+            params += list(models)
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        log_rows = conn.execute(query, params).fetchall()
+
+        trades_by_key: dict = {}
+        for rule_version in RULES:
+            trade_query = "SELECT * FROM sim_trades WHERE rule_version = ? AND horizon = 1"
+            trade_params: list = [rule_version]
+            if asset is not None:
+                trade_query += " AND asset = ?"
+                trade_params.append(asset)
+            if models is not None:
+                trade_query += f" AND model IN ({','.join('?' * len(models))})"
+                trade_params += list(models)
+            for row in conn.execute(trade_query, trade_params).fetchall():
+                key = (row["source"], row["run_id"], row["model"], row["asset"], row["d_date"])
+                trades_by_key.setdefault(key, []).append(row)
+    finally:
+        conn.close()
+
+    results = []
+    for row in log_rows:
+        key = (row["source"], row["run_id"], row["model"], row["asset"], row["d_date"])
+        signals = [{
+            "tc_id": RULE_TC_ID[m["rule_version"]], "rule_version": m["rule_version"],
+            "branch": m["branch"], "counter": m["counter"], "roi": m["roi"], "status": m["status"],
+        } for m in trades_by_key.get(key, [])]
+        results.append({
+            "source": row["source"], "d_date": row["d_date"], "target_date": row["target_date"],
+            "model": row["model"], "asset": row["asset"],
+            "reference_price": row["reference_price"], "predicted": row["predicted"],
+            "pi_lower": row["pi_lower"], "pi_upper": row["pi_upper"],
+            "realized_price": row["realized_price"],
+            "signals": signals,
+        })
+    results.sort(key=lambda r: (r["d_date"], r["model"]), reverse=True)
     return results
 
 
