@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.2",
+  "tc_name": "bull_stress",
+  "model": "SARIMA",
+  "asset": "ETH-USD",
+  "transition_date": "2020-09-02",
+  "cutoff_date": "2020-09-01",
+  "regime_from": "bull",
+  "regime_to": "stress",
+  "last_close": 477.0519,
+  "horizons": {
+    "1": {
+      "target_date": "2020-09-02",
+      "y_pred": 474.193855,
+      "y_lower": 443.835751,
+      "y_upper": 504.55196,
+      "y_true": 440.0405,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 34.153355,
+      "abs_error_naif": 37.0114,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2020-09-08",
+      "y_pred": 482.469652,
+      "y_lower": 403.703314,
+      "y_upper": 561.23599,
+      "y_true": 337.6021,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 144.867552,
+      "abs_error_naif": 139.4498,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-ETH-USD-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 11174.599766,
+      "bic": 11198.737912
+    }
+  }
+}

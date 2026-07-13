@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "SARIMA",
+  "asset": "ETH-USD",
+  "transition_date": "2026-03-11",
+  "cutoff_date": "2026-03-10",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 2037.1205,
+  "horizons": {
+    "1": {
+      "target_date": "2026-03-11",
+      "y_pred": 2039.476359,
+      "y_lower": 1870.688754,
+      "y_upper": 2208.263963,
+      "y_true": 2051.5732,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 12.096841,
+      "abs_error_naif": 14.4527,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-03-17",
+      "y_pred": 2037.090144,
+      "y_lower": 1608.430363,
+      "y_upper": 2465.749925,
+      "y_true": 2318.0535,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 280.963356,
+      "abs_error_naif": 280.933,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-ETH-USD-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 11174.599766,
+      "bic": 11198.737912
+    }
+  }
+}

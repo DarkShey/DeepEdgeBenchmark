@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "SARIMA",
+  "asset": "ZN=F",
+  "transition_date": "2024-12-16",
+  "cutoff_date": "2024-12-13",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 109.8281,
+  "horizons": {
+    "1": {
+      "target_date": "2024-12-16",
+      "y_pred": 109.843655,
+      "y_lower": 108.974748,
+      "y_upper": 110.712562,
+      "y_true": 109.8125,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 0.031155,
+      "abs_error_naif": 0.0156,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2024-12-24",
+      "y_pred": 109.83888,
+      "y_lower": 107.6248,
+      "y_upper": 112.052959,
+      "y_true": 108.5625,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 1.27638,
+      "abs_error_naif": 1.2656,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-ZN=F-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 648.625491,
+      "bic": 670.877843
+    }
+  }
+}

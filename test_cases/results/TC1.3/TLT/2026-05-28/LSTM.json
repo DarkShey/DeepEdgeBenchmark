@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "LSTM",
+  "asset": "TLT",
+  "transition_date": "2026-05-28",
+  "cutoff_date": "2026-05-27",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 84.6532,
+  "horizons": {
+    "1": {
+      "target_date": "2026-05-28",
+      "y_pred": 83.792084,
+      "y_lower": 80.988637,
+      "y_upper": 86.59553,
+      "y_true": 85.0898,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 1.297716,
+      "abs_error_naif": 0.4366,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-06-05",
+      "y_pred": 84.070053,
+      "y_lower": 76.652831,
+      "y_upper": 91.487276,
+      "y_true": 84.747,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 0.676947,
+      "abs_error_naif": 0.0938,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-TLT-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

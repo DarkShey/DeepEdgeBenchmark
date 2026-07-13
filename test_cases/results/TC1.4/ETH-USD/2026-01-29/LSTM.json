@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "LSTM",
+  "asset": "ETH-USD",
+  "transition_date": "2026-01-29",
+  "cutoff_date": "2026-01-28",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 3006.6074,
+  "horizons": {
+    "1": {
+      "target_date": "2026-01-29",
+      "y_pred": 3050.64209,
+      "y_lower": 2855.758987,
+      "y_upper": 3245.525192,
+      "y_true": 2818.2327,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 232.40939,
+      "abs_error_naif": 188.3747,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-02-04",
+      "y_pred": 3262.885498,
+      "y_lower": 2747.273274,
+      "y_upper": 3778.497722,
+      "y_true": 2143.5042,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 1119.381298,
+      "abs_error_naif": 863.1032,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-ETH-USD-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

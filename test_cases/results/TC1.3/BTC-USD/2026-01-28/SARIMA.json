@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "SARIMA",
+  "asset": "BTC-USD",
+  "transition_date": "2026-01-28",
+  "cutoff_date": "2026-01-27",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 89102.5703,
+  "horizons": {
+    "1": {
+      "target_date": "2026-01-28",
+      "y_pred": 89067.163988,
+      "y_lower": 86504.033702,
+      "y_upper": 91630.294273,
+      "y_true": 89184.5703,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 117.406312,
+      "abs_error_naif": 82.0,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-02-03",
+      "y_pred": 89068.136485,
+      "y_lower": 82524.622914,
+      "y_upper": 95611.650056,
+      "y_true": 75633.5469,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 13434.589585,
+      "abs_error_naif": 13469.0234,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-BTC-USD-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 16493.590331,
+      "bic": 16517.728477
+    }
+  }
+}

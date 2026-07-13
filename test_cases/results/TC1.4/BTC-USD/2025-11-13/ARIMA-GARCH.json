@@ -1,0 +1,53 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "ARIMA-GARCH",
+  "asset": "BTC-USD",
+  "transition_date": "2025-11-13",
+  "cutoff_date": "2025-11-12",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 101663.1875,
+  "horizons": {
+    "1": {
+      "target_date": "2025-11-13",
+      "y_pred": 101723.403078,
+      "y_lower": 96405.619947,
+      "y_upper": 107334.517836,
+      "y_true": 99697.4922,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 2025.910878,
+      "abs_error_naif": 1965.6953,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2025-11-19",
+      "y_pred": 102078.933672,
+      "y_lower": 88004.782787,
+      "y_upper": 118403.890897,
+      "y_true": 91465.9922,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 10612.941472,
+      "abs_error_naif": 10197.1953,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-ARIMA-BTC-USD-D1",
+    "hyperparams": {
+      "order": [
+        2,
+        0,
+        2
+      ],
+      "garch_p": 1,
+      "garch_q": 1,
+      "garch_dist": "normal",
+      "aic": 4261.731656,
+      "bic": 4290.723378
+    }
+  }
+}

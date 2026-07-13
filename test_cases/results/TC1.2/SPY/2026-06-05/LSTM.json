@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.2",
+  "tc_name": "bull_stress",
+  "model": "LSTM",
+  "asset": "SPY",
+  "transition_date": "2026-06-05",
+  "cutoff_date": "2026-06-04",
+  "regime_from": "bull",
+  "regime_to": "stress",
+  "last_close": 755.1446,
+  "horizons": {
+    "1": {
+      "target_date": "2026-06-05",
+      "y_pred": 750.913086,
+      "y_lower": 735.644708,
+      "y_upper": 766.181464,
+      "y_true": 735.6548,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 15.258286,
+      "abs_error_naif": 19.4898,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-06-15",
+      "y_pred": 750.538269,
+      "y_lower": 710.141938,
+      "y_upper": 790.9346,
+      "y_true": 752.8904,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 2.352131,
+      "abs_error_naif": 2.2542,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-SPY-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

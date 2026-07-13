@@ -1,0 +1,38 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "TSDiff",
+  "asset": "ETH-USD",
+  "transition_date": "2025-01-31",
+  "cutoff_date": "2025-01-30",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 3247.78,
+  "horizons": {
+    "1": {
+      "target_date": "2025-01-31",
+      "y_pred": 3250.655029,
+      "y_lower": 3231.677002,
+      "y_upper": 3271.457275,
+      "y_true": 3298.2651,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 47.610071,
+      "abs_error_naif": 50.4851,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2025-02-06",
+      "y_pred": 3256.296143,
+      "y_lower": 3211.419922,
+      "y_upper": 3299.698242,
+      "y_true": 2688.4009,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 567.895243,
+      "abs_error_naif": 559.3791,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": null
+}

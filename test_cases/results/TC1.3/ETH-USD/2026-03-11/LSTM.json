@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "LSTM",
+  "asset": "ETH-USD",
+  "transition_date": "2026-03-11",
+  "cutoff_date": "2026-03-10",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 2037.1205,
+  "horizons": {
+    "1": {
+      "target_date": "2026-03-11",
+      "y_pred": 2007.680298,
+      "y_lower": 1818.737172,
+      "y_upper": 2196.623424,
+      "y_true": 2051.5732,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 43.892902,
+      "abs_error_naif": 14.4527,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-03-17",
+      "y_pred": 2071.796631,
+      "y_lower": 1571.900107,
+      "y_upper": 2571.693155,
+      "y_true": 2318.0535,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 246.256869,
+      "abs_error_naif": 280.933,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-ETH-USD-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "LSTM",
+  "asset": "ZN=F",
+  "transition_date": "2026-03-19",
+  "cutoff_date": "2026-03-18",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 111.6875,
+  "horizons": {
+    "1": {
+      "target_date": "2026-03-19",
+      "y_pred": 111.787117,
+      "y_lower": 110.511639,
+      "y_upper": 113.062595,
+      "y_true": 111.3594,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 0.427717,
+      "abs_error_naif": 0.3281,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-03-27",
+      "y_pred": 111.591965,
+      "y_lower": 108.217368,
+      "y_upper": 114.966562,
+      "y_true": 110.1562,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 1.435765,
+      "abs_error_naif": 1.5313,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-ZN=F-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}
