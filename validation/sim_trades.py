@@ -1,15 +1,25 @@
 """
-sim_trades.py — Test Case Bull à D+1 (`bull_calm_d1`), cf. BRIEF_bull_calm_d1.md.
+sim_trades.py — Test cases Bull-Calm (`bull_calm_d1`) et Sideways (`sideways_d1`) à D+1,
+cf. BRIEF_bull_calm_d1.md, BRIEF_sideways_d1.md, BRIEF_db_unification.md.
 
-Construit `daily_oos_log` (vue normalisée D->D+1, alignement anti-look-ahead §2) à partir
-des `Run/*-D1/predictions.parquet` (`source="oos"`) et de `validation.tracking_db`
-(`source="live"`), applique la règle `bull_calm_d1` (+ règle sœur `pi95_conf`, §3) et
-persiste les signaux valides dans `sim_trades`. Stdlib (sqlite3, json) + pandas (lecture
-parquet) uniquement — même contrainte de dépendances que `tracking_db.py`.
+Le brut (une ligne = une prédiction D->D+1, live ou oos) vit dans l'unique table
+`predictions` de `validation.tracking_db` (colonne `source` : 'live'/'oos', cf.
+BRIEF_db_unification.md). Ce module lit ce brut via la vue `all_predictions` (créée
+par `init_db()`, vocabulaire test-case : `d_date`/`reference_price`/`predicted`/
+`pi_lower`/`pi_upper`/`realized_price`, filtrée `horizon=1` -- mes test cases sont D+1
+uniquement, la table `predictions` contient aussi du live horizon=7 qui ne doit jamais
+fuiter ici), applique la règle (`bull_calm_d1` + règle sœur `pi95_conf`, ou
+`sideways_d1`) et persiste les signaux valides dans `sim_trades` (résultats calculés,
+table distincte du brut -- inchangée par l'unification). Stdlib (sqlite3, json) +
+pandas (lecture parquet) uniquement, même contrainte que `tracking_db.py`.
 
-Restreint aux combos horizon=1 jour de bourse (dossiers `*-D1`) : `predictions.parquet`
-d'un dossier `*-D7` est un backtest rolling-origin espacé de plusieurs jours (pas un log
-quotidien consécutif), l'alignement D->D+1 de bull_calm_d1 ne s'y applique pas.
+Ingestion OOS : lit toujours `Run/*-D1/predictions.parquet` comme source de vérité
+(alignement anti-look-ahead §2 de BRIEF_bull_calm_d1.md : `reference_price=actual[t-1]`,
+jamais `actual[t]`) mais insère désormais directement dans `predictions` (source='oos'),
+plus dans une table séparée -- `daily_oos_log` a été supprimée (BRIEF_db_unification.md
+§2.3), c'était une redondance pure avec `predictions`. Restreint aux dossiers `*-D1` :
+`predictions.parquet` d'un `*-D7` est un backtest rolling-origin espacé de plusieurs
+jours (pas un log quotidien consécutif), l'alignement D->D+1 ne s'y applique pas.
 
 `regime` : forcé à `"unknown"` pour `source="oos"`. `business_validation.json` (quand il
 existe) décrit la prévision LIVE la plus récente du combo, pas les ~112 jours historiques
@@ -22,6 +32,9 @@ Signaux valides mais non résolus (`status="open"`, live uniquement) : exclus de
 KPIs tant qu'ils ne sont pas résolus par `resolve_open_sim_trades` / `sync_live_trades`
 (§6.5) — y compris du compte `n_signaux`, qui ne reflète donc que l'activité déjà
 résolue de la règle (le nombre de signaux ouverts est reporté séparément, `n_open`).
+Résolution live directe depuis `predictions` (plus de mirroring à rafraîchir : dès que
+`tracking_db.evaluate_pending` écrit `y_true`, `all_predictions.realized_price` le
+reflète immédiatement).
 """
 
 import json
@@ -47,31 +60,47 @@ def _connect(db_path=DEFAULT_DB_PATH):
     return conn
 
 
+def _drop_legacy_daily_oos_log(conn) -> None:
+    """Supprime `daily_oos_log` si elle traîne encore (créée par une base alimentée
+    avant BRIEF_db_unification.md, plus jamais recréée depuis -- ce module ne
+    l'écrit plus). Garde-fou avant suppression : chaque ligne doit déjà avoir un
+    équivalent exact dans `predictions` (même run_id/model/asset/horizon/cutoff_date) ;
+    sinon on lève plutôt que de perdre des données silencieusement."""
+    tables = {row[0] for row in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='daily_oos_log'")}
+    if not tables:
+        return
+
+    orphans = conn.execute("""
+        SELECT COUNT(*) FROM daily_oos_log d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM predictions p
+            WHERE p.run_id = d.run_id AND p.model = d.model AND p.asset = d.asset
+              AND p.horizon = d.horizon AND p.cutoff_date = d.d_date
+        )
+    """).fetchone()[0]
+    if orphans:
+        raise RuntimeError(
+            f"daily_oos_log contient {orphans} ligne(s) sans équivalent dans predictions -- "
+            "suppression bloquée (perte de données potentielle, à vérifier manuellement)."
+        )
+    conn.execute("DROP TABLE daily_oos_log")
+
+
 def init_db(db_path=DEFAULT_DB_PATH) -> None:
-    """Crée daily_oos_log et sim_trades si absentes (CREATE TABLE IF NOT EXISTS,
-    idempotent) — schéma §7 du brief."""
+    """Assure `predictions` (brut, table+migration possédées par tracking_db.py), crée
+    `sim_trades` si absente (résultats calculés, CREATE TABLE IF NOT EXISTS, idempotent
+    -- schéma §7 de BRIEF_bull_calm_d1.md, `in_band` ajoutée par BRIEF_sideways_d1.md
+    §10) et (re)crée la vue `all_predictions` (BRIEF_db_unification.md §2.4) : lecture
+    du brut au vocabulaire test-case, filtrée horizon=1 (mes test cases sont D+1
+    uniquement ; `predictions` contient aussi du live horizon=7 qui ne doit jamais
+    fuiter dans le backtest ou les KPIs). Vue recréée à chaque appel (DROP+CREATE, pas
+    IF NOT EXISTS) pour ne jamais rester sur une définition périmée -- coût nul, une
+    vue ne porte aucune donnée."""
+    td.init_db(db_path)
     conn = _connect(db_path)
     try:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS daily_oos_log (
-                id                INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_id            TEXT NOT NULL,
-                model             TEXT NOT NULL,
-                asset             TEXT NOT NULL,
-                horizon           INTEGER NOT NULL,
-                regime            TEXT NOT NULL,
-                d_date            TEXT NOT NULL,
-                target_date       TEXT NOT NULL,
-                reference_price   REAL NOT NULL,
-                predicted         REAL NOT NULL,
-                pi_lower          REAL NOT NULL,
-                pi_upper          REAL NOT NULL,
-                realized_price    REAL,
-                source            TEXT NOT NULL,
-                created_at        TEXT NOT NULL,
-                UNIQUE (source, run_id, model, asset, horizon, d_date)
-            )
-        """)
+        _drop_legacy_daily_oos_log(conn)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sim_trades (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,6 +138,19 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
         existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(sim_trades)")}
         if "in_band" not in existing_cols:
             conn.execute("ALTER TABLE sim_trades ADD COLUMN in_band INTEGER")
+
+        conn.execute("DROP VIEW IF EXISTS all_predictions")
+        conn.execute("""
+            CREATE VIEW all_predictions AS
+            SELECT
+                id, run_id, model, asset, horizon, regime,
+                cutoff_date AS d_date, target_date,
+                last_close  AS reference_price, y_pred AS predicted,
+                y_lower     AS pi_lower,        y_upper AS pi_upper,
+                y_true      AS realized_price,  source
+            FROM predictions
+            WHERE horizon = 1
+        """)
         conn.commit()
     finally:
         conn.close()
@@ -234,16 +276,21 @@ RULES = {
 }
 
 
-# ── Construction daily_oos_log — source="oos" (Run/*-D1/predictions.parquet) ───
+# ── Ingestion OOS -> predictions (source="oos"), depuis Run/*-D1/predictions.parquet ─
 
 def _date_str(ts) -> str:
     return pd.Timestamp(ts).strftime("%Y-%m-%d")
 
 
-def build_daily_oos_log_rows(run_dir, source="oos"):
+def build_oos_prediction_rows(run_dir, source="oos"):
     """Lit predictions.parquet + metrics.json d'un dossier Run/<...>-D1/, applique
-    l'alignement §2 (t>=1 ; t=0 ignoré faute de t-1, §6.1). Exclut les lignes NaN /
-    bornes cassées (pi_lower > pi_upper, §6.3). Retourne (rows, n_dropped)."""
+    l'alignement anti-look-ahead (t>=1 ; t=0 ignoré faute de t-1, cf. BRIEF_bull_calm_d1.md
+    §2/§6.1). Exclut les lignes NaN / bornes cassées (pi_lower > pi_upper). Retourne des
+    lignes au format de la table `predictions` unifiée (BRIEF_db_unification.md §2.2) :
+    `cutoff_date`/`last_close`/`y_pred`/`y_lower`/`y_upper`/`y_true`, `source='oos'`.
+    Les colonnes métier live (tc_id, verdict_*, created_at, ...) sont absentes de ces
+    dicts -> NULL par schéma une fois insérées (jamais renseignées pour l'OOS).
+    Retourne (rows, n_dropped)."""
     run_dir = Path(run_dir)
     df = pd.read_parquet(run_dir / "predictions.parquet").sort_values("date").reset_index(drop=True)
     metrics = json.loads((run_dir / "metrics.json").read_text())
@@ -252,7 +299,6 @@ def build_daily_oos_log_rows(run_dir, source="oos"):
     horizon = _HORIZON_LABEL_TO_INT.get(metrics.get("horizon"), 1)
 
     run_id = run_dir.name
-    now = datetime.now(timezone.utc).isoformat()
     rows = []
     n_dropped = 0
 
@@ -271,26 +317,27 @@ def build_daily_oos_log_rows(run_dir, source="oos"):
         rows.append({
             "run_id": run_id, "model": model, "asset": asset, "horizon": horizon,
             "regime": "unknown",   # jamais business_validation.json ici, cf. docstring module
-            "d_date": _date_str(df.loc[t - 1, "date"]),
+            "cutoff_date": _date_str(df.loc[t - 1, "date"]),
             "target_date": _date_str(df.loc[t, "date"]),
-            "reference_price": float(reference_price), "predicted": float(predicted),
-            "pi_lower": float(pi_lower), "pi_upper": float(pi_upper),
-            "realized_price": float(realized_price),
-            "source": source, "created_at": now,
+            "last_close": float(reference_price), "y_pred": float(predicted),
+            "y_lower": float(pi_lower), "y_upper": float(pi_upper),
+            "y_true": float(realized_price),
+            "source": source,
         })
 
     return rows, n_dropped
 
 
-def insert_daily_oos_log(rows, db_path=DEFAULT_DB_PATH) -> int:
-    """INSERT OR IGNORE (idempotent sur la contrainte UNIQUE). Retourne le nombre de
-    lignes effectivement insérées."""
+def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
+    """INSERT OR IGNORE dans `predictions` (source='oos') -- idempotent via l'index
+    partiel de tracking_db.init_db (`idx_predictions_oos_unique`, tc_id étant NULL pour
+    l'OOS et donc hors de portée du UNIQUE(tc_id, model, cutoff_date) historique).
+    Retourne le nombre de lignes effectivement insérées."""
     if not rows:
         return 0
-    init_db(db_path)
-    cols = ("run_id", "model", "asset", "horizon", "regime", "d_date", "target_date",
-            "reference_price", "predicted", "pi_lower", "pi_upper", "realized_price",
-            "source", "created_at")
+    td.init_db(db_path)
+    cols = ("run_id", "model", "asset", "horizon", "regime", "cutoff_date", "target_date",
+            "last_close", "y_pred", "y_lower", "y_upper", "y_true", "source")
     placeholders = ", ".join(f":{c}" for c in cols)
     columns = ", ".join(cols)
     conn = _connect(db_path)
@@ -298,7 +345,7 @@ def insert_daily_oos_log(rows, db_path=DEFAULT_DB_PATH) -> int:
         n = 0
         for row in rows:
             cur = conn.execute(
-                f"INSERT OR IGNORE INTO daily_oos_log ({columns}) VALUES ({placeholders})", row)
+                f"INSERT OR IGNORE INTO predictions ({columns}) VALUES ({placeholders})", row)
             n += cur.rowcount
         conn.commit()
         return n
@@ -308,91 +355,29 @@ def insert_daily_oos_log(rows, db_path=DEFAULT_DB_PATH) -> int:
 
 def ingest_oos(run_root="Run", db_path=DEFAULT_DB_PATH) -> dict:
     """Parcourt tous les Run/*-D1/ (skip silencieusement si predictions.parquet ou
-    metrics.json manque), construit et insère daily_oos_log. Idempotent."""
-    init_db(db_path)
+    metrics.json manque), construit et insère dans `predictions` (source='oos').
+    Idempotent."""
+    td.init_db(db_path)
     inserted = dropped = combos = 0
     for run_dir in sorted(Path(run_root).glob("*-D1")):
         if not (run_dir / "predictions.parquet").exists() or not (run_dir / "metrics.json").exists():
             continue
-        rows, n_dropped = build_daily_oos_log_rows(run_dir)
-        inserted += insert_daily_oos_log(rows, db_path=db_path)
+        rows, n_dropped = build_oos_prediction_rows(run_dir)
+        inserted += insert_oos_predictions(rows, db_path=db_path)
         dropped += n_dropped
         combos += 1
     return {"combos": combos, "inserted": inserted, "dropped": dropped}
-
-
-# ── Construction daily_oos_log — source="live" (validation.tracking_db) ────────
-
-def build_live_daily_oos_log_rows(db_path=DEFAULT_DB_PATH):
-    """Lit les prédictions live horizon=1 de tracking.db (déjà alignées par
-    construction, §2) et les met en forme daily_oos_log. Exclut NaN / bornes cassées."""
-    td.init_db(db_path)
-    conn = _connect(db_path)
-    try:
-        rows = conn.execute(
-            "SELECT run_id, model, asset, horizon, regime, cutoff_date, target_date, "
-            "last_close, y_pred, y_lower, y_upper, y_true FROM predictions WHERE horizon = 1"
-        ).fetchall()
-    finally:
-        conn.close()
-
-    now = datetime.now(timezone.utc).isoformat()
-    out = []
-    for row in rows:
-        values = (row["last_close"], row["y_pred"], row["y_lower"], row["y_upper"])
-        if not all(_is_finite(v) for v in values) or row["y_lower"] > row["y_upper"]:
-            continue
-        out.append({
-            "run_id": row["run_id"], "model": row["model"], "asset": row["asset"],
-            "horizon": row["horizon"], "regime": row["regime"],
-            "d_date": row["cutoff_date"], "target_date": row["target_date"],
-            "reference_price": row["last_close"], "predicted": row["y_pred"],
-            "pi_lower": row["y_lower"], "pi_upper": row["y_upper"],
-            "realized_price": row["y_true"], "source": "live", "created_at": now,
-        })
-    return out
-
-
-def ingest_live_daily_oos_log(db_path=DEFAULT_DB_PATH) -> int:
-    init_db(db_path)
-    return insert_daily_oos_log(build_live_daily_oos_log_rows(db_path=db_path), db_path=db_path)
-
-
-def refresh_live_realized_prices(db_path=DEFAULT_DB_PATH) -> int:
-    """Reporte dans daily_oos_log(source='live') les y_true fraîchement résolus dans
-    tracking.db (evaluate_pending) pour les lignes encore NULL. Idempotent."""
-    init_db(db_path)
-    conn = _connect(db_path)
-    try:
-        pending = conn.execute(
-            "SELECT id, run_id, model, asset, d_date FROM daily_oos_log "
-            "WHERE source='live' AND realized_price IS NULL"
-        ).fetchall()
-        n = 0
-        for row in pending:
-            pred = conn.execute(
-                "SELECT y_true FROM predictions WHERE run_id=? AND model=? AND asset=? AND cutoff_date=?",
-                (row["run_id"], row["model"], row["asset"], row["d_date"]),
-            ).fetchone()
-            if pred is None or pred["y_true"] is None:
-                continue
-            conn.execute("UPDATE daily_oos_log SET realized_price=? WHERE id=?",
-                        (pred["y_true"], row["id"]))
-            n += 1
-        conn.commit()
-        return n
-    finally:
-        conn.close()
 
 
 # ── sim_trades : génération + résolution ────────────────────────────────────────
 
 def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
                         fee_bps=0.0, source=None, **rule_kwargs) -> int:
-    """Applique la règle à chaque ligne daily_oos_log n'ayant pas encore de sim_trade
-    pour cette rule_version. Les flats (signal_valid=False) ne génèrent pas de ligne
-    (§7.2). Idempotent (UNIQUE + LEFT JOIN ... IS NULL). `**rule_kwargs` passe les
-    paramètres spécifiques à la règle (k/m_frac/h_frac pour sideways_d1) ; les
+    """Applique la règle à chaque ligne `all_predictions` (brut unifié, horizon=1,
+    cf. BRIEF_db_unification.md) n'ayant pas encore de sim_trade pour cette
+    rule_version. Les flats (signal_valid=False) ne génèrent pas de ligne (§7.2 de
+    BRIEF_bull_calm_d1.md). Idempotent (UNIQUE + LEFT JOIN ... IS NULL). `**rule_kwargs`
+    passe les paramètres spécifiques à la règle (k/m_frac/h_frac pour sideways_d1) ; les
     adaptateurs de RULES ignorent ceux qui ne les concernent pas. Retourne le nombre
     de lignes insérées."""
     init_db(db_path)
@@ -400,7 +385,7 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
     conn = _connect(db_path)
     try:
         query = """
-            SELECT l.* FROM daily_oos_log l
+            SELECT l.* FROM all_predictions l
             LEFT JOIN sim_trades s
               ON s.rule_version = ? AND s.source = l.source AND s.run_id = l.run_id
              AND s.model = l.model AND s.asset = l.asset AND s.horizon = l.horizon
@@ -448,8 +433,10 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
 def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
                             fee_bps=0.0, **rule_kwargs) -> int:
     """Réévalue les sim_trades status='open' dont le realized_price est maintenant
-    connu dans daily_oos_log (mis à jour au préalable par refresh_live_realized_prices).
-    Idempotent : ne touche jamais un trade déjà 'closed'."""
+    connu dans `all_predictions` -- pour source='live', dès que
+    `tracking_db.evaluate_pending` écrit `y_true`, la vue le reflète immédiatement
+    (plus de mirroring séparé à rafraîchir, cf. BRIEF_db_unification.md). Idempotent :
+    ne touche jamais un trade déjà 'closed'."""
     init_db(db_path)
     rule_fn = RULES[rule_version]
     conn = _connect(db_path)
@@ -462,7 +449,7 @@ def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1"
         n_resolved = 0
         for trade in open_trades:
             log_row = conn.execute(
-                "SELECT realized_price FROM daily_oos_log WHERE source=? AND run_id=? AND model=? "
+                "SELECT realized_price FROM all_predictions WHERE source=? AND run_id=? AND model=? "
                 "AND asset=? AND horizon=? AND d_date=?",
                 (trade["source"], trade["run_id"], trade["model"], trade["asset"],
                  trade["horizon"], trade["d_date"]),
@@ -488,17 +475,18 @@ def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1"
 
 def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1", fee_bps=0.0,
                      **rule_kwargs) -> dict:
-    """Point d'entrée appelé par evaluate_daily.py : ingère les nouvelles prédictions
-    live horizon=1, rafraîchit les realized_price connus, génère les nouveaux sim_trades
-    et résout les 'open' devenus résolubles. Idempotent de bout en bout."""
+    """Point d'entrée appelé par evaluate_daily.py : génère les nouveaux sim_trades pour
+    les prédictions live déjà dans `predictions` et résout les 'open' devenus
+    résolubles. Idempotent de bout en bout. Depuis BRIEF_db_unification.md, le live vit
+    nativement dans `predictions` (écrit par tracking_db.save_prediction) -- plus
+    d'étape d'ingestion/rafraîchissement séparée à faire ici, `all_predictions` la
+    reflète déjà."""
     init_db(db_path)
-    n_log = ingest_live_daily_oos_log(db_path=db_path)
-    refresh_live_realized_prices(db_path=db_path)
     n_new = generate_sim_trades(db_path=db_path, rule_version=rule_version, fee_bps=fee_bps,
                                 source="live", **rule_kwargs)
     n_resolved = resolve_open_sim_trades(db_path=db_path, rule_version=rule_version,
                                          fee_bps=fee_bps, **rule_kwargs)
-    return {"new_log_rows": n_log, "new_trades": n_new, "resolved": n_resolved}
+    return {"new_trades": n_new, "resolved": n_resolved}
 
 
 # ── KPIs (§9) ────────────────────────────────────────────────────────────────────
@@ -519,7 +507,7 @@ def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1
 
     k_values : balayage de sensibilité §8.7 du brief Sideways (uniquement valide avec
     rule_version="sideways_d1"). Recalcule taux_signal/taux_justesse pour chaque k
-    DIRECTEMENT depuis daily_oos_log (le k des sim_trades déjà générés est figé à la
+    DIRECTEMENT depuis all_predictions (le k des sim_trades déjà générés est figé à la
     génération) -- purement en lecture, n'écrit jamais dans sim_trades. Résultat
     attaché à chaque groupe sous la clé 'k_sensitivity'."""
     if source not in VALID_SOURCES:
@@ -538,7 +526,7 @@ def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1
     init_db(db_path)
     conn = _connect(db_path)
     try:
-        log_rows = conn.execute("SELECT * FROM daily_oos_log WHERE source=?", (source,)).fetchall()
+        log_rows = conn.execute("SELECT * FROM all_predictions WHERE source=?", (source,)).fetchall()
         trade_rows = conn.execute(
             "SELECT * FROM sim_trades WHERE source=? AND rule_version=?", (source, rule_version)
         ).fetchall()
@@ -575,7 +563,7 @@ def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1
 
 def _sideways_k_sweep(log_rows, k_values, m_frac, h_frac, include_degenerate) -> list:
     """Recalcule en mémoire, pour chaque k, le nombre de signaux et le taux de justesse
-    sideways_d1 sur les lignes daily_oos_log fournies -- jamais persisté (§8.7)."""
+    sideways_d1 sur les lignes all_predictions fournies -- jamais persisté (§8.7)."""
     sweep = []
     for k in k_values:
         n_total = len(log_rows)
@@ -731,7 +719,7 @@ def naive_always_long_report(db_path=DEFAULT_DB_PATH, source="oos", model="Naive
     conn = _connect(db_path)
     try:
         rows = conn.execute(
-            "SELECT * FROM daily_oos_log WHERE source=? AND model=? AND realized_price IS NOT NULL",
+            "SELECT * FROM all_predictions WHERE source=? AND model=? AND realized_price IS NOT NULL",
             (source, model),
         ).fetchall()
     finally:
@@ -777,7 +765,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description="bull_calm_d1 : ingestion + rapport KPI")
     p.add_argument("--db-path", default="validation/tracking.db")
     p.add_argument("--run-root", default="Run")
-    p.add_argument("--ingest-oos", action="store_true", help="ingère les Run/*-D1/ dans daily_oos_log")
+    p.add_argument("--ingest-oos", action="store_true", help="ingère les Run/*-D1/ dans predictions (source='oos')")
     p.add_argument("--sync-live", action="store_true", help="ingère/résout les prédictions live")
     p.add_argument("--report", choices=["oos", "live"], help="imprime le rapport KPI pour cette source")
     args = p.parse_args()

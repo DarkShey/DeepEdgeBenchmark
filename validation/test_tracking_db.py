@@ -266,3 +266,229 @@ def test_export_csv_writes_all_rows(tmp_path):
     content = csv_path.read_text()
     assert content.count("\n") == 3  # header + 2 lignes (+ newline final)
     assert "tc_id" in content.splitlines()[0]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Unification predictions (BRIEF_db_unification.md) : migration + isolation source
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _create_legacy_predictions_schema(db_path):
+    """Reproduit exactement le schéma pré-unification (pas de `source`, tc_id/
+    verdict_*/created_at NOT NULL) pour tester la migration en conditions réelles."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT NOT NULL, tc_id TEXT NOT NULL, model TEXT NOT NULL, asset TEXT NOT NULL,
+            horizon INTEGER NOT NULL, cutoff_date TEXT NOT NULL, target_date TEXT NOT NULL,
+            regime TEXT NOT NULL, last_close REAL NOT NULL, y_pred REAL NOT NULL,
+            y_lower REAL NOT NULL, y_upper REAL NOT NULL, verdict_integrite INTEGER NOT NULL,
+            verdict_plausibilite INTEGER NOT NULL, created_at TEXT NOT NULL, y_true REAL,
+            in_interval INTEGER, abs_error REAL, abs_error_naif REAL, beats_naif INTEGER,
+            direction_correct INTEGER, evaluated_at TEXT,
+            UNIQUE (tc_id, model, cutoff_date)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def _insert_oos_row(db_path, **overrides):
+    """INSERT direct dans predictions avec source='oos' (simule ce que fera
+    sim_trades.py -- tc_id/verdict_*/created_at à NULL, comme une vraie ligne OOS)."""
+    row = {
+        "run_id": "20260707-Prophet-SPY-D1", "model": "Prophet", "asset": "SPY",
+        "horizon": 1, "cutoff_date": "2026-02-01", "target_date": "2026-02-02",
+        "regime": "unknown", "last_close": 100.0, "y_pred": 101.0,
+        "y_lower": 95.0, "y_upper": 107.0, "y_true": 102.0, "source": "oos",
+    }
+    row.update(overrides)
+    conn = sqlite3.connect(db_path)
+    cols = ", ".join(row)
+    placeholders = ", ".join(f":{k}" for k in row)
+    conn.execute(f"INSERT INTO predictions ({cols}) VALUES ({placeholders})", row)
+    conn.commit()
+    conn.close()
+
+
+def test_migration_preserves_ids_and_sequence_from_legacy_schema(tmp_path):
+    db_path = str(tmp_path / "legacy.db")
+    _create_legacy_predictions_schema(db_path)
+    conn = sqlite3.connect(db_path)
+    conn.executemany(
+        "INSERT INTO predictions (run_id, tc_id, model, asset, horizon, cutoff_date, "
+        "target_date, regime, last_close, y_pred, y_lower, y_upper, verdict_integrite, "
+        "verdict_plausibilite, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            ("run1", "TC1", "arima", "SPY", 1, "2026-01-01", "2026-01-02", "calm",
+             100.0, 101.0, 95.0, 107.0, 1, 1, "2026-01-01T00:00:00"),
+            ("run2", "TC2", "lstm", "BTC-USD", 1, "2026-01-01", "2026-01-02", "calm",
+             200.0, 201.0, 195.0, 207.0, 1, 1, "2026-01-01T00:00:00"),
+            ("run3", "TC3", "prophet", "ETH-USD", 7, "2026-01-01", "2026-01-08", "bull",
+             300.0, 301.0, 295.0, 307.0, 0, 1, "2026-01-01T00:00:00"),
+        ],
+    )
+    conn.commit()
+    conn.execute("DELETE FROM predictions WHERE tc_id='TC2'")   # trou dans les id (comme la vraie base)
+    conn.execute("UPDATE sqlite_sequence SET seq = 392 WHERE name='predictions'")
+    conn.commit()
+    ids_before = [row[0] for row in conn.execute("SELECT id FROM predictions ORDER BY id")]
+    conn.close()
+
+    td.init_db(db_path)   # déclenche la migration (pas de colonne source)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT id, tc_id, verdict_integrite, source FROM predictions ORDER BY id").fetchall()
+    seq = conn.execute("SELECT seq FROM sqlite_sequence WHERE name='predictions'").fetchone()[0]
+    conn.close()
+
+    assert [row["id"] for row in rows] == ids_before == [1, 3]   # trou préservé, pas de renumérotation
+    assert all(row["source"] == "live" for row in rows)          # lignes pré-existantes -> live
+    assert rows[0]["tc_id"] == "TC1" and rows[1]["tc_id"] == "TC3"
+    assert seq == 392   # compteur historique préservé, PAS recalculé depuis MAX(id)=3
+
+    # la prochaine insertion continue bien après le compteur restauré
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO predictions (run_id, tc_id, model, asset, horizon, cutoff_date, "
+        "target_date, regime, last_close, y_pred, y_lower, y_upper, verdict_integrite, "
+        "verdict_plausibilite, created_at) VALUES "
+        "('run4','TC4','naive','SPY',1,'2026-01-02','2026-01-03','calm',100,100,90,110,1,1,'2026-01-02T00:00:00')"
+    )
+    conn.commit()
+    new_id = conn.execute("SELECT id FROM predictions WHERE tc_id='TC4'").fetchone()[0]
+    conn.close()
+    assert new_id == 393
+
+
+def test_migration_is_idempotent_and_noop_on_already_migrated_db(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)   # déjà au nouveau schéma dès la création
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+    td.init_db(db_path)   # rejouer ne doit rien casser ni dupliquer
+
+    conn = sqlite3.connect(db_path)
+    n = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+    conn.close()
+    assert n == 1
+
+
+def test_save_prediction_writes_source_live(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    source = conn.execute("SELECT source FROM predictions WHERE tc_id='TC1'").fetchone()[0]
+    conn.close()
+    assert source == "live"
+
+
+def test_oos_row_accepts_null_business_columns(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _insert_oos_row(db_path)   # ne doit pas lever malgré tc_id/verdict_* absents
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions WHERE source='oos'").fetchone()
+    conn.close()
+    assert row["tc_id"] is None
+    assert row["verdict_integrite"] is None
+    assert row["verdict_plausibilite"] is None
+    assert row["created_at"] is None
+
+
+def test_oos_row_idempotent_via_partial_unique_index(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _insert_oos_row(db_path)
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.execute("""
+        INSERT OR IGNORE INTO predictions
+            (run_id, model, asset, horizon, cutoff_date, target_date, regime,
+             last_close, y_pred, y_lower, y_upper, y_true, source)
+        VALUES ('20260707-Prophet-SPY-D1','Prophet','SPY',1,'2026-02-01','2026-02-02',
+                'unknown',100.0,101.0,95.0,107.0,102.0,'oos')
+    """)
+    conn.commit()
+    n = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert cur.rowcount == 0   # rejeu ignoré
+    assert n == 1              # pas de doublon
+
+
+def test_evaluate_pending_ignores_oos_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(
+        tc_id="TC1", target_date="2026-06-02", last_close=100.0, y_pred=101.0,
+    ), db_path=db_path)
+    _insert_oos_row(db_path, target_date="2026-06-02", y_true=None)   # OOS "non résolu"
+
+    calls = []
+    n = td.evaluate_pending(
+        lambda asset, target_date: calls.append((asset, target_date)) or 102.0,
+        db_path=db_path, today="2026-06-03",
+    )
+
+    assert n == 1                 # seule la ligne live est résolue
+    assert calls == [("BTC-USD", "2026-06-02")]   # jamais appelé pour la ligne oos (asset SPY ici)
+
+    conn = sqlite3.connect(db_path)
+    oos_y_true = conn.execute("SELECT y_true FROM predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert oos_y_true is None   # la ligne oos n'a pas été touchée
+
+
+def test_pending_assets_ignores_oos_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _insert_oos_row(db_path, asset="ZN=F", target_date="2026-06-02", y_true=None)
+
+    assert td.pending_assets(db_path=db_path) == []   # la ligne oos non résolue n'apparaît pas
+
+
+def test_fetch_predictions_for_run_ignores_oos_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _insert_oos_row(db_path, run_id="shared_run_id")
+    td.save_prediction(make_record(tc_id="TC1", run_id="shared_run_id"), db_path=db_path)
+
+    rows = td.fetch_predictions_for_run("shared_run_id", db_path=db_path)
+    assert len(rows) == 1
+    assert rows[0]["source"] == "live"
+
+
+def test_report_ignores_oos_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1", model="arima"), db_path=db_path)
+    _insert_oos_row(db_path, model="arima")
+
+    by_model = {row["model"]: row for row in td.report(group_by=("model",), db_path=db_path)}
+    assert by_model["arima"]["n_total"] == 1   # la ligne oos n'est pas comptée
+
+
+def test_export_csv_default_is_live_only(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+    _insert_oos_row(db_path)
+
+    csv_path = tmp_path / "export.csv"
+    n = td.export_csv(str(csv_path), db_path=db_path)
+    assert n == 1   # comportement inchangé de tracking_export.csv : live seulement
+
+
+def test_export_csv_source_none_dumps_everything(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+    _insert_oos_row(db_path)
+
+    csv_path = tmp_path / "export_all.csv"
+    n = td.export_csv(str(csv_path), db_path=db_path, source=None)
+    assert n == 2

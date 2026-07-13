@@ -33,7 +33,7 @@ def make_prediction_record(**overrides):
 def write_fake_run_dir(tmp_path, name="20260707-ARIMA-SPY-D1", model="ARIMA-GARCH",
                        asset="SPY", horizon_label="D1", rows=None):
     """Fabrique un dossier Run/<name>/ minimal (predictions.parquet + metrics.json)
-    conforme au contrat lu par sim_trades.build_daily_oos_log_rows."""
+    conforme au contrat lu par sim_trades.build_oos_prediction_rows."""
     run_dir = tmp_path / name
     run_dir.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
@@ -149,21 +149,21 @@ def test_no_lookahead_reference_price_is_actual_t_minus_1(tmp_path):
         "pi_upper":  [999.0, 115.0, 113.0],
     }
     run_dir = write_fake_run_dir(tmp_path, rows=rows)
-    log_rows, n_dropped = st.build_daily_oos_log_rows(run_dir)
+    log_rows, n_dropped = st.build_oos_prediction_rows(run_dir)
 
     assert n_dropped == 0
     assert len(log_rows) == 2   # t=1 et t=2 ; t=0 ignoré (§6.1, pas de t-1)
 
     row_t1 = log_rows[0]
-    assert row_t1["d_date"] == "2026-02-01"
+    assert row_t1["cutoff_date"] == "2026-02-01"
     assert row_t1["target_date"] == "2026-02-02"
-    assert row_t1["reference_price"] == pytest.approx(100.0)   # actual[t-1=0], PAS actual[t=1]=105.0
-    assert row_t1["reference_price"] != pytest.approx(105.0)
-    assert row_t1["realized_price"] == pytest.approx(105.0)    # actual[t=1], révélé seulement à D+1
+    assert row_t1["last_close"] == pytest.approx(100.0)   # actual[t-1=0], PAS actual[t=1]=105.0
+    assert row_t1["last_close"] != pytest.approx(105.0)
+    assert row_t1["y_true"] == pytest.approx(105.0)    # actual[t=1], révélé seulement à D+1
 
     row_t2 = log_rows[1]
-    assert row_t2["reference_price"] == pytest.approx(105.0)   # actual[t-1=1], PAS actual[t=2]=103.0
-    assert row_t2["realized_price"] == pytest.approx(103.0)
+    assert row_t2["last_close"] == pytest.approx(105.0)   # actual[t-1=1], PAS actual[t=2]=103.0
+    assert row_t2["y_true"] == pytest.approx(103.0)
 
 
 def test_no_lookahead_swap_to_actual_t_would_fail(tmp_path):
@@ -177,9 +177,9 @@ def test_no_lookahead_swap_to_actual_t_would_fail(tmp_path):
         "pi_upper":  [999.0, 115.0],
     }
     run_dir = write_fake_run_dir(tmp_path, rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
     # si le code (buggé) faisait reference_price = actual[t], on lirait 999.0 ici
-    assert log_rows[0]["reference_price"] == pytest.approx(100.0)
+    assert log_rows[0]["last_close"] == pytest.approx(100.0)
 
 
 # ── 6. test_signal_flat ───────────────────────────────────────────────────────
@@ -204,16 +204,16 @@ def test_signal_flat_rows_not_stored_as_sim_trades(tmp_path):
         "pi_upper":  [999.0, 108.0, 120.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
     n_trades = st.generate_sim_trades(db_path=db_path)
 
     assert n_trades == 1   # seule la ligne t=2 (predicted=108 > ref=99) génère un trade
     conn = sqlite3.connect(db_path)
-    n_total_log = conn.execute("SELECT COUNT(*) FROM daily_oos_log").fetchone()[0]
+    n_total_log = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='oos'").fetchone()[0]
     n_total_trades = conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0]
     conn.close()
-    assert n_total_log == 2     # les 2 lignes (flat incluse) vivent dans daily_oos_log
+    assert n_total_log == 2     # les 2 lignes (flat incluse) vivent dans predictions
     assert n_total_trades == 1  # le flat n'est jamais un sim_trade
 
 
@@ -238,8 +238,8 @@ def test_degenerate_pi_excluded_from_kpis_by_default(tmp_path):
         "pi_upper":  [999.0, 100.0],   # pi_high(100) <= ref(100) -> dégénéré
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
     st.generate_sim_trades(db_path=db_path)
 
     conn = sqlite3.connect(db_path)
@@ -268,7 +268,8 @@ def test_live_open_trade_stored_with_open_status(tmp_path):
     st.init_db(db_path)
     td.save_prediction(make_prediction_record(target_date="2099-01-01"), db_path=db_path)
 
-    st.ingest_live_daily_oos_log(db_path=db_path)
+    # plus d'étape d'ingestion séparée depuis BRIEF_db_unification.md : save_prediction
+    # écrit directement dans predictions, all_predictions la voit immédiatement.
     n_new = st.generate_sim_trades(db_path=db_path, source="live")
     assert n_new == 1
 
@@ -347,11 +348,11 @@ def test_vs_naive_pure_persistence_generates_zero_signals(tmp_path):
         "pi_upper":  [999.0, 110.0, 115.0],
     }
     run_dir = write_fake_run_dir(tmp_path, model="Naive", horizon_label="D1", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
     for row in log_rows:
         signal_valid, *_ = st.bull_calm_d1(
-            row["reference_price"], row["predicted"], row["pi_lower"],
-            row["pi_upper"], row["realized_price"])
+            row["last_close"], row["y_pred"], row["y_lower"],
+            row["y_upper"], row["y_true"])
         assert signal_valid is False
 
 
@@ -369,8 +370,8 @@ def test_naive_always_long_benchmark_ignores_signal_filter(tmp_path):
         "pi_upper":  [999.0, 110.0, 115.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", model="Naive", horizon_label="D1", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
 
     # sous la règle normale : aucun sim_trade (confirme test précédent au niveau DB)
     n_trades = st.generate_sim_trades(db_path=db_path)
@@ -396,7 +397,7 @@ def test_oos_regime_is_always_unknown_even_if_business_validation_present(tmp_pa
     })
     (run_dir / "business_validation.json").write_text('{"regime": "bull"}')
 
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
     assert all(row["regime"] == "unknown" for row in log_rows)
 
 
@@ -556,8 +557,8 @@ def test_sideways_direction_ok_is_none_in_sim_trades(tmp_path):
         "pi_lower": [999.0, 96.0], "pi_upper": [999.0, 104.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
     n = st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
     assert n == 1
 
@@ -583,17 +584,17 @@ def test_sideways_no_lookahead_reference_price_is_actual_t_minus_1(tmp_path):
         "pi_upper":  [999.0, 104.0, 104.0],
     }
     run_dir = write_fake_run_dir(tmp_path, rows=rows)
-    log_rows, n_dropped = st.build_daily_oos_log_rows(run_dir)
+    log_rows, n_dropped = st.build_oos_prediction_rows(run_dir)
 
     assert n_dropped == 0
     row_t1 = log_rows[0]
-    assert row_t1["reference_price"] == pytest.approx(100.0)   # actual[t-1=0], pas actual[t=1]
-    assert row_t1["realized_price"] == pytest.approx(100.5)
+    assert row_t1["last_close"] == pytest.approx(100.0)   # actual[t-1=0], pas actual[t=1]
+    assert row_t1["y_true"] == pytest.approx(100.5)
 
     # si le code (buggé) utilisait actual[t] comme référence, on lirait 100.5 pour t=2, pas 100.5 (t-1=1)
     row_t2 = log_rows[1]
-    assert row_t2["reference_price"] == pytest.approx(100.5)   # actual[t-1=1]
-    assert row_t2["reference_price"] != pytest.approx(999.0)
+    assert row_t2["last_close"] == pytest.approx(100.5)   # actual[t-1=1]
+    assert row_t2["last_close"] != pytest.approx(999.0)
 
 
 # ── test_sideways_live_open ───────────────────────────────────────────────────
@@ -615,7 +616,6 @@ def test_sideways_live_open_trade_stored_with_open_status(tmp_path):
         target_date="2099-01-01", last_close=100.0, y_pred=100.3, y_lower=96.0, y_upper=104.0,
     ), db_path=db_path)
 
-    st.ingest_live_daily_oos_log(db_path=db_path)
     n_new = st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="live")
     assert n_new == 1
 
@@ -656,8 +656,8 @@ def test_sideways_k_sensitivity_is_monotonic_in_number_of_signals(tmp_path):
         "pi_upper":  [999.0, 104.0, 105.0, 104.8, 104.2],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
 
     report = st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1",
                            group_by=("asset",), k_values=(0.05, 0.10, 0.15, 0.20))
@@ -687,8 +687,8 @@ def test_sideways_kpi_report_has_no_roi_fields(tmp_path):
         "pi_lower": [999.0, 96.0], "pi_upper": [999.0, 104.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
     st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
 
     report = st.kpi_report(db_path=db_path, source="oos", rule_version="sideways_d1", group_by=("asset",))
@@ -715,8 +715,8 @@ def test_sideways_kpi_report_breakout_decomposed_haussier_baissier(tmp_path):
         "pi_upper":  [999.0, 104.0, 104.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
     st.generate_sim_trades(db_path=db_path, rule_version="sideways_d1", source="oos")
 
     conn = sqlite3.connect(db_path)
@@ -748,8 +748,8 @@ def test_sideways_k_sweep_does_not_write_sim_trades(tmp_path):
         "pi_upper":  [999.0, 104.0, 105.0],
     }
     run_dir = write_fake_run_dir(tmp_path / "runs", rows=rows)
-    log_rows, _ = st.build_daily_oos_log_rows(run_dir)
-    st.insert_daily_oos_log(log_rows, db_path=db_path)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
 
     conn = sqlite3.connect(db_path)
     n_before = conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0]
@@ -763,3 +763,123 @@ def test_sideways_k_sweep_does_not_write_sim_trades(tmp_path):
     n_after = conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0]
     conn.close()
     assert n_after == 0   # le balayage k_values ne persiste rien
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Unification predictions (BRIEF_db_unification.md) : coexistence live/oos + horizon=1
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def test_coexistence_live_and_oos_isolated_by_source_in_generate_sim_trades(tmp_path):
+    """live + oos dans la même table predictions, distingués par source : chaque appel
+    de generate_sim_trades(source=...) n'agit que sur sa source, jamais sur l'autre."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    td.save_prediction(make_prediction_record(
+        tc_id="TC_LIVE", target_date="2026-06-02", last_close=100.0, y_pred=101.0,
+        y_lower=95.0, y_upper=107.0,
+    ), db_path=db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual": [200.0, 210.0], "predicted": [999.0, 205.0],
+        "pi_lower": [999.0, 195.0], "pi_upper": [999.0, 215.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", asset="BTC-USD", rows=rows)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    st.insert_oos_predictions(log_rows, db_path=db_path)
+
+    n_live = st.generate_sim_trades(db_path=db_path, source="live")
+    n_oos = st.generate_sim_trades(db_path=db_path, source="oos")
+    assert n_live == 1 and n_oos == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    live_trade = conn.execute("SELECT * FROM sim_trades WHERE source='live'").fetchone()
+    oos_trade = conn.execute("SELECT * FROM sim_trades WHERE source='oos'").fetchone()
+    conn.close()
+    assert live_trade["asset"] == "SPY"
+    assert oos_trade["asset"] == "BTC-USD"
+    # rejouer generate_sim_trades sans filtre de source ne doit rien dupliquer
+    n_replay = st.generate_sim_trades(db_path=db_path)
+    assert n_replay == 0
+
+
+def test_live_horizon_7_never_leaks_into_all_predictions_or_kpis(tmp_path):
+    """predictions contient du live horizon=1 ET horizon=7 (mêmes runs) ; la vue
+    all_predictions (et donc generate_sim_trades/kpi_report) doit filtrer horizon=1
+    strictement -- une ligne h=7 ne doit jamais apparaître dans le backtest D+1."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    td.save_prediction(make_prediction_record(
+        tc_id="TC_H1", horizon=1, target_date="2026-06-02",
+        last_close=100.0, y_pred=101.0, y_lower=95.0, y_upper=107.0,
+    ), db_path=db_path)
+    td.save_prediction(make_prediction_record(
+        tc_id="TC_H7", horizon=7, target_date="2026-06-08",
+        last_close=100.0, y_pred=110.0, y_lower=95.0, y_upper=120.0,
+    ), db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    n_all_predictions = conn.execute("SELECT COUNT(*) FROM all_predictions").fetchone()[0]
+    horizons_seen = {row[0] for row in conn.execute("SELECT DISTINCT horizon FROM all_predictions")}
+    conn.close()
+    assert n_all_predictions == 1
+    assert horizons_seen == {1}
+
+    n_new = st.generate_sim_trades(db_path=db_path, source="live")
+    assert n_new == 1   # jamais 2 : la ligne h=7 n'a pas généré de sim_trade
+
+    report = st.kpi_report(db_path=db_path, source="live", group_by=())
+    assert report[0]["n_total"] == 1   # la ligne h=7 n'est pas comptée dans N_total non plus
+
+
+def test_init_db_drops_legacy_daily_oos_log_when_all_rows_duplicated(tmp_path):
+    """Une base créée avant BRIEF_db_unification.md peut encore porter une
+    daily_oos_log orpheline (plus jamais écrite) -- init_db() doit la supprimer, à
+    condition que chaque ligne y soit déjà un doublon exact de predictions."""
+    db_path = str(tmp_path / "t.db")
+    td.save_prediction(make_prediction_record(tc_id="TC1", run_id="run1"), db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE daily_oos_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, model TEXT, asset TEXT,
+            horizon INTEGER, d_date TEXT, source TEXT
+        )
+    """)
+    conn.execute(
+        "INSERT INTO daily_oos_log (run_id, model, asset, horizon, d_date, source) "
+        "VALUES ('run1','ARIMA-GARCH','SPY',1,'2026-06-01','live')"
+    )
+    conn.commit()
+    conn.close()
+
+    st.init_db(db_path)   # doit supprimer daily_oos_log sans lever
+
+    conn = sqlite3.connect(db_path)
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    conn.close()
+    assert "daily_oos_log" not in tables
+
+
+def test_init_db_refuses_to_drop_daily_oos_log_with_orphan_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE daily_oos_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, model TEXT, asset TEXT,
+            horizon INTEGER, d_date TEXT, source TEXT
+        )
+    """)
+    conn.execute(
+        "INSERT INTO daily_oos_log (run_id, model, asset, horizon, d_date, source) "
+        "VALUES ('run_orphan','ARIMA-GARCH','SPY',1,'2026-06-01','live')"
+    )
+    conn.commit()
+    conn.close()
+
+    with pytest.raises(RuntimeError):
+        st.init_db(db_path)   # aucune ligne predictions correspondante -> refuse de perdre la donnée
