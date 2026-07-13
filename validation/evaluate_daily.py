@@ -81,13 +81,16 @@ def main():
     n_evaluated = td.evaluate_pending(price_fetcher, db_path=args.db_path, today=today_iso)
     print(f"[evaluate_daily] {n_evaluated} prédiction(s) résolue(s)")
 
-    # Bull-Calm (BRIEF_bull_calm_d1.md §12) : ingère les nouvelles prédictions live horizon=1 dans
-    # daily_oos_log/sim_trades et résout les trades "open" devenus résolubles -- placé APRÈS
-    # evaluate_pending pour résoudre les trades le jour même où tracking.db se met à jour
-    # (idempotent, cf. validation/sim_trades.py).
-    sim_result = st.sync_live_trades(db_path=args.db_path)
-    print(f"[evaluate_daily] bull_calm_d1 : {sim_result['new_trades']} nouveau(x) sim_trade(s), "
-          f"{sim_result['resolved']} résolu(s)")
+    # Test cases TC1.1-TC1.5 (BRIEF_bull_calm_d1.md §12, BRIEF_sideways_d1.md) : ingère les
+    # nouvelles prédictions live horizon=1 dans daily_oos_log/sim_trades et résout les trades
+    # "open" devenus résolubles, pour CHACUNE des 5 règles déjà codées dans sim_trades.py --
+    # placé APRÈS evaluate_pending pour résoudre les trades le jour même où tracking.db se met
+    # à jour (idempotent, cf. validation/sim_trades.py). ingest_live_daily_oos_log() est
+    # idempotent (contrainte UNIQUE) : l'appeler 5 fois via sync_live_trades ne duplique rien.
+    for rule_version in ("bull_calm_d1", "pi95_conf", "bear_calm_d1", "bear_stress_d1", "sideways_d1"):
+        sim_result = st.sync_live_trades(db_path=args.db_path, rule_version=rule_version)
+        print(f"[evaluate_daily] {rule_version} : {sim_result['new_trades']} nouveau(x) sim_trade(s), "
+              f"{sim_result['resolved']} résolu(s)")
 
     if n_evaluated and not args.no_run_refresh:
         run_ids = td.run_ids_evaluated_on(today_iso, db_path=args.db_path)
