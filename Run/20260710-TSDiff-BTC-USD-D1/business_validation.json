@@ -15,12 +15,12 @@
   "verdict_integrite": 1,
   "verdict_plausibilite": 1,
   "created_at": "2026-07-10T15:42:46",
-  "y_true": 64165.91015625,
+  "y_true": 63802.02734375,
   "in_interval": 1,
-  "abs_error": 1506.515625,
-  "abs_error_naif": 972.76171875,
+  "abs_error": 1142.6328125,
+  "abs_error_naif": 608.87890625,
   "beats_naif": 0,
   "direction_correct": 0,
-  "evaluated_at": "2026-07-11",
+  "evaluated_at": "2026-07-13",
   "horizon_trading_days": 1
 }
