@@ -1,0 +1,53 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "ARIMA-GARCH",
+  "asset": "ETH-USD",
+  "transition_date": "2026-01-01",
+  "cutoff_date": "2025-12-31",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 2967.0376,
+  "horizons": {
+    "1": {
+      "target_date": "2026-01-01",
+      "y_pred": 2970.690388,
+      "y_lower": 2801.134491,
+      "y_upper": 3150.509699,
+      "y_true": 3000.3943,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 29.703912,
+      "abs_error_naif": 33.3567,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-01-07",
+      "y_pred": 2979.617571,
+      "y_lower": 2535.031867,
+      "y_upper": 3502.173281,
+      "y_true": 3166.844,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 187.226429,
+      "abs_error_naif": 199.8064,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-ARIMA-ETH-USD-D1",
+    "hyperparams": {
+      "order": [
+        2,
+        0,
+        2
+      ],
+      "garch_p": 1,
+      "garch_q": 1,
+      "garch_dist": "normal",
+      "aic": 4913.158621,
+      "bic": 4942.150343
+    }
+  }
+}

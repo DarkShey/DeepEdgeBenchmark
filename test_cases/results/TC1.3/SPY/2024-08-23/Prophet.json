@@ -1,0 +1,49 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "Prophet",
+  "asset": "SPY",
+  "transition_date": "2024-08-23",
+  "cutoff_date": "2024-08-22",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 543.3568,
+  "horizons": {
+    "1": {
+      "target_date": "2024-08-23",
+      "y_pred": 542.072429,
+      "y_lower": 522.013988,
+      "y_upper": 561.636025,
+      "y_true": 549.1302,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 7.057771,
+      "abs_error_naif": 5.7734,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2024-09-03",
+      "y_pred": 544.073149,
+      "y_lower": 525.329565,
+      "y_upper": 562.606608,
+      "y_true": 539.3127,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 4.760449,
+      "abs_error_naif": 4.0441,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-Prophet-SPY-D1",
+    "hyperparams": {
+      "changepoint_prior_scale": 0.05,
+      "seasonality_prior_scale": 10.0,
+      "interval_width": 0.95,
+      "weekly_seasonality": true,
+      "yearly_seasonality": true,
+      "daily_seasonality": false
+    }
+  }
+}

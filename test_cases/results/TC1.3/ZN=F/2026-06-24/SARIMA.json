@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "SARIMA",
+  "asset": "ZN=F",
+  "transition_date": "2026-06-24",
+  "cutoff_date": "2026-06-23",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 109.375,
+  "horizons": {
+    "1": {
+      "target_date": "2026-06-24",
+      "y_pred": 109.391629,
+      "y_lower": 108.555293,
+      "y_upper": 110.227964,
+      "y_true": 110.0,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 0.608371,
+      "abs_error_naif": 0.625,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-07-02",
+      "y_pred": 109.388476,
+      "y_lower": 107.280746,
+      "y_upper": 111.496206,
+      "y_true": 109.5781,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 0.189624,
+      "abs_error_naif": 0.2031,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-ZN=F-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 648.625491,
+      "bic": 670.877843
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "TSDiff",
+  "asset": "BTC-USD",
+  "transition_date": "2025-10-25",
+  "cutoff_date": "2025-10-24",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 111033.9219,
+  "horizons": {
+    "1": {
+      "target_date": "2025-10-25",
+      "y_pred": 111129.070312,
+      "y_lower": 111006.742188,
+      "y_upper": 111253.5,
+      "y_true": 111641.7266,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 512.656287,
+      "abs_error_naif": 607.8047,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2025-10-31",
+      "y_pred": 111776.140625,
+      "y_lower": 111467.601562,
+      "y_upper": 112164.390625,
+      "y_true": 109556.1641,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 2219.976525,
+      "abs_error_naif": 1477.7578,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": null
+}

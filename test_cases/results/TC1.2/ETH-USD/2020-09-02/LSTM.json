@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.2",
+  "tc_name": "bull_stress",
+  "model": "LSTM",
+  "asset": "ETH-USD",
+  "transition_date": "2020-09-02",
+  "cutoff_date": "2020-09-01",
+  "regime_from": "bull",
+  "regime_to": "stress",
+  "last_close": 477.0519,
+  "horizons": {
+    "1": {
+      "target_date": "2020-09-02",
+      "y_pred": 420.291718,
+      "y_lower": 379.330736,
+      "y_upper": 461.252699,
+      "y_true": 440.0405,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 19.748782,
+      "abs_error_naif": 37.0114,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2020-09-08",
+      "y_pred": 437.723053,
+      "y_lower": 329.350482,
+      "y_upper": 546.095624,
+      "y_true": 337.6021,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 100.120953,
+      "abs_error_naif": 139.4498,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-ETH-USD-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "Prophet",
+  "asset": "ETH-USD",
+  "transition_date": "2026-01-01",
+  "cutoff_date": "2025-12-31",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 2967.0376,
+  "horizons": {
+    "1": {
+      "target_date": "2026-01-01",
+      "y_pred": 3279.800115,
+      "y_lower": 2355.973151,
+      "y_upper": 4088.446121,
+      "y_true": 3000.3943,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 279.405815,
+      "abs_error_naif": 33.3567,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-01-07",
+      "y_pred": 3311.298031,
+      "y_lower": 2486.533836,
+      "y_upper": 4150.105646,
+      "y_true": 3166.844,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 144.454031,
+      "abs_error_naif": 199.8064,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-Prophet-ETH-USD-D1",
+    "hyperparams": {
+      "changepoint_prior_scale": 0.05,
+      "seasonality_prior_scale": 10.0,
+      "interval_width": 0.95,
+      "weekly_seasonality": true,
+      "yearly_seasonality": true,
+      "daily_seasonality": false
+    }
+  }
+}

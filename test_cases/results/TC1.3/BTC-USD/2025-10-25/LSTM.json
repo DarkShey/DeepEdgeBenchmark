@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "LSTM",
+  "asset": "BTC-USD",
+  "transition_date": "2025-10-25",
+  "cutoff_date": "2025-10-24",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 111033.9219,
+  "horizons": {
+    "1": {
+      "target_date": "2025-10-25",
+      "y_pred": 109290.453125,
+      "y_lower": 106200.076249,
+      "y_upper": 112380.830001,
+      "y_true": 111641.7266,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 2351.273475,
+      "abs_error_naif": 607.8047,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2025-10-31",
+      "y_pred": 105852.25,
+      "y_lower": 97675.881328,
+      "y_upper": 114028.618672,
+      "y_true": 109556.1641,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 3703.9141,
+      "abs_error_naif": 1477.7578,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-BTC-USD-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "TSDiff",
+  "asset": "SPY",
+  "transition_date": "2024-04-26",
+  "cutoff_date": "2024-04-25",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 490.2646,
+  "horizons": {
+    "1": {
+      "target_date": "2024-04-26",
+      "y_pred": 491.064362,
+      "y_lower": 488.331451,
+      "y_upper": 495.090698,
+      "y_true": 494.9094,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 3.845038,
+      "abs_error_naif": 4.6448,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2024-05-06",
+      "y_pred": 493.888214,
+      "y_lower": 483.139954,
+      "y_upper": 500.8573,
+      "y_true": 503.001,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 9.112786,
+      "abs_error_naif": 12.7364,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": null
+}

@@ -1,0 +1,48 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "LSTM",
+  "asset": "BTC-USD",
+  "transition_date": "2025-11-13",
+  "cutoff_date": "2025-11-12",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 101663.1875,
+  "horizons": {
+    "1": {
+      "target_date": "2025-11-13",
+      "y_pred": 105551.234375,
+      "y_lower": 102295.542191,
+      "y_upper": 108806.926559,
+      "y_true": 99697.4922,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 5853.742175,
+      "abs_error_naif": 1965.6953,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2025-11-19",
+      "y_pred": 111518.695312,
+      "y_lower": 102904.943448,
+      "y_upper": 120132.447177,
+      "y_true": 91465.9922,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 20052.703113,
+      "abs_error_naif": 10197.1953,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-LSTM-BTC-USD-D1",
+    "hyperparams": {
+      "seq_len": 30,
+      "units": 64,
+      "epochs": 30,
+      "batch_size": 32,
+      "optimizer": "adam"
+    }
+  }
+}

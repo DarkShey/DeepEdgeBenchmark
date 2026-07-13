@@ -1,0 +1,53 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "ARIMA-GARCH",
+  "asset": "SPY",
+  "transition_date": "2024-08-23",
+  "cutoff_date": "2024-08-22",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 543.3568,
+  "horizons": {
+    "1": {
+      "target_date": "2024-08-23",
+      "y_pred": 542.460847,
+      "y_lower": 532.27799,
+      "y_upper": 552.838509,
+      "y_true": 549.1302,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 6.669353,
+      "abs_error_naif": 5.7734,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2024-09-03",
+      "y_pred": 544.673628,
+      "y_lower": 517.445337,
+      "y_upper": 573.334688,
+      "y_true": 539.3127,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 5.360928,
+      "abs_error_naif": 4.0441,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-ARIMA-SPY-D1",
+    "hyperparams": {
+      "order": [
+        2,
+        0,
+        2
+      ],
+      "garch_p": 1,
+      "garch_q": 1,
+      "garch_dist": "normal",
+      "aic": 1767.134217,
+      "bic": 1793.855967
+    }
+  }
+}

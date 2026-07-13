@@ -1,0 +1,56 @@
+{
+  "tc_id": "TC1.2",
+  "tc_name": "bull_stress",
+  "model": "SARIMA",
+  "asset": "SPY",
+  "transition_date": "2026-06-05",
+  "cutoff_date": "2026-06-04",
+  "regime_from": "bull",
+  "regime_to": "stress",
+  "last_close": 755.1446,
+  "horizons": {
+    "1": {
+      "target_date": "2026-06-05",
+      "y_pred": 754.854282,
+      "y_lower": 745.96715,
+      "y_upper": 763.741413,
+      "y_true": 735.6548,
+      "in_interval": false,
+      "direction_correct": true,
+      "abs_error": 19.199482,
+      "abs_error_naif": 19.4898,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-06-15",
+      "y_pred": 755.065336,
+      "y_lower": 732.406319,
+      "y_upper": 777.724353,
+      "y_true": 752.8904,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 2.174936,
+      "abs_error_naif": 2.2542,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-SARIMA-SPY-D1",
+    "hyperparams": {
+      "order": [
+        1,
+        1,
+        1
+      ],
+      "seasonal_order": [
+        1,
+        0,
+        1,
+        5
+      ],
+      "aic": 3890.87249,
+      "bic": 3913.109019
+    }
+  }
+}

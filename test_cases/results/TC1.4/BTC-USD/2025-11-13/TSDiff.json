@@ -1,0 +1,38 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "TSDiff",
+  "asset": "BTC-USD",
+  "transition_date": "2025-11-13",
+  "cutoff_date": "2025-11-12",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 101663.1875,
+  "horizons": {
+    "1": {
+      "target_date": "2025-11-13",
+      "y_pred": 101733.453125,
+      "y_lower": 101538.984375,
+      "y_upper": 101986.90625,
+      "y_true": 99697.4922,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 2035.960925,
+      "abs_error_naif": 1965.6953,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2025-11-19",
+      "y_pred": 102155.398438,
+      "y_lower": 101270.765625,
+      "y_upper": 102711.15625,
+      "y_true": 91465.9922,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 10689.406238,
+      "abs_error_naif": 10197.1953,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": null
+}

@@ -1,0 +1,49 @@
+{
+  "tc_id": "TC1.4",
+  "tc_name": "bear_stress",
+  "model": "Prophet",
+  "asset": "ETH-USD",
+  "transition_date": "2026-01-29",
+  "cutoff_date": "2026-01-28",
+  "regime_from": "bear",
+  "regime_to": "stress",
+  "last_close": 3006.6074,
+  "horizons": {
+    "1": {
+      "target_date": "2026-01-29",
+      "y_pred": 3207.27053,
+      "y_lower": 2395.512502,
+      "y_upper": 4061.323975,
+      "y_true": 2818.2327,
+      "in_interval": true,
+      "direction_correct": false,
+      "abs_error": 389.03783,
+      "abs_error_naif": 188.3747,
+      "beats_naif": false
+    },
+    "7": {
+      "target_date": "2026-02-04",
+      "y_pred": 3246.300807,
+      "y_lower": 2374.81413,
+      "y_upper": 4074.229532,
+      "y_true": 2143.5042,
+      "in_interval": false,
+      "direction_correct": false,
+      "abs_error": 1102.796607,
+      "abs_error_naif": 863.1032,
+      "beats_naif": false
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-Prophet-ETH-USD-D1",
+    "hyperparams": {
+      "changepoint_prior_scale": 0.05,
+      "seasonality_prior_scale": 10.0,
+      "interval_width": 0.95,
+      "weekly_seasonality": true,
+      "yearly_seasonality": true,
+      "daily_seasonality": false
+    }
+  }
+}

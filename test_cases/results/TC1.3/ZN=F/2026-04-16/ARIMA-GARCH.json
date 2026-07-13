@@ -1,0 +1,53 @@
+{
+  "tc_id": "TC1.3",
+  "tc_name": "bear_calm",
+  "model": "ARIMA-GARCH",
+  "asset": "ZN=F",
+  "transition_date": "2026-04-16",
+  "cutoff_date": "2026-04-15",
+  "regime_from": "bear",
+  "regime_to": "calm",
+  "last_close": 111.3594,
+  "horizons": {
+    "1": {
+      "target_date": "2026-04-16",
+      "y_pred": 111.329448,
+      "y_lower": 110.703705,
+      "y_upper": 111.958727,
+      "y_true": 111.2188,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 0.110648,
+      "abs_error_naif": 0.1406,
+      "beats_naif": true
+    },
+    "7": {
+      "target_date": "2026-04-24",
+      "y_pred": 111.30047,
+      "y_lower": 109.636967,
+      "y_upper": 112.989213,
+      "y_true": 111.2188,
+      "in_interval": true,
+      "direction_correct": true,
+      "abs_error": 0.08167,
+      "abs_error_naif": 0.1406,
+      "beats_naif": true
+    }
+  },
+  "hyperparams_source": {
+    "source_run_date": "20260712",
+    "source_run_dir": "20260712-ARIMA-ZN=F-D1",
+    "hyperparams": {
+      "order": [
+        2,
+        0,
+        2
+      ],
+      "garch_p": 1,
+      "garch_q": 1,
+      "garch_dist": "normal",
+      "aic": 526.164622,
+      "bic": 552.90524
+    }
+  }
+}
