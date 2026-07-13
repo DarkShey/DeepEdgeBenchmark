@@ -22,5 +22,6 @@
   "beats_naif": 1,
   "direction_correct": 0,
   "evaluated_at": "2026-07-13",
+  "source": "live",
   "horizon_trading_days": 1
 }

@@ -10,6 +10,11 @@ par model_artifacts/pipeline.py et génère une page HTML autonome affichant, pa
 Plus un onglet Comparaison (tous actifs confondus, graphiques barres — fonctionnalité
 préexistante conservée telle quelle).
 
+En bas de chaque onglet actif où la donnée existe (BTC-USD pour l'instant) : un tableau
+jour par jour des test cases TC1.1-TC1.5 (`validation/sim_trades.py`), le TC qui a généré
+un signal ce jour-là et son counter — restreint à D+1 (seul horizon supporté par ces
+règles, cf. docstring de validation/sim_trades.py).
+
 Exécution (depuis DeepEdgeBenchmark/) :
     python -m model_artifacts.generate_dashboard
     python -m model_artifacts.generate_dashboard --run-root Run --out Run/dashboard.html
@@ -24,6 +29,16 @@ from pathlib import Path
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+import sys
+sys.path.insert(0, str(REPO_ROOT))
+from validation import sim_trades as st
+
+# Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief), et un
+# seul actif pour l'instant (BTC-USD) -- étendre en ajoutant des tickers ici.
+SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff"]
+SIM_TRADES_ASSETS = ["BTC-USD"]
+SIM_TRADES_DB_PATH = "validation/tracking.db"
 
 MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
@@ -178,6 +193,32 @@ def build_asset_catalog(records: list) -> list:
     return [{"ticker": t, "label": t, "short": t, "asset_class": ""} for t in seen_tickers]
 
 
+def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
+    """Détail jour par jour des test cases TC1.1-TC1.5 (validation/sim_trades.py),
+    un par actif de SIM_TRADES_ASSETS -- vide (silencieux) si tracking.db est absent
+    ou si validation.sim_trades lève une erreur, pour ne jamais faire échouer la
+    génération du reste du dashboard sur cette seule fonctionnalité annexe."""
+    out = {}
+    for asset in SIM_TRADES_ASSETS:
+        try:
+            rows = st.daily_detail(db_path=db_path, asset=asset, models=SIM_TRADES_MODELS)
+        except Exception as exc:
+            print(f"[generate_dashboard] sim_trades indisponible pour {asset} ({exc})")
+            rows = []
+        out[asset] = [
+            {
+                "source": r["source"], "d_date": r["d_date"], "target_date": r["target_date"],
+                "model": r["model"],
+                "reference_price": _num(r["reference_price"]), "predicted": _num(r["predicted"]),
+                "pi_lower": _num(r["pi_lower"]), "pi_upper": _num(r["pi_upper"]),
+                "realized_price": _num(r["realized_price"]),
+                "signals": r["signals"],
+            }
+            for r in rows
+        ]
+    return out
+
+
 def render_html(run_data: dict, run_root_label: str) -> str:
     records = run_data["records"]
     asset_catalog = build_asset_catalog(records)
@@ -194,6 +235,8 @@ def render_html(run_data: dict, run_root_label: str) -> str:
         "run_dates": run_data["run_dates"],
         "predictions": run_data["predictions"],
         "prices": run_data["prices"],
+        "sim_trades_daily": collect_sim_trades_daily(),
+        "sim_trades_models": SIM_TRADES_MODELS,
     }
     data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     return HTML_TEMPLATE.replace("__DATA_JSON__", data_json)
@@ -571,6 +614,17 @@ function assetPanelSkeleton(a) {
         <div class="chart-wrap" id="chart-${s}"></div>
       </div>
     </div>
+
+    <div class="card" id="simtrades-card-${s}" style="display:none;">
+      <h2>Test cases (TC1.1&ndash;TC1.5, D+1) &mdash; jour par jour</h2>
+      <div class="controls-row" style="margin-bottom:12px;">
+        <div class="model-checks" id="simtrades-models-${s}"></div>
+        <label class="field-label">
+          <input type="checkbox" id="simtrades-onlysignal-${s}" checked> Seulement les jours avec signal
+        </label>
+      </div>
+      <div style="overflow:auto; max-height:480px;" id="simtrades-table-${s}"></div>
+    </div>
   `;
 }
 
@@ -715,11 +769,91 @@ function wireAssetPanel(a) {
   });
 
   renderAssetKpis(ticker);
+  setupSimTradesControls(a);
+  renderSimTradesTable(ticker);
 }
 
 function refreshAssetTab(ticker) {
   renderAssetKpis(ticker);
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+}
+
+// =============================================================================
+// Test cases TC1.1-TC1.5 (validation/sim_trades.py) — tableau jour par jour, en bas
+// de chaque onglet actif où la donnée existe (BTC-USD pour l'instant, cf.
+// SIM_TRADES_ASSETS côté Python). Restreint à D+1 (seul horizon supporté par ces
+// règles — l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin).
+// =============================================================================
+
+const simTradesState = {};
+
+function setupSimTradesControls(a) {
+  const s = a.short, ticker = a.ticker;
+  const rows = (DATA.sim_trades_daily || {})[ticker];
+  if (!rows || !rows.length) return;   // pas de données pour cet actif -> rien à câbler
+
+  const models = DATA.sim_trades_models || [];
+  simTradesState[ticker] = { models: new Set(models) };
+
+  const mEl = document.getElementById(`simtrades-models-${s}`);
+  mEl.innerHTML = '';
+  models.forEach(m => {
+    const label = document.createElement('label');
+    label.className = 'model-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = true;
+    cb.addEventListener('change', () => {
+      if (cb.checked) simTradesState[ticker].models.add(m); else simTradesState[ticker].models.delete(m);
+      renderSimTradesTable(ticker);
+    });
+    const sw = document.createElement('span');
+    sw.style.cssText = `width:9px;height:9px;border-radius:2px;display:inline-block;background:${MODEL_COLORS[m]};`;
+    const txt = document.createElement('span'); txt.textContent = m;
+    label.appendChild(cb); label.appendChild(sw); label.appendChild(txt);
+    mEl.appendChild(label);
+  });
+
+  document.getElementById(`simtrades-onlysignal-${s}`).addEventListener('change', () => renderSimTradesTable(ticker));
+}
+
+function renderSimTradesTable(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short;
+  const card = document.getElementById(`simtrades-card-${s}`);
+  const rows = (DATA.sim_trades_daily || {})[ticker];
+  if (!rows || !rows.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const state = simTradesState[ticker];
+  const onlySignal = document.getElementById(`simtrades-onlysignal-${s}`).checked;
+
+  let filtered = rows.filter(r => state.models.has(r.model));
+  if (onlySignal) filtered = filtered.filter(r => r.signals.length > 0);
+
+  const wrap = document.getElementById(`simtrades-table-${s}`);
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="no-data">Aucune ligne pour cette sélection.</div>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source</th><th>Modèle</th>'
+    + '<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s)</th><th>Counter</th></tr></thead><tbody>';
+  filtered.forEach(r => {
+    const color = MODEL_COLORS[r.model] || '#888';
+    const tcText = r.signals.length
+      ? r.signals.map(sig => sig.tc_id + (sig.status === 'open' ? ' (ouvert)' : '')).join(', ')
+      : '—';
+    const counterText = r.signals.length
+      ? r.signals.map(sig => sig.counter === null || sig.counter === undefined
+          ? '—' : (sig.counter > 0 ? '+' + sig.counter : String(sig.counter))).join(', ')
+      : '—';
+    html += `<tr><td>${r.d_date}</td><td>${r.target_date}</td><td>${r.source}</td>`
+      + `<td><span style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${color};margin-right:6px;"></span>${r.model}</td>`
+      + `<td>${fmt(r.reference_price, 2)}</td><td>${fmt(r.predicted, 2)}</td><td>${fmt(r.realized_price, 2)}</td>`
+      + `<td>${tcText}</td><td>${counterText}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------

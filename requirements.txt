@@ -23,6 +23,3 @@ pytest-timeout>=2
 
 # model_artifacts/ (résidus ARIMA/SARIMA sérialisés en residuals.parquet)
 pyarrow>=14
-
-# test_cases/ (lecture de DONNEE~1.XLS pour convert_source_data.py)
-openpyxl>=3.1

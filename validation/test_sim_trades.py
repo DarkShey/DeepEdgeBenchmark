@@ -387,35 +387,6 @@ def test_naive_always_long_benchmark_ignores_signal_filter(tmp_path):
     assert entry["roi_sum"] == pytest.approx(expected_roi_sum, abs=1e-6)   # report arrondi à 6 décimales
 
 
-# ── Bonus : regime="unknown" forcé en OOS, jamais lu depuis business_validation ─
-
-def test_oos_regime_is_always_unknown_even_if_business_validation_present(tmp_path):
-    run_dir = write_fake_run_dir(tmp_path, rows={
-        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
-        "actual": [100.0, 105.0], "predicted": [999.0, 106.0],
-        "pi_lower": [999.0, 95.0], "pi_upper": [999.0, 115.0],
-    })
-    (run_dir / "business_validation.json").write_text('{"regime": "bull"}')
-
-    log_rows, _ = st.build_oos_prediction_rows(run_dir)
-    assert all(row["regime"] == "unknown" for row in log_rows)
-
-
-def test_kpi_report_rejects_regime_groupby_on_oos_source(tmp_path):
-    db_path = str(tmp_path / "t.db")
-    st.init_db(db_path)
-    with pytest.raises(ValueError):
-        st.kpi_report(db_path=db_path, source="oos", group_by=("asset", "regime"))
-
-
-def test_kpi_report_allows_regime_groupby_on_live_source(tmp_path):
-    db_path = str(tmp_path / "t.db")
-    st.init_db(db_path)
-    # ne doit pas lever, même si la table est vide
-    report = st.kpi_report(db_path=db_path, source="live", group_by=("asset", "regime"))
-    assert report == []
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Bear (bear_calm_d1 = TC1.3, bear_stress_d1 = TC1.4) — miroir exact des tests Bull
 # ci-dessus (BRIEF_bull_calm_d1.md §3bis) : position courte, profit quand le prix baisse,
@@ -681,6 +652,35 @@ def test_bear_rules_registered_in_dispatch():
     assert signal_valid is True
     assert direction_ok == 1   # realized(96) < ref(100) : thèse courte confirmée
     assert in_band is None
+
+
+# ── Bonus : regime="unknown" forcé en OOS, jamais lu depuis business_validation ─
+
+def test_oos_regime_is_always_unknown_even_if_business_validation_present(tmp_path):
+    run_dir = write_fake_run_dir(tmp_path, rows={
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual": [100.0, 105.0], "predicted": [999.0, 106.0],
+        "pi_lower": [999.0, 95.0], "pi_upper": [999.0, 115.0],
+    })
+    (run_dir / "business_validation.json").write_text('{"regime": "bull"}')
+
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    assert all(row["regime"] == "unknown" for row in log_rows)
+
+
+def test_kpi_report_rejects_regime_groupby_on_oos_source(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    with pytest.raises(ValueError):
+        st.kpi_report(db_path=db_path, source="oos", group_by=("asset", "regime"))
+
+
+def test_kpi_report_allows_regime_groupby_on_live_source(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    # ne doit pas lever, même si la table est vide
+    report = st.kpi_report(db_path=db_path, source="live", group_by=("asset", "regime"))
+    assert report == []
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

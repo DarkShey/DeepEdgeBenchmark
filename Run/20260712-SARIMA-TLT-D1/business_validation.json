@@ -22,5 +22,6 @@
   "beats_naif": null,
   "direction_correct": null,
   "evaluated_at": null,
+  "source": "live",
   "horizon_trading_days": 1
 }

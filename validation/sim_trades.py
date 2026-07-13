@@ -178,7 +178,7 @@ def _resolve_branches(ref: float, pi_low: float, pi_high: float, realized: float
 
 
 def bull_calm_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
-    """cf. §8 du brief. Retourne (signal_valid, branch, counter, roi, degenerate_pi)."""
+    """TC1.1 Bull-Calm — cf. §8 du brief. Retourne (signal_valid, branch, counter, roi, degenerate_pi)."""
     degenerate_pi = int(pi_high <= ref)
 
     # Garde-fou d'étanchéité (taxonomie TC1.1-TC1.5) : bull calm exclut les jours
@@ -197,9 +197,9 @@ def bull_calm_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
 
 
 def pi95_conf(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
-    """Règle sœur (§3) : signal plus strict (hausse quasi certaine même au pire bas de
-    l'IC) -- `pi_low > ref` au lieu de `predicted > ref`. Résolution identique (mêmes
-    branches §4)."""
+    """TC1.2 Bull-Stress — règle sœur (§3) : signal plus strict (hausse quasi certaine
+    même au pire bas de l'IC) -- `pi_low > ref` au lieu de `predicted > ref`. Résolution
+    identique (mêmes branches §4)."""
     degenerate_pi = int(pi_high <= ref)
 
     signal_valid = pi_low > ref
@@ -269,9 +269,10 @@ def bear_stress_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
 
 
 def sideways_d1(ref, predicted, pi_low, pi_high, realized, k=0.10, m_frac=0.25, h_frac=0.50):
-    """Test de justesse d'une journée plate (BRIEF_sideways_d1.md §7, pseudo-code exact).
-    Retourne (signal_sideways, branch, counter, roi, in_band, degenerate_pi). roi est
-    TOUJOURS None (pas de position directionnelle) ; realized peut être None (live)."""
+    """TC1.5 Sideways — test de justesse d'une journée plate (BRIEF_sideways_d1.md §7,
+    pseudo-code exact). Retourne (signal_sideways, branch, counter, roi, in_band,
+    degenerate_pi). roi est TOUJOURS None (pas de position directionnelle) ; realized
+    peut être None (live)."""
     W = pi_high - pi_low
     degenerate_pi = int(W <= 0)
 
