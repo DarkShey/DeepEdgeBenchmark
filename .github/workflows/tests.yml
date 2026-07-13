@@ -1,0 +1,28 @@
+name: Tests
+
+# Suite de tests hors-ligne (aucun accès réseau, aucune écriture sur tracking.db du repo) :
+# validation/test_*.py, dont validation/test_sim_trades.py (BRIEF_TCB1_bull_d1.md §10/§12).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run validation test suite
+        run: python -m pytest validation/ -q
