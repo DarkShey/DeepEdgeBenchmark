@@ -81,12 +81,12 @@ def main():
     n_evaluated = td.evaluate_pending(price_fetcher, db_path=args.db_path, today=today_iso)
     print(f"[evaluate_daily] {n_evaluated} prédiction(s) résolue(s)")
 
-    # TCB1 (BRIEF_TCB1_bull_d1.md §12) : ingère les nouvelles prédictions live horizon=1 dans
+    # Bull-Calm (BRIEF_bull_calm_d1.md §12) : ingère les nouvelles prédictions live horizon=1 dans
     # daily_oos_log/sim_trades et résout les trades "open" devenus résolubles -- placé APRÈS
     # evaluate_pending pour résoudre les trades le jour même où tracking.db se met à jour
     # (idempotent, cf. validation/sim_trades.py).
     sim_result = st.sync_live_trades(db_path=args.db_path)
-    print(f"[evaluate_daily] tcb1_bull_d1 : {sim_result['new_trades']} nouveau(x) sim_trade(s), "
+    print(f"[evaluate_daily] bull_calm_d1 : {sim_result['new_trades']} nouveau(x) sim_trade(s), "
           f"{sim_result['resolved']} résolu(s)")
 
     if n_evaluated and not args.no_run_refresh:

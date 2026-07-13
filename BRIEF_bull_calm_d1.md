@@ -1,20 +1,20 @@
-# BRIEF — TCB1 : Test Case Bull à D+1 (`tcb1_bull_d1`)
+# BRIEF — Bull-Calm : Test Case Bull à D+1 (`bull_calm_d1`)
 
 > **Statut** : spec validée (2026-07-12), à implémenter.
 > **Objet** : mesurer l'utilisabilité *opérationnelle* d'une prédiction Price Interval 95 % à D+1
 > via une stratégie simple et falsifiable — *long today, take profit tomorrow*.
-> **Rule version** : `tcb1_bull_d1`.
+> **Rule version** : `bull_calm_d1`.
 > **Principe directeur** : on ne juge plus le modèle sur des métriques abstraites (RMSE, couverture)
 > mais sur le **P&L d'une règle de trading explicite**. Un modèle « statistiquement bon » qui perd de
-> l'argent sur TCB1 est inutilisable ; c'est exactement ce qu'on veut détecter.
+> l'argent sur Bull-Calm est inutilisable ; c'est exactement ce qu'on veut détecter.
 
 ---
 
 ## 0. Contexte & état du repo (ce qui existe déjà)
 
-Les briques de données sont en place ; TCB1 ne rajoute qu'une **couche de simulation** par-dessus.
+Les briques de données sont en place ; Bull-Calm ne rajoute qu'une **couche de simulation** par-dessus.
 
-| Brique existante | Emplacement | Contenu utile pour TCB1 |
+| Brique existante | Emplacement | Contenu utile pour Bull-Calm |
 |---|---|---|
 | Log OOS par combo | `Run/<run>/predictions.parquet` | `date, actual, predicted, pi_lower, pi_upper` (~113 pts OOS/combo, walk-forward one-step-ahead) |
 | Prédictions live | `validation/tracking.db` → table `predictions` | `last_close, y_pred, y_lower, y_upper, target_date, y_true, direction_correct, in_interval, regime, …` |
@@ -22,9 +22,9 @@ Les briques de données sont en place ; TCB1 ne rajoute qu'une **couche de simul
 | Métriques modèle | `Run/<run>/metrics.json` | `pi_coverage_95`, `directional_accuracy`, `skill_vs_naive`, … |
 | Verdicts pré-résolution | `validation/verdict_rules.py` | `verdict_integrite`, `verdict_plausibilite` |
 
-**Ce que TCB1 ajoute et qui n'existe pas encore** : la table `daily_oos_log` (vue normalisée du log OOS
+**Ce que Bull-Calm ajoute et qui n'existe pas encore** : la table `daily_oos_log` (vue normalisée du log OOS
 alimentant la simulation), la table `sim_trades` (un trade simulé par signal, avec `counter` et `roi`),
-la règle `tcb1_bull_d1`, et les KPIs agrégés.
+la règle `bull_calm_d1`, et les KPIs agrégés.
 
 ---
 
@@ -96,7 +96,7 @@ plus il est haut au-dessus, plus c'est baissier ; au centre, c'est plat. Partiti
 | Test case | Condition sur P(D) (connue à D) | Stratégie | Statut |
 |---|---|---|---|
 | **TC1.2 Bull stress** | `P(D) < PI_low` | long forte conviction | règle `pi95_conf` codée, à promouvoir |
-| **TC1.1 Bull calm** | `PI_low ≤ P(D) < PI_mid` | long léger | ✅ implémenté (`tcb1_bull_d1`) |
+| **TC1.1 Bull calm** | `PI_low ≤ P(D) < PI_mid` | long léger | ✅ implémenté (`bull_calm_d1`) |
 | **TC1.5 Sideways** | `P(D) ≈ PI_mid` (`|PI_mid − P(D)| < ε`) | range / justesse | à concevoir (cf. note ROI) |
 | **TC1.3 Bear calm** | `PI_mid < P(D) ≤ PI_high` | short léger | à faire (miroir de TC1.1) |
 | **TC1.4 Bear stress** | `P(D) > PI_high` | short forte conviction | à faire (miroir de TC1.2) |
@@ -172,7 +172,7 @@ sert précisément à révéler ce genre de combo peu tradable**.
 
 1. **Première ligne OOS (`t=0`)** : pas de `t-1`, donc pas de `reference_price` → ignorée (jamais de trade).
 2. **`predicted > ref` mais `PI_high ≤ ref`** (intervalle incohérent avec la prévision ponctuelle) :
-   la prévision est signalée `verdict_integrite = 0` en amont ; en TCB1 on **flag** `degenerate_pi = True`,
+   la prévision est signalée `verdict_integrite = 0` en amont ; en Bull-Calm on **flag** `degenerate_pi = True`,
    on exécute quand même la règle (les branches restent exhaustives) mais on **exclut** ces trades des KPIs par défaut.
 3. **NaN / bornes cassées** (`pi_lower > pi_upper`, valeurs non finies) : ligne exclue, comptée dans `n_dropped`.
 4. **`realized` exactement sur une frontière** : inégalités choisies pour ne jamais laisser de trou —
@@ -208,7 +208,7 @@ Une ligne = un couple (D → D+1) prêt à simuler, dérivé de `predictions.par
 | Colonne | Type | Définition |
 |---|---|---|
 | `id` | INTEGER PK | |
-| `rule_version` | TEXT | `"tcb1_bull_d1"` |
+| `rule_version` | TEXT | `"bull_calm_d1"` |
 | `run_id`, `model`, `asset`, `horizon`, `regime`, `source` | — | hérités du log |
 | `d_date`, `target_date` | TEXT | |
 | `reference_price`, `predicted`, `pi_lower`, `pi_upper`, `realized_price` | REAL | snapshot au moment du signal |
@@ -226,10 +226,10 @@ Une ligne = un couple (D → D+1) prêt à simuler, dérivé de `predictions.par
 
 ---
 
-## 8. Pseudo-code de la règle (`tcb1_bull_d1`)
+## 8. Pseudo-code de la règle (`bull_calm_d1`)
 
 ```python
-def tcb1_bull_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
+def bull_calm_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     """Retourne (signal_valid, branch, counter, roi, degenerate_pi) pour un couple D->D+1.
     Toutes les entrées sont des prix au close ; realized peut être None (live non résolu)."""
     degenerate_pi = int(pi_high <= ref)
@@ -275,7 +275,7 @@ Tous calculés sur les **signaux valides non dégénérés** sauf mention contra
 7. **Couverture PI** (réutilise l'existant `pi_coverage_95`) — % de `realized ∈ [pi_low, pi_high]` : sert de garde-fou
    (un counter −2 fréquent doit coïncider avec une couverture < 95 %).
 8. **Benchmark naïf** — même règle appliquée à un prédicteur naïf (`predicted = ref`, PI = bandes vol √t) →
-   TCB1 n'a de valeur que s'il **bat le naïf** (cohérent avec `skill_vs_naive` de `metrics.json`).
+   Bull-Calm n'a de valeur que s'il **bat le naïf** (cohérent avec `skill_vs_naive` de `metrics.json`).
 
 **Garde-fou d'interprétation** : sur un combo `worse than naive`, on *attend* un counter moyen négatif.
 Un counter fortement positif sur un tel combo = suspicion de bug (probable look-ahead) → investiguer avant de célébrer.
@@ -317,7 +317,7 @@ re-téléchargement à la volée pour les KPIs OOS).
 
 ## 12. Livrables d'implémentation attendus
 
-- `validation/sim_trades.py` (ou module dédié) : construction `daily_oos_log`, application `tcb1_bull_d1`, écriture `sim_trades`.
+- `validation/sim_trades.py` (ou module dédié) : construction `daily_oos_log`, application `bull_calm_d1`, écriture `sim_trades`.
 - Migration `tracking.db` : tables `daily_oos_log` et `sim_trades`.
 - Branchement dans `evaluate_daily.py` : résoudre les `sim_trades` `open` en même temps que les prédictions.
 - Rapport KPIs (réutiliser le style `rapport_validation` / dashboard existant), séparé OOS / live.

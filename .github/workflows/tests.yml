@@ -1,7 +1,7 @@
 name: Tests
 
 # Suite de tests hors-ligne (aucun accès réseau, aucune écriture sur tracking.db du repo) :
-# validation/test_*.py, dont validation/test_sim_trades.py (BRIEF_TCB1_bull_d1.md §10/§12).
+# validation/test_*.py, dont validation/test_sim_trades.py (BRIEF_bull_calm_d1.md §10/§12).
 
 on:
   push:

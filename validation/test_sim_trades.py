@@ -1,5 +1,5 @@
 """
-test_sim_trades.py — suite du §10 de BRIEF_TCB1_bull_d1.md (hors-ligne, aucun accès réseau).
+test_sim_trades.py — suite du §10 de BRIEF_bull_calm_d1.md (hors-ligne, aucun accès réseau).
 
 Convention identique à test_tracking_db.py : sqlite temporaire (tmp_path), assertions
 directes en SQL quand on teste la persistance, sinon appel direct aux fonctions pures.
@@ -101,28 +101,28 @@ def test_counter_values(realized, expected_counter):
 # ── 4. test_roi_formulas ──────────────────────────────────────────────────────
 
 def test_roi_formula_branch_1_capped_at_pi_high():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=130.0)
     assert branch == 1
     assert roi == pytest.approx((110.0 - 100.0) / 100.0)
 
 
 def test_roi_formula_branch_2():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=104.0)
     assert branch == 2
     assert roi == pytest.approx((104.0 - 100.0) / 100.0)
 
 
 def test_roi_formula_branch_3():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=95.0)
     assert branch == 3
     assert roi == pytest.approx((95.0 - 100.0) / 100.0)
 
 
 def test_roi_formula_branch_4_uses_realized_close_not_pi_low_in_v1():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=80.0)
     assert branch == 4
     # décision v1 (§8/§11.1) : exit_px = realized (daily close prudent), PAS pi_low
@@ -131,9 +131,9 @@ def test_roi_formula_branch_4_uses_realized_close_not_pi_low_in_v1():
 
 
 def test_roi_formula_applies_fee_bps():
-    _, _, _, roi_no_fee, _ = st.tcb1_bull_d1(
+    _, _, _, roi_no_fee, _ = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=104.0, fee_bps=0.0)
-    _, _, _, roi_with_fee, _ = st.tcb1_bull_d1(
+    _, _, _, roi_with_fee, _ = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=104.0, fee_bps=10.0)
     assert roi_no_fee - roi_with_fee == pytest.approx(10.0 / 1e4)
 
@@ -185,7 +185,7 @@ def test_no_lookahead_swap_to_actual_t_would_fail(tmp_path):
 # ── 6. test_signal_flat ───────────────────────────────────────────────────────
 
 def test_signal_flat_when_predicted_not_above_ref():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=100.0, pi_low=90.0, pi_high=110.0, realized=105.0)
     assert signal_valid is False
     assert branch is None
@@ -220,7 +220,7 @@ def test_signal_flat_rows_not_stored_as_sim_trades(tmp_path):
 # ── 7. test_degenerate_pi ─────────────────────────────────────────────────────
 
 def test_degenerate_pi_flag_when_pi_high_leq_ref():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=101.0, pi_low=90.0, pi_high=100.0, realized=102.0)
     assert degenerate == 1
     assert signal_valid is True   # la règle s'exécute quand même (§6.2)
@@ -255,7 +255,7 @@ def test_degenerate_pi_excluded_from_kpis_by_default(tmp_path):
 # ── 8. test_live_open ─────────────────────────────────────────────────────────
 
 def test_live_open_when_realized_is_none():
-    signal_valid, branch, counter, roi, degenerate = st.tcb1_bull_d1(
+    signal_valid, branch, counter, roi, degenerate = st.bull_calm_d1(
         ref=100.0, predicted=105.0, pi_low=90.0, pi_high=110.0, realized=None)
     assert signal_valid is True
     assert branch is None
@@ -335,7 +335,7 @@ def test_idempotent_resolution_no_duplicate_and_no_reprocess(tmp_path):
 
 def test_vs_naive_pure_persistence_generates_zero_signals(tmp_path):
     """Un prédicteur naïf pur (predicted[t] == actual[t-1], persistance stricte)
-    ne déclenche jamais tcb1_bull_d1 (predicted > ref est toujours faux) : le
+    ne déclenche jamais bull_calm_d1 (predicted > ref est toujours faux) : le
     benchmark 'signal-filtré' serait vide -- constaté empiriquement sur les runs
     Naive-*-D1 récents (cf. discussion), d'où le remplacement par un benchmark
     always-long pour le KPI 8 (naive_always_long_report)."""
@@ -349,7 +349,7 @@ def test_vs_naive_pure_persistence_generates_zero_signals(tmp_path):
     run_dir = write_fake_run_dir(tmp_path, model="Naive", horizon_label="D1", rows=rows)
     log_rows, _ = st.build_daily_oos_log_rows(run_dir)
     for row in log_rows:
-        signal_valid, *_ = st.tcb1_bull_d1(
+        signal_valid, *_ = st.bull_calm_d1(
             row["reference_price"], row["predicted"], row["pi_lower"],
             row["pi_upper"], row["realized_price"])
         assert signal_valid is False
@@ -364,7 +364,7 @@ def test_naive_always_long_benchmark_ignores_signal_filter(tmp_path):
     rows = {
         "date": pd.to_datetime(["2026-02-01", "2026-02-02", "2026-02-03"]),
         "actual":    [100.0, 105.0, 103.0],
-        "predicted": [999.0, 100.0, 105.0],   # persistance stricte -> 0 signal sous tcb1_bull_d1
+        "predicted": [999.0, 100.0, 105.0],   # persistance stricte -> 0 signal sous bull_calm_d1
         "pi_lower":  [999.0,  90.0,  95.0],
         "pi_upper":  [999.0, 110.0, 115.0],
     }

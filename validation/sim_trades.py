@@ -1,15 +1,15 @@
 """
-sim_trades.py — Test Case Bull à D+1 (`tcb1_bull_d1`), cf. BRIEF_TCB1_bull_d1.md.
+sim_trades.py — Test Case Bull à D+1 (`bull_calm_d1`), cf. BRIEF_bull_calm_d1.md.
 
 Construit `daily_oos_log` (vue normalisée D->D+1, alignement anti-look-ahead §2) à partir
 des `Run/*-D1/predictions.parquet` (`source="oos"`) et de `validation.tracking_db`
-(`source="live"`), applique la règle `tcb1_bull_d1` (+ règle sœur `pi95_conf`, §3) et
+(`source="live"`), applique la règle `bull_calm_d1` (+ règle sœur `pi95_conf`, §3) et
 persiste les signaux valides dans `sim_trades`. Stdlib (sqlite3, json) + pandas (lecture
 parquet) uniquement — même contrainte de dépendances que `tracking_db.py`.
 
 Restreint aux combos horizon=1 jour de bourse (dossiers `*-D1`) : `predictions.parquet`
 d'un dossier `*-D7` est un backtest rolling-origin espacé de plusieurs jours (pas un log
-quotidien consécutif), l'alignement D->D+1 de tcb1_bull_d1 ne s'y applique pas.
+quotidien consécutif), l'alignement D->D+1 de bull_calm_d1 ne s'y applique pas.
 
 `regime` : forcé à `"unknown"` pour `source="oos"`. `business_validation.json` (quand il
 existe) décrit la prévision LIVE la plus récente du combo, pas les ~112 jours historiques
@@ -106,7 +106,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
         conn.close()
 
 
-# ── Règle tcb1_bull_d1 (§3, §4, §8) et règle sœur pi95_conf (§3) ────────────────
+# ── Règle bull_calm_d1 (§3, §4, §8) et règle sœur pi95_conf (§3) ────────────────
 
 def _is_finite(x) -> bool:
     try:
@@ -127,7 +127,7 @@ def _resolve_branches(ref: float, pi_low: float, pi_high: float, realized: float
     return 4, -2, realized                       # 4 (v1 : close réalisé, PAS pi_low, cf. §11.1)
 
 
-def tcb1_bull_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
+def bull_calm_d1(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     """cf. §8 du brief. Retourne (signal_valid, branch, counter, roi, degenerate_pi)."""
     degenerate_pi = int(pi_high <= ref)
 
@@ -164,7 +164,7 @@ def pi95_conf(ref, predicted, pi_low, pi_high, realized, fee_bps=0.0):
     return True, branch, counter, roi, degenerate_pi
 
 
-RULES = {"tcb1_bull_d1": tcb1_bull_d1, "pi95_conf": pi95_conf}
+RULES = {"bull_calm_d1": bull_calm_d1, "pi95_conf": pi95_conf}
 
 
 # ── Construction daily_oos_log — source="oos" (Run/*-D1/predictions.parquet) ───
@@ -320,7 +320,7 @@ def refresh_live_realized_prices(db_path=DEFAULT_DB_PATH) -> int:
 
 # ── sim_trades : génération + résolution ────────────────────────────────────────
 
-def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1",
+def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
                         fee_bps=0.0, source=None) -> int:
     """Applique la règle à chaque ligne daily_oos_log n'ayant pas encore de sim_trade
     pour cette rule_version. Les flats (signal_valid=False) ne génèrent pas de ligne
@@ -376,7 +376,7 @@ def generate_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1",
         conn.close()
 
 
-def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1",
+def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1",
                             fee_bps=0.0) -> int:
     """Réévalue les sim_trades status='open' dont le realized_price est maintenant
     connu dans daily_oos_log (mis à jour au préalable par refresh_live_realized_prices).
@@ -418,7 +418,7 @@ def resolve_open_sim_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1"
         conn.close()
 
 
-def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1", fee_bps=0.0) -> dict:
+def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="bull_calm_d1", fee_bps=0.0) -> dict:
     """Point d'entrée appelé par evaluate_daily.py : ingère les nouvelles prédictions
     live horizon=1, rafraîchit les realized_price connus, génère les nouveaux sim_trades
     et résout les 'open' devenus résolubles. Idempotent de bout en bout."""
@@ -432,7 +432,7 @@ def sync_live_trades(db_path=DEFAULT_DB_PATH, rule_version="tcb1_bull_d1", fee_b
 
 # ── KPIs (§9) ────────────────────────────────────────────────────────────────────
 
-def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="tcb1_bull_d1",
+def kpi_report(db_path=DEFAULT_DB_PATH, source="oos", rule_version="bull_calm_d1",
               group_by=("asset", "model"), include_degenerate=False) -> list:
     """KPIs §9.1-9.7, par group_by (sous-ensemble de {asset, model, regime}) — appeler
     avec group_by=() pour l'agrégat global (§11.5, les deux niveaux sont à reporter).
@@ -548,7 +548,7 @@ def _summarize_group(log_rows, signals, n_open) -> dict:
 def naive_always_long_report(db_path=DEFAULT_DB_PATH, source="oos", model="Naive",
                              group_by=("asset",)) -> list:
     """KPI 8 (§9.8), benchmark -- décision tuteur (2026-07-13) : le prédicteur naïf pur
-    (persistance stricte, predicted[t]==actual[t-1]) ne déclenche jamais tcb1_bull_d1
+    (persistance stricte, predicted[t]==actual[t-1]) ne déclenche jamais bull_calm_d1
     (predicted>ref toujours faux) -- vérifié empiriquement sur les runs Naive-*-D1
     récents (0 signal). Le benchmark 'signal-filtré' serait donc vide et sans valeur de
     comparaison. On applique ici la résolution des branches (§4) à CHAQUE ligne du log
@@ -609,7 +609,7 @@ def naive_always_long_report(db_path=DEFAULT_DB_PATH, source="oos", model="Naive
 def main() -> None:
     import argparse
 
-    p = argparse.ArgumentParser(description="TCB1 bull_d1 : ingestion + rapport KPI")
+    p = argparse.ArgumentParser(description="bull_calm_d1 : ingestion + rapport KPI")
     p.add_argument("--db-path", default="validation/tracking.db")
     p.add_argument("--run-root", default="Run")
     p.add_argument("--ingest-oos", action="store_true", help="ingère les Run/*-D1/ dans daily_oos_log")
@@ -623,7 +623,7 @@ def main() -> None:
         stats = ingest_oos(run_root=args.run_root, db_path=args.db_path)
         print(f"[sim_trades] ingestion OOS : {stats}")
         n_trades = generate_sim_trades(db_path=args.db_path, source="oos")
-        print(f"[sim_trades] {n_trades} nouveau(x) sim_trade(s) OOS (tcb1_bull_d1)")
+        print(f"[sim_trades] {n_trades} nouveau(x) sim_trade(s) OOS (bull_calm_d1)")
 
     if args.sync_live:
         result = sync_live_trades(db_path=args.db_path)
