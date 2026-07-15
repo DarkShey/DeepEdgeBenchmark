@@ -3,7 +3,7 @@
   "pytest_filter": "naive_model",
   "status": "pass",
   "exit_code": 0,
-  "summary": "5 passed, 42 deselected in 2.17s",
+  "summary": "5 passed, 42 deselected in 3.36s",
   "tests": [
     {
       "name": "models/test_naive_model.py::test_run_naive_predicts_previous_close_exactly",

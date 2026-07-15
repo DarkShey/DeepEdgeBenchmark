@@ -180,6 +180,13 @@ def main():
                         "train+validation combinés -- cf. process_asset_model/_forecast_all_horizons "
                         "de pipeline.py, qui ne peut pas appeler mh.forecast_horizons_lstm dans son "
                         "propre process (même deadlock que Gate1/Gate2, cf. docstring de module)")
+    p.add_argument("--skip-training", action="store_true",
+                   help="saute le fit Gate1 (85% train, sérialisation) -- cf. pipeline.py "
+                        "--full-retrain=False : le process parent recopie alors model.h5/scaler.pkl "
+                        "d'un run antérieur plutôt que de les régénérer. N'affecte ni le Gate2 "
+                        "(contrôlé indépendamment par --horizons, qui peut déjà être restreint aux "
+                        "seuls horizons non réutilisables) ni --live-horizons : les deux font leur "
+                        "propre fit, jamais celui de Gate1 (cf. docstring de module).")
     args = p.parse_args()
 
     import lstm_model
@@ -192,22 +199,27 @@ def main():
     horizons = [h for h in args.horizons.split(",") if h]
 
     result = {"gate1_ok": False, "gate2": {}}
-    try:
-        model, scaler, std, scaled = _fit_lstm(train, epochs=args.epochs, seed=args.seed)
-        weights_ok = all(bool(np.all(np.isfinite(w))) for w in model.get_weights())
-        gate1_ok = bool(weights_ok and np.isfinite(std))
-        result["gate1_ok"] = gate1_ok
-        if gate1_ok:
-            model.save(str(out_dir / "model.h5"))
-            with open(out_dir / "scaler.pkl", "wb") as f:
-                pickle.dump(scaler, f)
-            result["hyperparams"] = {
-                "seq_len": lstm_model.SEQ_LEN, "units": lstm_model.UNITS,
-                "epochs": lstm_model.EPOCHS, "batch_size": lstm_model.BATCH_SIZE,
-                "optimizer": "adam",
-            }
-    except Exception as exc:
-        result["gate1_error"] = str(exc)
+    if args.skip_training:
+        # Rien à faire ici : le process parent recopie model.h5/scaler.pkl/hyperparams.json
+        # d'un run antérieur (cf. --skip-training ci-dessus) -- ne pas toucher out_dir.
+        result["gate1_skipped"] = True
+    else:
+        try:
+            model, scaler, std, scaled = _fit_lstm(train, epochs=args.epochs, seed=args.seed)
+            weights_ok = all(bool(np.all(np.isfinite(w))) for w in model.get_weights())
+            gate1_ok = bool(weights_ok and np.isfinite(std))
+            result["gate1_ok"] = gate1_ok
+            if gate1_ok:
+                model.save(str(out_dir / "model.h5"))
+                with open(out_dir / "scaler.pkl", "wb") as f:
+                    pickle.dump(scaler, f)
+                result["hyperparams"] = {
+                    "seq_len": lstm_model.SEQ_LEN, "units": lstm_model.UNITS,
+                    "epochs": lstm_model.EPOCHS, "batch_size": lstm_model.BATCH_SIZE,
+                    "optimizer": "adam",
+                }
+        except Exception as exc:
+            result["gate1_error"] = str(exc)
 
     for horizon_label in horizons:
         h_days = HORIZON_TRADING_DAYS[horizon_label]
@@ -240,7 +252,8 @@ def main():
 
     Path(args.result_json).write_text(json.dumps(result, default=str, indent=2))
     gate2_summary = ", ".join(f"{h}={result['gate2'][h]['ok']}" for h in horizons)
-    print(f"[lstm_worker] gate1_ok={result['gate1_ok']} gate2=({gate2_summary})")
+    gate1_summary = "skipped" if result.get("gate1_skipped") else result["gate1_ok"]
+    print(f"[lstm_worker] gate1_ok={gate1_summary} gate2=({gate2_summary})")
 
 
 if __name__ == "__main__":
