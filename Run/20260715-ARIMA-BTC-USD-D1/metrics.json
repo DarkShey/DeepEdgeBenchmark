@@ -1,0 +1,34 @@
+{
+  "RMSE": 1837.0131,
+  "MAE": 1285.7996,
+  "MAPE": 1.85,
+  "directional_accuracy": 53.05,
+  "pi_coverage_95": 93.33,
+  "pi_width_min": 4537.656579,
+  "pi_width_mean": 6338.924234,
+  "pi_width_max": 7865.15379,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "ARIMA-GARCH",
+  "theil_u": 1.002,
+  "MASE": 1.004,
+  "change_corr": 0.0638,
+  "dir_acc_change": 50.91,
+  "dir_acc_ci95": [
+    43.35,
+    58.43
+  ],
+  "dir_acc_p_vs_coin": 0.8763,
+  "dm_stat": 0.256,
+  "dm_p": 0.7982,
+  "dm_lag": 5,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-14",
+    "last_price": 64956.113281,
+    "predicted": 64806.251435,
+    "pi_lower": 61892.31638,
+    "pi_upper": 67857.376661
+  }
+}

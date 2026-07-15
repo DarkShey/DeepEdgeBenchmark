@@ -1,0 +1,29 @@
+{
+  "model": "TSDiff",
+  "pytest_filter": "tsdiff_model",
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "4 passed, 43 deselected in 3.89s",
+  "tests": [
+    {
+      "name": "models/test_tsdiff_model.py::test_run_tsdiff_contract",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_tsdiff_model.py::test_next_step_tsdiff_ordered",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_tsdiff_model.py::test_forecast_horizons_tsdiff_shape",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_tsdiff_model.py::test_too_short_series_raises",
+      "outcome": "passed"
+    }
+  ],
+  "what_these_tests_check": {
+    "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift."
+  }
+}
