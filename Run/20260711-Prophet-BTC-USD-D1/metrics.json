@@ -1,0 +1,34 @@
+{
+  "RMSE": 8539.9646,
+  "MAE": 7571.8846,
+  "MAPE": 11.14,
+  "directional_accuracy": 53.05,
+  "pi_coverage_95": 82.42,
+  "pi_width_min": 16161.064722,
+  "pi_width_mean": 58518.297897,
+  "pi_width_max": 133122.592399,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "BTC-USD",
+  "model": "Prophet",
+  "theil_u": 4.6068,
+  "MASE": 5.8746,
+  "change_corr": 0.0814,
+  "dir_acc_change": 45.45,
+  "dir_acc_ci95": [
+    38.05,
+    53.07
+  ],
+  "dir_acc_p_vs_coin": 0.2757,
+  "dm_stat": 6.442,
+  "dm_p": 0.0,
+  "dm_lag": 5,
+  "skill_vs_naive": "worse than naive",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 64127.140625,
+    "predicted": 64038.43602,
+    "pi_lower": 55458.356207,
+    "pi_upper": 71884.554601
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "RMSE": 0.5242,
+  "MAE": 0.4144,
+  "MAPE": 0.48,
+  "directional_accuracy": 44.64,
+  "pi_coverage_95": 94.69,
+  "pi_width_min": 1.953616,
+  "pi_width_mean": 2.135704,
+  "pi_width_max": 2.484324,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "TLT",
+  "model": "ARIMA-GARCH",
+  "theil_u": 1.0023,
+  "MASE": 1.0107,
+  "change_corr": 0.0372,
+  "dir_acc_change": 49.56,
+  "dir_acc_ci95": [
+    40.51,
+    58.64
+  ],
+  "dir_acc_p_vs_coin": 1.0,
+  "dm_stat": 0.245,
+  "dm_p": 0.8068,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-07",
+    "last_price": 84.550003,
+    "predicted": 84.56787,
+    "pi_lower": 83.507096,
+    "pi_upper": 85.642119
+  }
+}

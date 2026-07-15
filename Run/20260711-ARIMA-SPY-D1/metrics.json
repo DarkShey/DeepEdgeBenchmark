@@ -1,0 +1,34 @@
+{
+  "RMSE": 6.3332,
+  "MAE": 4.9878,
+  "MAPE": 0.71,
+  "directional_accuracy": 44.64,
+  "pi_coverage_95": 92.04,
+  "pi_width_min": 20.695692,
+  "pi_width_mean": 23.375984,
+  "pi_width_max": 28.976978,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "ARIMA-GARCH",
+  "theil_u": 1.005,
+  "MASE": 1.0223,
+  "change_corr": -0.0033,
+  "dir_acc_change": 46.02,
+  "dir_acc_ci95": [
+    37.11,
+    55.19
+  ],
+  "dir_acc_p_vs_coin": 0.4519,
+  "dm_stat": 0.44,
+  "dm_p": 0.6607,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 754.950012,
+    "predicted": 756.49942,
+    "pi_lower": 744.554106,
+    "pi_upper": 768.63638
+  }
+}

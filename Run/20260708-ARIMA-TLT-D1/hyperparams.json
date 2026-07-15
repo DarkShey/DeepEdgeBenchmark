@@ -1,0 +1,12 @@
+{
+  "order": [
+    2,
+    0,
+    2
+  ],
+  "garch_p": 1,
+  "garch_q": 1,
+  "garch_dist": "normal",
+  "aic": 1683.219852,
+  "bic": 1709.932146
+}
