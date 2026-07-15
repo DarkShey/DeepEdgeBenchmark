@@ -40,6 +40,16 @@ SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff"]
 SIM_TRADES_ASSETS = ["BTC-USD"]
 SIM_TRADES_DB_PATH = "validation/tracking.db"
 
+# Bouton "pipeline" du tableau TC : famille de règles par horizon de résolution. Seul
+# "daily" a des règles codées aujourd'hui (TC1.1-1.5, résolues à D+1, cf.
+# validation/sim_trades.py) -- "weekly"/"monthly" sont des emplacements réservés pour de
+# futures règles (D+7, mensuelles) pas encore écrites ; le bouton correspondant reste
+# grisé côté dashboard tant qu'aucun tc_id n'y est rattaché ci-dessous.
+SIM_TRADES_PIPELINES = ["daily", "weekly", "monthly"]
+TC_PIPELINE = {
+    "TC1.1": "daily", "TC1.2": "daily", "TC1.3": "daily", "TC1.4": "daily", "TC1.5": "daily",
+}
+
 MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
 MODEL_COLORS_LIGHT = {
@@ -237,6 +247,8 @@ def render_html(run_data: dict, run_root_label: str) -> str:
         "prices": run_data["prices"],
         "sim_trades_daily": collect_sim_trades_daily(),
         "sim_trades_models": SIM_TRADES_MODELS,
+        "sim_trades_pipelines": SIM_TRADES_PIPELINES,
+        "tc_pipeline": TC_PIPELINE,
     }
     data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     return HTML_TEMPLATE.replace("__DATA_JSON__", data_json)
@@ -254,6 +266,8 @@ HTML_TEMPLATE = r"""<title>Dashboard KPI — Modèles de prévision</title>
   --baseline:       #c3c2b7;
   --border-ring:    rgba(11,11,11,0.10);
   --card-shadow:    0 1px 2px rgba(11,11,11,0.06);
+  --pos-color:      #1baf7a;
+  --neg-color:      #d64550;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -266,6 +280,8 @@ HTML_TEMPLATE = r"""<title>Dashboard KPI — Modèles de prévision</title>
     --baseline:       #383835;
     --border-ring:    rgba(255,255,255,0.10);
     --card-shadow:    0 1px 3px rgba(0,0,0,0.4);
+    --pos-color:      #2ecc9a;
+    --neg-color:      #e5606b;
   }
 }
 * { box-sizing: border-box; }
@@ -320,6 +336,8 @@ h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
 .stat-tile { flex: 1 1 150px; }
 .stat-tile .label { font-size: 12px; color: var(--text-secondary); }
 .stat-tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.stat-tile .value.pos { color: var(--pos-color); }
+.stat-tile .value.neg { color: var(--neg-color); }
 .panel-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
 }
@@ -435,6 +453,10 @@ function addDays(dateStr, days) {
 function fmt(v, digits) {
   if (v === null || v === undefined) return '—';
   return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+function fmtPct(v) {
+  if (v === null || v === undefined) return '—';
+  return (Number(v) * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 }
 
 function hexToRgba(hex, alpha) {
@@ -618,12 +640,14 @@ function assetPanelSkeleton(a) {
     <div class="card" id="simtrades-card-${s}" style="display:none;">
       <h2>Test cases (TC1.1&ndash;TC1.5, D+1) &mdash; jour par jour</h2>
       <div class="controls-row" style="margin-bottom:12px;">
+        <div class="toggle-group" id="simtrades-pipeline-${s}"></div>
         <div class="model-checks" id="simtrades-models-${s}"></div>
         <label class="field-label">
           <input type="checkbox" id="simtrades-onlysignal-${s}" checked> Seulement les jours avec signal
         </label>
       </div>
       <div style="overflow:auto; max-height:480px;" id="simtrades-table-${s}"></div>
+      <div class="stat-tiles" id="simtrades-usage-${s}" style="margin-top:16px;"></div>
     </div>
   `;
 }
@@ -793,7 +817,35 @@ function setupSimTradesControls(a) {
   if (!rows || !rows.length) return;   // pas de données pour cet actif -> rien à câbler
 
   const models = DATA.sim_trades_models || [];
-  simTradesState[ticker] = { models: new Set(models) };
+  const pipelines = DATA.sim_trades_pipelines || [];
+  // Familles pipeline effectivement rattachées à au moins un TC (cf. TC_PIPELINE côté
+  // Python) -- seule "daily" l'est aujourd'hui ; les autres restent grisées jusqu'à ce
+  // que de nouvelles règles (D+7, mensuelles) leur soient rattachées.
+  const activePipelines = new Set(Object.values(DATA.tc_pipeline || {}));
+  simTradesState[ticker] = { models: new Set(models), pipeline: 'daily' };
+
+  const pEl = document.getElementById(`simtrades-pipeline-${s}`);
+  pEl.innerHTML = '';
+  const pipelineLabel = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+  pipelines.forEach(p => {
+    const btn = document.createElement('button');
+    btn.textContent = pipelineLabel[p] || p;
+    const enabled = activePipelines.has(p);
+    btn.className = p === simTradesState[ticker].pipeline ? 'active' : '';
+    if (!enabled) {
+      btn.disabled = true;
+      btn.title = 'Pas encore de règles pour cet horizon de résolution';
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.addEventListener('click', () => {
+        simTradesState[ticker].pipeline = p;
+        pEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+        renderSimTradesTable(ticker);
+      });
+    }
+    pEl.appendChild(btn);
+  });
 
   const mEl = document.getElementById(`simtrades-models-${s}`);
   mEl.innerHTML = '';
@@ -826,8 +878,19 @@ function renderSimTradesTable(ticker) {
 
   const state = simTradesState[ticker];
   const onlySignal = document.getElementById(`simtrades-onlysignal-${s}`).checked;
+  const tcPipeline = DATA.tc_pipeline || {};
 
-  let filtered = rows.filter(r => state.models.has(r.model));
+  // Filtre modèle(s) + pipeline sélectionné (daily pour l'instant), signaux restreints
+  // à la famille choisie. Servie telle quelle à renderUsageStats -- calculée sur TOUTES
+  // ces lignes, indépendamment de la case "Seulement les jours avec signal" ci-dessous
+  // (sinon la cocher fausserait le taux d'utilisation en réduisant le dénominateur).
+  const base = rows
+    .filter(r => state.models.has(r.model))
+    .map(r => ({ ...r, signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline) }));
+
+  renderUsageStats(s, base);
+
+  let filtered = base;
   if (onlySignal) filtered = filtered.filter(r => r.signals.length > 0);
 
   const wrap = document.getElementById(`simtrades-table-${s}`);
@@ -854,6 +917,40 @@ function renderSimTradesTable(ticker) {
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+}
+
+// Utilisation brute / performance simulation / taux d'utilisation : une ligne (jour ×
+// modèle) est "utilisable" si au moins un TC s'y est déclenché ET que son counter résolu
+// est positif (+1/+2) -- une prédiction qui ne déclenche rien n'a rien d'exploitable pour
+// un trader, et un signal résolu négativement ne l'était pas non plus. La performance
+// (Σ counter) somme tous les signaux résolus, positifs et négatifs. Le taux rapporte
+// l'utilisation brute au nombre total de lignes de la sélection courante (modèle(s) +
+// pipeline) -- signaux ouverts (non encore résolus) comptés non-utilisables pour l'instant.
+function renderUsageStats(s, rows) {
+  const el = document.getElementById(`simtrades-usage-${s}`);
+  const total = rows.length;
+  let usableCount = 0;
+  let counterSum = 0;
+  rows.forEach(r => {
+    let rowUsable = false;
+    r.signals.forEach(sig => {
+      if (sig.counter === null || sig.counter === undefined) return;
+      counterSum += sig.counter;
+      if (sig.counter > 0) rowUsable = true;
+    });
+    if (rowUsable) usableCount++;
+  });
+  const taux = total ? usableCount / total : null;
+
+  const tiles = [
+    { label: 'Utilisation brute', value: String(usableCount), cls: '' },
+    { label: 'Performance simulation (Σ counter)', value: fmt(counterSum, 0),
+      cls: counterSum > 0 ? 'pos' : (counterSum < 0 ? 'neg' : '') },
+    { label: "Taux d'utilisation", value: fmtPct(taux), cls: '' },
+  ];
+  el.innerHTML = tiles.map(t =>
+    `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`
+  ).join('');
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------

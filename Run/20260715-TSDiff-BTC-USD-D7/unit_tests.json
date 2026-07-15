@@ -3,7 +3,7 @@
   "pytest_filter": "tsdiff_model",
   "status": "pass",
   "exit_code": 0,
-  "summary": "4 passed, 43 deselected in 3.89s",
+  "summary": "4 passed, 43 deselected in 10.33s",
   "tests": [
     {
       "name": "models/test_tsdiff_model.py::test_run_tsdiff_contract",

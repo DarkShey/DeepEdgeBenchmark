@@ -5,9 +5,10 @@ Standalone port of the Prophet model from the DEITA time-series benchmark.
 
 What it does
 ------------
-Facebook/Meta **Prophet** additive regression with weekly + yearly seasonality,
-fitted once on the training prices, then predicting the test dates in one batch.
-Prediction intervals come from Prophet's own ``yhat_lower`` / ``yhat_upper``
+Facebook/Meta **Prophet** additive regression with weekly + yearly seasonality.
+Forecasting is **walk-forward** (rolling 1-step-ahead, mirrors ``run_sarima``):
+the model is re-fitted each step on the growing history, then forecasts one
+point. Prediction intervals come from Prophet's own ``yhat_lower`` / ``yhat_upper``
 (95% interval width).
 
 This file is fully self-contained — no dependency on any other DEITA module.
@@ -106,25 +107,42 @@ def infer_next_date(series: pd.Series):
     return idx[-1] + pd.Timedelta(days=med)
 
 
-# ── Prophet backtest ─────────────────────────────────────────────────────────
-def run_prophet(train: pd.Series, test: pd.Series) -> dict:
-    """Fit Prophet on train, predict the test dates in one batch."""
-    t0 = time.time()
-    df_train = pd.DataFrame({
-        "ds": pd.to_datetime(train.index),
-        "y":  train.astype(float).values.flatten(),
-    })
-    model = Prophet(interval_width=1 - PI_ALPHA, daily_seasonality=False,
-                    weekly_seasonality=True, yearly_seasonality=True)
-    model.fit(df_train)
+# ── Prophet walk-forward backtest ────────────────────────────────────────────
+def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1) -> dict:
+    """Rolling 1-step-ahead Prophet forecast over the test window (walk-forward),
+    aligned with run_sarima: at each step, (re)fit Prophet on the history known up
+    to t-1 and take ONLY the next date (yhat/yhat_lower/yhat_upper).
 
-    df_future = pd.DataFrame({"ds": pd.to_datetime(test.index)})
-    forecast  = model.predict(df_future)
-    preds = forecast["yhat"].values
-    lower = forecast["yhat_lower"].values
-    upper = forecast["yhat_upper"].values
+    `refit_freq` : re-fit every N steps (1 = every step, the most correct and the
+    default). Values >1 speed things up but reintroduce drift proportional to the
+    gap -- between two refits the forecast degrades back into a k-step-ahead
+    extrapolation, exactly the bias this walk-forward rewrite exists to remove.
+    Keep it at 1 unless the cost is genuinely prohibitive."""
+    t0 = time.time()
+    history_ds = list(pd.to_datetime(train.index))
+    history_y  = list(train.astype(float).values.flatten())
+    preds, lower, upper = [], [], []
+
+    model = None
+    for i in range(len(test)):
+        if model is None or (i % refit_freq == 0):
+            df_train = pd.DataFrame({"ds": history_ds, "y": history_y})
+            model = Prophet(interval_width=1 - PI_ALPHA, daily_seasonality=False,
+                            weekly_seasonality=True, yearly_seasonality=True)
+            model.fit(df_train)
+
+        next_ds = pd.to_datetime(test.index[i])
+        fc = model.predict(pd.DataFrame({"ds": [next_ds]}))
+        preds.append(float(fc["yhat"].iloc[0]))
+        lower.append(float(fc["yhat_lower"].iloc[0]))
+        upper.append(float(fc["yhat_upper"].iloc[0]))
+
+        # walk forward: reveal the realised value for step i
+        history_ds.append(next_ds)
+        history_y.append(float(test.iloc[i]))
 
     train_time = time.time() - t0
+    preds, lower, upper = map(np.array, (preds, lower, upper))
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
     return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
@@ -159,7 +177,7 @@ def save_plot(result: dict, ticker: str, path: str) -> None:
     ax.plot(idx, result["predictions"], label="Prophet forecast", color="tab:purple", lw=1.3)
     ax.fill_between(idx, result["lower"], result["upper"], color="tab:purple",
                     alpha=0.20, label="95% PI")
-    ax.set_title(f"Prophet — {ticker} (fit-once, batch forecast)")
+    ax.set_title(f"Prophet — {ticker} (walk-forward 1-step)")
     ax.set_xlabel("Date"); ax.set_ylabel("Price"); ax.legend()
     fig.tight_layout(); fig.savefig(path, dpi=130)
     print(f"Saved plot -> {path}")
@@ -190,6 +208,8 @@ def main() -> None:
     split = int(len(prices) * (1 - args.test_ratio))
     train, test = prices.iloc[:split], prices.iloc[split:]
     print(f"Train: {len(train)}  Test: {len(test)}  Prophet (weekly+yearly seasonality)\n")
+    print("Note: Prophet re-fits every step (refit_freq=1, Stan backend) -- "
+          "the backtest can take several minutes.\n")
 
     result = run_prophet(train, test)
     print(f"=== Prophet — {args.ticker} ===")

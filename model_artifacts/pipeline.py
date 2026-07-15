@@ -407,6 +407,60 @@ def copy_serialized_artifacts(src_dir: Path, dst_dir: Path, model_key: str):
             shutil.copy2(src, dst_dir / filename)
 
 
+# ── --full-retrain=False (défaut) : réutilisation de Gate1/Gate2 d'un run antérieur ─────
+# On ne refait ni le fit d'entraînement (Gate1, 85% du début) ni le backtest de
+# validation (Gate2, walk-forward/origines glissantes sur les 15% de fin) tous les
+# jours -- ces deux étapes ne dépendent pas de la date du run (mêmes hyperparamètres,
+# même méthodologie) et sont, de loin, la partie coûteuse du pipeline. Seule la
+# prévision live (hors-échantillon, cf. _forecast_all_horizons/_run_lstm_via_worker)
+# reste recalculée chaque jour : c'est elle qui doit refléter la donnée la plus
+# fraîche. Si aucun run antérieur exploitable n'existe encore pour une combinaison,
+# on bascule automatiquement sur un calcul complet (rien à réutiliser).
+
+def find_reusable_run_dir(model_folder_name: str, ticker: str, horizon_label: str,
+                          before_date_str: str, required_file: str,
+                          run_root: Path = None) -> Path | None:
+    """Dossier Run/<date>-<modèle>-<actif>-<horizon>/ le plus récent strictement antérieur
+    à before_date_str contenant `required_file` -- "hyperparams.json" pour juger Gate1
+    exploitable (écrit ssi gate1_ok, indépendamment du succès de Gate2 ce jour-là),
+    "metrics.json" pour juger Gate2 exploitable (écrit ssi gate2_ok, cf.
+    process_asset_model). None si aucun run antérieur ne convient.
+
+    `run_root` par défaut lu sur le module (pas en valeur par défaut de paramètre) : sinon
+    un monkeypatch de pipeline.RUN_ROOT (cf. tests) resterait sans effet, la valeur par
+    défaut étant figée une fois pour toutes au chargement du module."""
+    if run_root is None:
+        run_root = RUN_ROOT
+    best_date_str, best_dir = None, None
+    for d in run_root.glob(f"*-{model_folder_name}-{ticker}-{horizon_label}"):
+        if not d.is_dir():
+            continue
+        date_str = d.name.split("-", 1)[0]
+        if not date_str.isdigit() or date_str >= before_date_str:
+            continue
+        if not (d / required_file).exists():
+            continue
+        if best_date_str is None or date_str > best_date_str:
+            best_date_str, best_dir = date_str, d
+    return best_dir
+
+
+def reuse_gate2_payload(prev_dir: Path, out_dir: Path) -> dict | None:
+    """Recopie predictions.parquet tel quel et retourne le contenu de metrics.json du run
+    antérieur `prev_dir`, sans la clé "forecast" (toujours recalculée par le run courant,
+    cf. process_asset_model). None si metrics.json n'a finalement pas les clés attendues
+    (_gate2_metrics_ok) -- garde-fou si un fichier legacy/partiel traînait, l'appelant
+    bascule alors sur un calcul complet plutôt que de propager une valeur invalide."""
+    payload = json.loads((prev_dir / "metrics.json").read_text())
+    if not _gate2_metrics_ok(payload):
+        return None
+    payload.pop("forecast", None)
+    predictions_src = prev_dir / "predictions.parquet"
+    if predictions_src.exists():
+        shutil.copy2(predictions_src, out_dir / "predictions.parquet")
+    return payload
+
+
 # ── Gate 2 : évaluation hors-échantillon, par horizon ───────────────────────────
 
 def _run_model_d1(model_key: str, train: pd.Series, validation: pd.Series, seed, epochs) -> dict:
@@ -637,12 +691,21 @@ def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.
 
 
 def write_metadata_json(out_dir: Path, asset: str, asset_class: str, window_start: str,
-                        window_end: str, train_end: str, run_date: str, seed: int) -> None:
+                        window_end: str, train_end: str, run_date: str, seed: int,
+                        gate1_reused_from: str = None, gate2_reused_from: str = None) -> None:
+    """`gate1_reused_from`/`gate2_reused_from` (date YYYYMMDD ou None) : traçabilité de
+    --full-retrain=False, cf. process_asset_model -- n'affecte aucun affichage existant du
+    dashboard (champs ignorés par model_artifacts/generate_dashboard.py), utile pour
+    déboguer/auditer quand la validation/entraînement d'une combinaison a réellement tourné
+    pour la dernière fois. window_start/window_end/train_end restent ceux du run courant
+    (le téléchargement + split chronologique tournent chaque jour, jamais figés) : ils
+    peuvent donc différer de la fenêtre effectivement utilisée par le Gate1/Gate2 réutilisé."""
     payload = {
         "asset": asset, "asset_class": asset_class, "frequency": "1d",
         "window_start": window_start, "window_end": window_end, "train_end": train_end,
         "run_date": run_date, "git_commit": get_git_commit(), "seed": seed,
         "lib_versions": get_lib_versions(),
+        "gate1_reused_from": gate1_reused_from, "gate2_reused_from": gate2_reused_from,
     }
     (out_dir / "metadata.json").write_text(json.dumps(payload, indent=2))
 
@@ -740,7 +803,8 @@ def _model_unit_test_results(model_key: str) -> dict:
 
 
 def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path, seed, epochs,
-                         max_d7_origins: int, horizons: list, business_h_days: set) -> dict:
+                         max_d7_origins: int, all_horizons: list, gate2_horizons: list,
+                         business_h_days: set, skip_training: bool) -> dict:
     """LSTM tourne dans un sous-processus neuf et isolé (model_artifacts/lstm_worker.py),
     jamais dans CE process : ce module importe benchmarks.multi_horizon (donc
     arima_model/regime_overlay) sans condition dès son chargement (cf. import plus haut),
@@ -748,7 +812,14 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
     (deadlock confirmé le 2026-07-08, cf. docstring de lstm_worker.py) -- ni une
     question de nombre de threads, ni spécifique à Prophet, ni réglable par les
     variables d'environnement OpenMP usuelles. Seule l'isolation de process règle
-    le problème, vérifiée empiriquement."""
+    le problème, vérifiée empiriquement.
+
+    `all_horizons` sert au calcul de live_horizons_days (la prévision live couvre
+    toujours tous les horizons demandés, jamais réduite par --full-retrain=False) ;
+    `gate2_horizons` peut être un sous-ensemble (les horizons dont Gate2 n'est PAS
+    réutilisable depuis un run antérieur, cf. process_asset_model) -- vide si tout est
+    réutilisable. `skip_training` saute le fit Gate1 du worker (cf. lstm_worker.py
+    --skip-training) sans toucher gate2_horizons ni la prévision live, indépendants."""
     with tempfile.TemporaryDirectory() as tmp:
         data_pickle = Path(tmp) / "data.pkl"
         result_json = Path(tmp) / "result.json"
@@ -758,16 +829,18 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
         # de business_lag si besoin -- cf. process_asset_model) en plus des horizons Gate2
         # demandés -- une seule invocation du worker isolé couvre donc à la fois le
         # backtest ML et la prévision live business.
-        live_horizons_days = sorted({HORIZON_TRADING_DAYS[h] for h in horizons} | business_h_days)
+        live_horizons_days = sorted({HORIZON_TRADING_DAYS[h] for h in all_horizons} | business_h_days)
         cmd = [sys.executable, "-m", "model_artifacts.lstm_worker",
                "--data-pickle", str(data_pickle), "--out-dir", str(out_dir),
                "--result-json", str(result_json), "--max-d7-origins", str(max_d7_origins),
-               "--horizons", ",".join(horizons),
+               "--horizons", ",".join(gate2_horizons),
                "--live-horizons", ",".join(str(h) for h in live_horizons_days)]
         if seed is not None:
             cmd += ["--seed", str(seed)]
         if epochs is not None:
             cmd += ["--epochs", str(epochs)]
+        if skip_training:
+            cmd += ["--skip-training"]
         subprocess.run(cmd, cwd=REPO_ROOT, check=True)
         result = json.loads(result_json.read_text())
         # Clés JSON toujours strings -- reconverties en int (h_days) pour matcher
@@ -866,9 +939,16 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                         validation: pd.Series, run_date_str: str, run_date_iso: str,
                         window_start: str, window_end: str, seed: int, epochs,
                         max_d7_origins: int, horizons: list, run_id: str, regime_tag: str,
-                        db_path: str) -> list:
+                        db_path: str, full_retrain: bool = False) -> list:
     """Gate 1 une fois (sauf Naive, rien à entraîner) puis Gate 2 par horizon.
-    Retourne la liste des logs (un par horizon)."""
+    Retourne la liste des logs (un par horizon).
+
+    `full_retrain=False` (défaut) : Gate1/Gate2 ne sont PAS recalculés si un run antérieur
+    exploitable existe déjà pour cette combinaison (mêmes fichiers/métriques recopiés tels
+    quels, cf. find_reusable_run_dir/reuse_gate2_payload) -- seule la prévision live
+    (hors-échantillon) reste toujours recalculée. Bascule automatiquement sur un calcul
+    complet, combinaison par combinaison et horizon par horizon, si aucun run antérieur
+    n'a les artefacts nécessaires (premier run, ou historique incomplet)."""
     train_end = str(train.index[-1].date())
     logs = []
 
@@ -883,24 +963,52 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     business_lag = 1 if validation.index[-1].date() < datetime.now().date() else 0
     business_h_days = {h + business_lag for h in BUSINESS_HORIZONS_TRADING_DAYS}
 
+    # cf. --full-retrain=False : Gate1 est identique quel que soit l'horizon (fit une fois,
+    # §12), on cherche donc un run antérieur exploitable via horizons[0] uniquement --
+    # "hyperparams.json" est écrit ssi gate1_ok, indépendamment du sort de Gate2 ce jour-là
+    # (cf. find_reusable_run_dir). Gate2, en revanche, est spécifique à chaque horizon.
+    gate1_reused_dir = None if full_retrain else find_reusable_run_dir(
+        MODEL_FOLDER_NAME[model_key], ticker, horizons[0], run_date_str, "hyperparams.json")
+    gate1_reused_from = gate1_reused_dir.name.split("-", 1)[0] if gate1_reused_dir else None
+    gate2_reused_dirs = {} if full_retrain else {
+        horizon_label: find_reusable_run_dir(MODEL_FOLDER_NAME[model_key], ticker, horizon_label,
+                                             run_date_str, "metrics.json")
+        for horizon_label in horizons
+    }
+
     lstm_worker_result = None
+    gate1_reused = False
     if model_key == "LSTM":
+        skip_lstm_training = gate1_reused_dir is not None
+        gate2_worker_horizons = [h for h in horizons if gate2_reused_dirs.get(h) is None]
         lstm_worker_result = _run_lstm_via_worker(train, validation, first_out_dir, seed, epochs,
-                                                  max_d7_origins, horizons, business_h_days)
-        gate1_ok = lstm_worker_result["gate1_ok"]
-        if gate1_ok:
-            (first_out_dir / "hyperparams.json").write_text(
-                json.dumps(lstm_worker_result["hyperparams"], indent=2))
+                                                  max_d7_origins, horizons, gate2_worker_horizons,
+                                                  business_h_days, skip_lstm_training)
+        if skip_lstm_training:
+            copy_serialized_artifacts(gate1_reused_dir, first_out_dir, model_key)
+            gate1_ok, gate1_reused = True, True
         else:
-            print(f"    [Gate1 FAIL] LSTM : {lstm_worker_result.get('gate1_error')}")
+            gate1_ok = lstm_worker_result["gate1_ok"]
+            if gate1_ok:
+                (first_out_dir / "hyperparams.json").write_text(
+                    json.dumps(lstm_worker_result["hyperparams"], indent=2))
+            else:
+                print(f"    [Gate1 FAIL] LSTM : {lstm_worker_result.get('gate1_error')}")
     else:
         fitted, gate1_ok = None, True
         # Naive n'a rien à entraîner ; TSDiff (port diffusion léger) suit le même patron —
         # pas d'artefact Gate 1 sérialisé, l'entraînement réel a lieu en Gate 2 (run_tsdiff)
         # et en prévision live (forecast_horizons_tsdiff).
         if model_key not in ("Naive", "TSDiff"):
-            fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
-    print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : {'PASS' if gate1_ok else 'FAIL'}")
+            if gate1_reused_dir is not None:
+                copy_serialized_artifacts(gate1_reused_dir, first_out_dir, model_key)
+                gate1_ok, gate1_reused = True, True
+            else:
+                fitted, gate1_ok = fit_and_serialize(model_key, train, first_out_dir, seed=seed, epochs=epochs)
+    if gate1_reused:
+        print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : REUTILISE (run {gate1_reused_from})")
+    else:
+        print(f"  [{model_key:<12} {ticker:<8}] Gate1 (training)   : {'PASS' if gate1_ok else 'FAIL'}")
 
     unit_test_result = _model_unit_test_results(model_key)
 
@@ -931,26 +1039,42 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         if model_key not in ("Naive", "TSDiff") and gate1_ok and out_dir != first_out_dir:
             copy_serialized_artifacts(first_out_dir, out_dir, model_key)
 
-        if model_key == "LSTM":
-            g2 = lstm_worker_result["gate2"].get(horizon_label, {"ok": False})
-            if g2["ok"]:
-                payload = _to_metrics_payload(g2["metrics"], model_key, ticker, horizon_label,
-                                              len(g2["actual"]), g2["pi_lower"], g2["pi_upper"])
-                gate2_ok = _gate2_metrics_ok(payload)
-                series = {"dates": g2["dates"], "actual": g2["actual"], "predicted": g2["predicted"],
-                          "pi_lower": g2["pi_lower"], "pi_upper": g2["pi_upper"]}
+        # cf. --full-retrain=False : recopie metrics.json (hors "forecast")+predictions.parquet
+        # d'un run antérieur plutôt que de refaire le backtest walk-forward/origines glissantes
+        # -- de loin la partie la plus coûteuse du pipeline (Prophet/LSTM en particulier).
+        # Bascule sur un calcul complet si aucun run antérieur n'a de metrics.json exploitable,
+        # ou si celui trouvé s'avère finalement invalide (cf. reuse_gate2_payload).
+        gate2_reused_dir = gate2_reused_dirs.get(horizon_label)
+        gate2_reused = False
+        if gate2_reused_dir is not None:
+            payload = reuse_gate2_payload(gate2_reused_dir, out_dir)
+            if payload is not None:
+                gate2_ok, series, gate2_reused = True, None, True
             else:
-                payload, gate2_ok, series = None, False, None
-                print(f"    [Gate2 FAIL] LSTM {horizon_label} : {g2.get('error')}")
-        else:
-            payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
-                                                       seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
+                print(f"    [{model_key:<12} {ticker:<8} {horizon_label}] run antérieur "
+                      f"{gate2_reused_dir.name} inexploitable (metrics.json invalide) -> recalcul complet")
+        if not gate2_reused:
+            if model_key == "LSTM":
+                g2 = lstm_worker_result["gate2"].get(horizon_label, {"ok": False})
+                if g2["ok"]:
+                    payload = _to_metrics_payload(g2["metrics"], model_key, ticker, horizon_label,
+                                                  len(g2["actual"]), g2["pi_lower"], g2["pi_upper"])
+                    gate2_ok = _gate2_metrics_ok(payload)
+                    series = {"dates": g2["dates"], "actual": g2["actual"], "predicted": g2["predicted"],
+                              "pi_lower": g2["pi_lower"], "pi_upper": g2["pi_upper"]}
+                else:
+                    payload, gate2_ok, series = None, False, None
+                    print(f"    [Gate2 FAIL] LSTM {horizon_label} : {g2.get('error')}")
+            else:
+                payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
+                                                           seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
         if gate2_ok:
             # Prévision hors-échantillon (au-delà de last_date, la dernière clôture connue)
             # repliée directement dans metrics.json plutôt que dans un forecast.json séparé
             # -- ni l'un ni l'autre n'est dans les "5 fichiers du doc" (BRIEF_model_artifacts.md
             # §5), et un fichier à part faisait doublon avec business_validation.json (même
             # prévision, deux endroits, risque de désynchronisation constaté en pratique).
+            # Toujours recalculée, même si Gate2 est réutilisé (cf. --full-retrain=False).
             h_days = HORIZON_TRADING_DAYS[horizon_label]
             if h_days in forecasts_by_h:
                 point, lo, hi = forecasts_by_h[h_days]
@@ -960,16 +1084,24 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                     "predicted": _num(point), "pi_lower": _num(lo), "pi_upper": _num(hi),
                 }
             (out_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
-            write_predictions_parquet(out_dir, **series)
+            if not gate2_reused:
+                write_predictions_parquet(out_dir, **series)
 
         write_prices_parquet(out_dir, train, validation)
         write_metadata_json(out_dir, ticker, asset_class, window_start, window_end,
-                            train_end, run_date_iso, seed)
+                            train_end, run_date_iso, seed, gate1_reused_from=gate1_reused_from,
+                            gate2_reused_from=(gate2_reused_dir.name.split("-", 1)[0]
+                                              if gate2_reused else None))
         (out_dir / "unit_tests.json").write_text(json.dumps(unit_test_result, indent=2, ensure_ascii=False))
 
-        status = f"RMSE={payload['RMSE']} DirAcc={payload['directional_accuracy']}%" if gate2_ok else "—"
-        print(f"  [{model_key:<12} {ticker:<8} {horizon_label}] Gate2 (validation) : "
-              f"{'PASS' if gate2_ok else 'FAIL'}  {status}")
+        if gate2_reused:
+            print(f"  [{model_key:<12} {ticker:<8} {horizon_label}] Gate2 (validation) : "
+                  f"REUTILISE (run {gate2_reused_dir.name.split('-', 1)[0]})  "
+                  f"RMSE={payload['RMSE']} DirAcc={payload['directional_accuracy']}%")
+        else:
+            status = f"RMSE={payload['RMSE']} DirAcc={payload['directional_accuracy']}%" if gate2_ok else "—"
+            print(f"  [{model_key:<12} {ticker:<8} {horizon_label}] Gate2 (validation) : "
+                  f"{'PASS' if gate2_ok else 'FAIL'}  {status}")
 
         logs.append({
             "model": model_key, "asset": ticker, "horizon": horizon_label,
@@ -980,7 +1112,10 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
 
 def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DEFAULT_SEED,
                  epochs=None, max_d7_origins=MAX_D7_ROLLING_ORIGINS, run_id=None,
-                 db_path=DEFAULT_DB_PATH) -> list:
+                 db_path=DEFAULT_DB_PATH, full_retrain: bool = False) -> list:
+    """`full_retrain=False` (défaut) : cf. process_asset_model -- Gate1/Gate2 réutilisent un
+    run antérieur exploitable au lieu d'être recalculés, seule la prévision live tourne
+    systématiquement. `full_retrain=True` : comportement historique, tout est recalculé."""
     models = models or MODELS
     assets = assets or ASSETS
     horizons = horizons or list(HORIZON_TRADING_DAYS)
@@ -1020,7 +1155,7 @@ def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DE
             logs = process_asset_model(model_key, ticker, asset_class, train, validation,
                                        run_date_str, run_date_iso, window_start, window_end,
                                        seed, epochs, max_d7_origins, horizons, run_id,
-                                       regime_tag, db_path)
+                                       regime_tag, db_path, full_retrain=full_retrain)
             all_logs.extend(logs)
 
     export_business_validation(run_id, db_path=db_path, run_dir_root=RUN_ROOT)
@@ -1057,6 +1192,14 @@ def main():
                         "même run_id entre les 2 sous-processus non-LSTM/LSTM d'un run complet")
     p.add_argument("--db-path", default=DEFAULT_DB_PATH,
                    help="tracking.db où persister les prédictions business (Partie B)")
+    p.add_argument("--full-retrain", action="store_true",
+                   help="relance tout le process entraînement (Gate1) + validation (Gate2) + "
+                        "prédiction, comme avant. Par défaut (absent), Gate1/Gate2 ne sont PAS "
+                        "recalculés si un run antérieur exploitable existe déjà pour une "
+                        "combinaison (mêmes fichiers/métriques recopiés) -- seule la prévision "
+                        "live (hors-échantillon) tourne toujours. Bascule automatiquement sur un "
+                        "calcul complet, combinaison par combinaison, si aucun run antérieur "
+                        "n'a les artefacts nécessaires (ex. tout premier run).")
     args = p.parse_args()
     run_date = datetime.strptime(args.run_date, "%Y-%m-%d") if args.run_date else None
 
@@ -1069,6 +1212,7 @@ def main():
         if args.horizons: common += ["--horizons", args.horizons]
         if args.epochs is not None: common += ["--epochs", str(args.epochs)]
         if args.run_date: common += ["--run-date", args.run_date]
+        if args.full_retrain: common += ["--full-retrain"]
         common += ["--seed", str(args.seed), "--max-d7-origins", str(args.max_d7_origins),
                   "--run-id", run_id, "--db-path", args.db_path]
 
@@ -1090,7 +1234,7 @@ def main():
 
     logs = run_pipeline(models=models, assets=assets, horizons=horizons, run_date=run_date,
                         seed=args.seed, epochs=args.epochs, max_d7_origins=args.max_d7_origins,
-                        run_id=args.run_id, db_path=args.db_path)
+                        run_id=args.run_id, db_path=args.db_path, full_retrain=args.full_retrain)
 
     n_gate1_pass = sum(1 for l in logs if l["gate1"])
     n_gate2_pass = sum(1 for l in logs if l["gate2"])

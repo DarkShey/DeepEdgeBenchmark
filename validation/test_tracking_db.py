@@ -311,6 +311,19 @@ def _insert_oos_row(db_path, **overrides):
     conn.close()
 
 
+def _drop_oos_unique_index(db_path):
+    """Retire idx_predictions_oos_unique -- depuis BRIEF_prevention_doublons.md, cet
+    index (désormais sans run_id) rend un doublon métier OOS impossible à insérer, y
+    compris via _insert_oos_row. Utilisé uniquement par les tests qui exercent
+    flag_daily_duplicates/reconcile_oos_sim_trades (conservées à titre défensif/
+    historique, cf. leurs docstrings) sur un scénario de doublon qui ne peut plus se
+    produire par le chemin d'ingestion normal."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP INDEX idx_predictions_oos_unique")
+    conn.commit()
+    conn.close()
+
+
 def test_migration_preserves_ids_and_sequence_from_legacy_schema(tmp_path):
     db_path = str(tmp_path / "legacy.db")
     _create_legacy_predictions_schema(db_path)
@@ -492,3 +505,201 @@ def test_export_csv_source_none_dumps_everything(tmp_path):
     csv_path = tmp_path / "export_all.csv"
     n = td.export_csv(str(csv_path), db_path=db_path, source=None)
     assert n == 2
+
+
+# ── flag_daily_duplicates (BRIEF_correction_doublons.md) ─────────────────────
+
+
+def test_flag_daily_duplicates_keeps_latest_run_id(tmp_path):
+    """Défensif (cf. docstring de reconcile_oos_sim_trades) : ce scénario de doublon
+    n'est plus atteignable par le chemin d'ingestion normal depuis
+    BRIEF_prevention_doublons.md (idx_predictions_oos_unique ne porte plus run_id) --
+    construit ici en désactivant temporairement l'index pour vérifier que la logique
+    de flag_daily_duplicates reste correcte si des doublons existaient malgré tout
+    (ex. base migrée depuis l'ancien schéma, avant que le nouvel index soit posé)."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _drop_oos_unique_index(db_path)
+    common = dict(model="Prophet", asset="SPY", horizon=1,
+                  cutoff_date="2026-02-01", target_date="2026-02-02")
+    _insert_oos_row(db_path, run_id="20260701-Prophet-SPY-D1", y_pred=100.0, **common)
+    _insert_oos_row(db_path, run_id="20260710-Prophet-SPY-D1", y_pred=102.0, **common)
+    _insert_oos_row(db_path, run_id="20260705-Prophet-SPY-D1", y_pred=101.0, **common)
+
+    n_flagged = td.flag_daily_duplicates(db_path=db_path)
+    assert n_flagged == 2
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT run_id, daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchall()
+    conn.close()
+
+    survivors = {r["run_id"] for r in rows if r["daily_duplicate"] == 0}
+    flagged = {r["run_id"] for r in rows if r["daily_duplicate"] == 1}
+    assert survivors == {"20260710-Prophet-SPY-D1"}   # run_id lexicographiquement le plus récent
+    assert flagged == {"20260701-Prophet-SPY-D1", "20260705-Prophet-SPY-D1"}
+
+
+def test_flag_daily_duplicates_ties_on_run_id_broken_by_id(tmp_path):
+    """Cas défensif : l'index partiel idx_predictions_oos_unique interdit normalement
+    deux lignes oos avec le même (run_id, model, asset, horizon, cutoff_date) -- une
+    égalité de run_id ne peut donc pas se produire en usage réel (cf. audit : la cause
+    des doublons est toujours des run_id distincts). On désactive temporairement
+    l'index pour simuler ce cas et vérifier que le dernier niveau de départage
+    (id DESC) fonctionne bien si cette hypothèse venait à être violée."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP INDEX idx_predictions_oos_unique")
+    conn.commit()
+    conn.close()
+
+    _insert_oos_row(db_path, run_id="20260707-Prophet-SPY-D1", y_pred=100.0)
+    _insert_oos_row(db_path, run_id="20260707-Prophet-SPY-D1", y_pred=101.0)   # id plus grand
+
+    n_flagged = td.flag_daily_duplicates(db_path=db_path)
+    assert n_flagged == 1
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT id, daily_duplicate FROM predictions WHERE source='oos' ORDER BY id"
+    ).fetchall()
+    conn.close()
+
+    assert rows[0]["daily_duplicate"] == 1   # id le plus petit -> flaggé
+    assert rows[1]["daily_duplicate"] == 0   # id le plus grand -> survivant (départage ultime)
+
+
+def test_flag_daily_duplicates_never_flags_live_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+    # save_prediction() ré-appelle init_db() -- dropper l'index APRÈS, sinon il serait
+    # simplement recréé (aucun doublon oos encore présent à ce stade) et la 2e
+    # _insert_oos_row ci-dessous violerait la contrainte au lieu de la contourner.
+    _drop_oos_unique_index(db_path)   # cf. docstring de test_flag_daily_duplicates_keeps_latest_run_id
+    _insert_oos_row(db_path, run_id="20260701-Prophet-SPY-D1")
+    _insert_oos_row(db_path, run_id="20260710-Prophet-SPY-D1")
+
+    td.flag_daily_duplicates(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    live_total = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='live'").fetchone()[0]
+    live_flagged = conn.execute(
+        "SELECT COUNT(*) FROM predictions WHERE source='live' AND daily_duplicate=1"
+    ).fetchone()[0]
+    conn.close()
+
+    assert live_total == 1
+    assert live_flagged == 0
+
+
+def test_flag_daily_duplicates_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _drop_oos_unique_index(db_path)   # cf. docstring de test_flag_daily_duplicates_keeps_latest_run_id
+    _insert_oos_row(db_path, run_id="20260701-Prophet-SPY-D1")
+    _insert_oos_row(db_path, run_id="20260710-Prophet-SPY-D1")
+
+    n_first = td.flag_daily_duplicates(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    state_first = {r["run_id"]: r["daily_duplicate"] for r in conn.execute(
+        "SELECT run_id, daily_duplicate FROM predictions WHERE source='oos'"
+    )}
+    conn.close()
+
+    n_second = td.flag_daily_duplicates(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    state_second = {r["run_id"]: r["daily_duplicate"] for r in conn.execute(
+        "SELECT run_id, daily_duplicate FROM predictions WHERE source='oos'"
+    )}
+    total = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+    conn.close()
+
+    assert n_first == n_second == 1
+    assert state_first == state_second
+    assert total == 2   # aucune ligne supprimée par le rejeu
+
+
+def test_export_csv_oos_daily_duplicate_filter_is_a_noop_once_no_duplicates_remain(tmp_path):
+    """Depuis BRIEF_prevention_doublons.md, export_csv (comme toute fonction qui
+    s'auto-initialise) ne peut plus être appelée sur une base contenant encore des
+    doublons OOS physiques (même flagués, pas supprimés) : son self-init tenterait de
+    reposer l'index dur idx_predictions_oos_unique et lèverait une IntegrityError --
+    ce scénario n'est de toute façon plus jamais atteignable par le chemin
+    d'ingestion normal. Le filtre `AND daily_duplicate=0` de export_csv (posé par
+    BRIEF_correction_doublons.md) devient donc un no-op permanent et inoffensif :
+    vérifie qu'il n'exclut plus rien sur une base normale (aucun doublon)."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(tc_id="TC1"), db_path=db_path)
+    _insert_oos_row(db_path, run_id="20260710-Prophet-SPY-D1")
+
+    n_oos = td.export_csv(str(tmp_path / "export_oos.csv"), db_path=db_path, source="oos")
+    assert n_oos == 1
+
+    n_all = td.export_csv(str(tmp_path / "export_all.csv"), db_path=db_path, source=None)
+    assert n_all == 2   # 1 live + 1 oos, rien filtré par daily_duplicate=0
+
+
+# ── BRIEF_prevention_doublons.md : index dur sans run_id ─────────────────────
+
+def test_oos_unique_index_rejects_raw_duplicate_business_key(tmp_path):
+    """§4/§9 du brief : l'index OOS ne porte plus run_id -- un INSERT brut (sans
+    gestion de conflit) pour la même clé métier (source, model, asset, horizon,
+    cutoff_date) avec un run_id différent doit être rejeté par SQLite lui-même."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    _insert_oos_row(db_path, run_id="20260701-Prophet-SPY-D1")
+
+    with pytest.raises(sqlite3.IntegrityError):
+        _insert_oos_row(db_path, run_id="20260710-Prophet-SPY-D1")   # même clé métier, run_id différent
+
+    conn = sqlite3.connect(db_path)
+    n = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert n == 1   # le premier insert reste seul en base, le second a été rejeté (pas d'empilement)
+
+
+def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
+    """L'index (source, model, asset, horizon, cutoff_date) doit servir de cible de
+    conflit valide pour un upsert SQL direct -- prérequis pour
+    sim_trades.insert_oos_predictions (§5 du brief, testé au niveau applicatif dans
+    test_sim_trades.py). Ici, au niveau SQL brut : deux INSERT ... ON CONFLICT ... DO
+    UPDATE sur la même clé métier avec des run_id différents -> 1 seule ligne, dont le
+    contenu est celui du dernier insert (keep-latest)."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+
+    def upsert(run_id, y_pred):
+        conn = sqlite3.connect(db_path)
+        conn.execute("""
+            INSERT INTO predictions (run_id, model, asset, horizon, regime, cutoff_date,
+                                     target_date, last_close, y_pred, y_lower, y_upper, y_true, source)
+            VALUES (?, 'Prophet', 'SPY', 1, 'unknown', '2026-02-01', '2026-02-02',
+                    100.0, ?, 95.0, 107.0, 102.0, 'oos')
+            ON CONFLICT (source, model, asset, horizon, cutoff_date) WHERE source='oos'
+            DO UPDATE SET run_id=excluded.run_id, y_pred=excluded.y_pred
+        """, (run_id, y_pred))
+        conn.commit()
+        conn.close()
+
+    upsert("20260701-Prophet-SPY-D1", 100.0)
+    upsert("20260710-Prophet-SPY-D1", 105.0)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT run_id, y_pred FROM predictions WHERE source='oos'").fetchall()
+    conn.close()
+
+    assert len(rows) == 1
+    assert rows[0]["run_id"] == "20260710-Prophet-SPY-D1"
+    assert rows[0]["y_pred"] == pytest.approx(105.0)
