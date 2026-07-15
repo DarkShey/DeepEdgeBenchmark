@@ -1,0 +1,34 @@
+{
+  "RMSE": 1.0642,
+  "MAE": 0.803,
+  "MAPE": 0.94,
+  "directional_accuracy": 44.44,
+  "pi_coverage_95": 100.0,
+  "pi_width_min": 6.322246,
+  "pi_width_mean": 6.480159,
+  "pi_width_max": 6.650016,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "TLT",
+  "model": "SARIMA",
+  "theil_u": 1.0104,
+  "MASE": 1.0117,
+  "change_corr": -0.3795,
+  "dir_acc_change": 20.0,
+  "dir_acc_ci95": [
+    5.67,
+    50.98
+  ],
+  "dir_acc_p_vs_coin": 0.1094,
+  "dm_stat": 1.981,
+  "dm_p": 0.079,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-10",
+    "last_price": 84.470001,
+    "predicted": 84.523275,
+    "pi_lower": 81.368253,
+    "pi_upper": 87.678298
+  }
+}
