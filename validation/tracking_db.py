@@ -21,7 +21,13 @@ validation/sim_trades.py depuis Run/*-D1/predictions.parquet). RECORD_FIELDS et
 save_prediction restent inchangés : la colonne omise de l'INSERT prend son DEFAULT
 'live' automatiquement -- model_artifacts/pipeline.py n'a donc rien à changer.
 Idempotence des lignes OOS (tc_id NULL, donc hors du UNIQUE ci-dessus puisque SQLite
-traite chaque NULL comme distinct) : index partiel séparé, cf. init_db().
+traite chaque NULL comme distinct) : index partiel séparé, cf. init_db(). Clé métier
+OOS (BRIEF_prevention_doublons.md) : `(source, model, asset, horizon, cutoff_date)`,
+SANS `run_id` -- `run_id` n'est plus qu'une métadonnée de provenance (le run qui a
+produit la ligne), pas une composante d'identité de la prédiction. Deux backtests sur
+la même date ne peuvent donc plus jamais cohabiter : le second ÉCRASE le premier
+(upsert « garde le dernier », cf. sim_trades.insert_oos_predictions), zéro doublon
+possible par construction plutôt que par nettoyage a posteriori.
 
 Toute requête "live" (résolution cron, export business_validation.json, rapport de
 suivi) doit filtrer `source='live'` pour ignorer les lignes OOS qui partagent
@@ -57,7 +63,9 @@ def _connect(db_path=DEFAULT_DB_PATH):
 def init_db(db_path=DEFAULT_DB_PATH) -> None:
     """Crée les tables si absentes (CREATE TABLE IF NOT EXISTS, idempotent). Si
     `predictions` existe déjà mais sans la colonne `source` (base pré-unification),
-    migre en place (cf. _migrate_predictions_add_source)."""
+    migre en place (cf. _migrate_predictions_add_source). Si `daily_duplicate` est
+    absente (base pré-BRIEF_correction_doublons.md), l'ajoute (cf.
+    _migrate_predictions_add_daily_duplicate)."""
     conn = _connect(db_path)
     try:
         conn.execute("""
@@ -94,16 +102,27 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 direction_correct     INTEGER,
                 evaluated_at          TEXT,
                 source                TEXT NOT NULL DEFAULT 'live',
+                daily_duplicate       INTEGER NOT NULL DEFAULT 0,
                 UNIQUE (tc_id, model, cutoff_date)
             )
         """)
         _migrate_predictions_add_source(conn)
+        _migrate_predictions_add_daily_duplicate(conn)
         # Idempotence des lignes OOS : tc_id y est NULL, donc hors de portée du
         # UNIQUE(tc_id, model, cutoff_date) ci-dessus (SQLite traite chaque NULL comme
         # distinct). Index partiel dédié, n'affecte jamais les lignes source='live'.
+        #
+        # BRIEF_prevention_doublons.md §4 : `run_id` retiré de la clé -- l'ancien index
+        # (source, run_id, model, asset, horizon, cutoff_date) laissait deux backtests
+        # sur les mêmes dates s'empiler (run_id différent à chaque rejeu = jamais de
+        # collision). La clé métier réelle d'une prédiction OOS ne dépend pas du run qui
+        # l'a produite : (source, model, asset, horizon, cutoff_date) la rend unique par
+        # construction, plus aucun doublon possible. DROP puis CREATE IF NOT EXISTS :
+        # idempotent, se rejoue sans erreur qu'on parte de l'ancien ou du nouvel index.
+        conn.execute("DROP INDEX IF EXISTS idx_predictions_oos_unique")
         conn.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_oos_unique
-            ON predictions (source, run_id, model, asset, horizon, cutoff_date)
+            ON predictions (source, model, asset, horizon, cutoff_date)
             WHERE source = 'oos'
         """)
         conn.commit()
@@ -173,6 +192,7 @@ def _migrate_predictions_add_source(conn) -> None:
             direction_correct     INTEGER,
             evaluated_at          TEXT,
             source                TEXT NOT NULL DEFAULT 'live',
+            daily_duplicate       INTEGER NOT NULL DEFAULT 0,
             UNIQUE (tc_id, model, cutoff_date)
         )
     """)
@@ -202,6 +222,18 @@ def _migrate_predictions_add_source(conn) -> None:
             f"n_before={n_before} n_after={n_after} "
             f"contenu_identique={rows_after == rows_before}"
         )
+
+
+def _migrate_predictions_add_daily_duplicate(conn) -> None:
+    """Ajout idempotent de `daily_duplicate` (BRIEF_correction_doublons.md §4.1) sur une
+    base existante qui a déjà la colonne `source` (donc pas concernée par la
+    reconstruction de _migrate_predictions_add_source, qui ne s'exécute que si
+    `source` est absente) : ALTER TABLE ADD COLUMN suffit ici, SQLite l'autorise pour
+    une colonne NOT NULL avec DEFAULT constant. Sans effet si la colonne existe déjà."""
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(predictions)")}
+    if "daily_duplicate" in cols or not cols:
+        return
+    conn.execute("ALTER TABLE predictions ADD COLUMN daily_duplicate INTEGER NOT NULL DEFAULT 0")
 
 
 def register_test_case(tc_id, asset, horizon, description="", db_path=DEFAULT_DB_PATH) -> None:
@@ -241,6 +273,79 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
         )
         conn.commit()
         return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def flag_daily_duplicates(db_path=DEFAULT_DB_PATH) -> int:
+    """Marque daily_duplicate=1 sur toutes les copies OOS sauf le dernier lancement
+    de chaque prédiction (source, model, asset, horizon, cutoff_date, target_date).
+    Idempotent (repart de 0 sur les lignes oos à chaque appel, cf. BRIEF_correction_doublons.md
+    §4.2). Ne touche jamais les lignes source='live' (0 doublon, déjà protégées par
+    UNIQUE(tc_id, model, cutoff_date)). Ne supprime aucune ligne.
+
+    Le survivant de chaque groupe (daily_duplicate=0) est déterminé par
+    ORDER BY run_id DESC, created_at DESC, id DESC : au sein d'un groupe, model/asset/
+    horizon/cutoff_date/target_date sont fixes, donc le run_id oos ne varie que par son
+    préfixe YYYYMMDD -- le tri lexicographique sur la chaîne complète est donc déjà un
+    tri chronologique correct, pas besoin d'extraire le préfixe.
+
+    Les deux UPDATE (reset puis flag) et les contrôles internes (§6) tournent dans la
+    transaction implicite d'une connexion unique : si un contrôle échoue, rollback
+    complet et exception, rien n'est persisté. Retourne le nombre de lignes passées à 1.
+
+    Précondition : la colonne `daily_duplicate` doit déjà exister (appeler init_db()
+    avant, comme le fait le script one-shot §5) -- volontairement pas de lazy-init ici
+    pour rester une pure fonction de mise à jour, symétrique du bloc SQL du brief."""
+    conn = _connect(db_path)
+    try:
+        n_before = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+
+        conn.execute("UPDATE predictions SET daily_duplicate = 0 WHERE source = 'oos'")
+        conn.execute("""
+            WITH ranked AS (
+                SELECT id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY source, model, asset, horizon, cutoff_date, target_date
+                           ORDER BY run_id DESC, created_at DESC, id DESC
+                       ) AS rn
+                FROM predictions
+                WHERE source = 'oos'
+            )
+            UPDATE predictions
+            SET daily_duplicate = 1
+            WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
+        """)
+        # cur.rowcount vaut -1 ici : le driver sqlite3 de Python ne sait déterminer le
+        # rowcount que pour un UPDATE/DELETE/INSERT dont le texte SQL commence
+        # directement par ce mot-clé -- un UPDATE précédé d'un WITH (CTE) n'est pas
+        # reconnu et rowcount reste à sa valeur par défaut. On recompte donc directement.
+        n_flagged = conn.execute(
+            "SELECT COUNT(*) FROM predictions WHERE source='oos' AND daily_duplicate=1"
+        ).fetchone()[0]
+
+        n_after = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+        n_live_flagged = conn.execute(
+            "SELECT COUNT(*) FROM predictions WHERE source='live' AND daily_duplicate=1"
+        ).fetchone()[0]
+        n_bad_groups = conn.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT 1 FROM predictions WHERE source='oos' AND daily_duplicate=0
+                GROUP BY source, model, asset, horizon, cutoff_date, target_date
+                HAVING COUNT(*) <> 1
+            )
+        """).fetchone()[0]
+
+        if n_after != n_before or n_live_flagged != 0 or n_bad_groups != 0:
+            conn.rollback()
+            raise RuntimeError(
+                "flag_daily_duplicates : contrôle interne échoué, rollback effectué "
+                f"(n_before={n_before} n_after={n_after} "
+                f"live_flaggees={n_live_flagged} groupes_oos_invalides={n_bad_groups})"
+            )
+
+        conn.commit()
+        return n_flagged
     finally:
         conn.close()
 
@@ -415,14 +520,27 @@ def export_csv(path, db_path=DEFAULT_DB_PATH, source="live") -> int:
     silencieusement ce que produit un export existant du seul fait que la table
     contient désormais aussi de l'OOS. `source=None` exporte tout (live + oos, avec
     la colonne `source` pour les distinguer) ; toute autre valeur filtre sur cette
-    source précise."""
+    source précise.
+
+    Dès que source != 'live' (donc source=None ou source='oos'), les lignes oos
+    flaguées daily_duplicate=1 sont exclues (BRIEF_correction_doublons.md §4.3) pour
+    qu'une même prédiction métier ne soit comptée qu'une fois dans les
+    stats/exports OOS ; les lignes live ne sont jamais filtrées sur ce critère
+    (0 doublon par construction, cf. UNIQUE(tc_id, model, cutoff_date))."""
     init_db(db_path)
     conn = _connect(db_path)
     try:
         if source is None:
-            cur = conn.execute("SELECT * FROM predictions ORDER BY id")
-        else:
+            cur = conn.execute(
+                "SELECT * FROM predictions WHERE source='live' OR daily_duplicate=0 ORDER BY id"
+            )
+        elif source == "live":
             cur = conn.execute("SELECT * FROM predictions WHERE source=? ORDER BY id", (source,))
+        else:
+            cur = conn.execute(
+                "SELECT * FROM predictions WHERE source=? AND daily_duplicate=0 ORDER BY id",
+                (source,),
+            )
         columns = [d[0] for d in cur.description]
         rows = cur.fetchall()
         with open(path, "w", newline="") as f:
