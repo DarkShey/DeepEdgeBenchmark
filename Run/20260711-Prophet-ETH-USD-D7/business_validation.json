@@ -1,5 +1,5 @@
 {
-  "id": 14622,
+  "id": 66510,
   "run_id": "run_20260711T000000",
   "tc_id": "TC_ETH-USD_D7",
   "model": "Prophet",
@@ -23,6 +23,7 @@
   "direction_correct": null,
   "evaluated_at": null,
   "source": "live",
+  "daily_duplicate": 0,
   "horizon_trading_days": 7,
   "note": "horizon_trading_days=7 ici (test case business), à ne pas confondre avec les métriques Gate2 D7 de ce même dossier qui portent sur 5 jours de bourse (cf. PIPELINE_HORIZON_LABEL)."
 }
