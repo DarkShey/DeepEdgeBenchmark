@@ -432,6 +432,8 @@ td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 60
   .kpi-card.validated-ok { background: rgba(46,204,154,0.14); }
   .kpi-card.validated-bad { background: rgba(229,96,107,0.14); }
 }
+.kpi-card.validation-global { border-width: 2px; }
+.kpi-card.validation-global .kpi-card-title { font-size: 14px; }
 .last-price-card {
   flex: 1 1 220px; border: 1px solid var(--text-primary); border-radius: 8px; padding: 12px 14px;
   background: rgba(128,128,128,0.05);
@@ -589,6 +591,7 @@ const KPI_DEFINITIONS = {
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
   tcsourcefilter: "Source des prédictions — 'live' : vraies prédictions, produites en production ce jour-là. 'oos' : fausses prédictions au sens strict — reconstruites a posteriori sur la période de validation/backtest, pas produites avec les autres, mais utiles pour évaluer la règle sur plus de données.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
+  tcvalidatedglobal: "Validation globale — même règle que par modèle, mais le taux d'utilisation est calculé sur les lignes de TOUS les modèles actuellement cochés confondus (pas de moyenne des taux individuels). Dépend donc des cases modèle cochées ci-dessus.",
 };
 
 function infoDot(defKey) {
@@ -1094,23 +1097,32 @@ function renderUsageStats(s, rows) {
   ).join('');
 }
 
-// Validation par modèle : un modèle est "validé" sur cette sélection (pipeline,
-// source(s), D+1, actif courant) si son taux d'utilisation atteint le seuil choisi.
+function validationCardHtml(titleHtml, rowsSubset, threshold, extraClass) {
+  const { total, taux } = computeUsage(rowsSubset);
+  const pct = taux === null ? null : taux * 100;
+  const validated = pct !== null && pct >= threshold;
+  const cls = pct === null ? '' : (validated ? 'validated-ok' : 'validated-bad');
+  return `<div class="kpi-card ${cls} ${extraClass || ''}">`
+    + `<div class="kpi-card-title">${titleHtml}</div>`
+    + `<div class="kpi-row"><span>Taux d'utilisation ${infoDot('tcrate')}</span><b>${fmtPct(taux)}</b></div>`
+    + `<div class="kpi-row"><span>n (lignes)</span><b>${total}</b></div>`
+    + `<div class="kpi-row"><span>Verdict</span><b>${pct === null ? '—' : (validated ? 'Validé' : 'Non validé')}</b></div>`
+    + `</div>`;
+}
+
+// Validation par modèle (+ une carte globale, tous modèles cochés confondus) : un
+// modèle -- ou l'ensemble -- est "validé" sur cette sélection (pipeline, source(s),
+// D+1, actif courant) si son taux d'utilisation atteint le seuil choisi.
 function renderValidationCards(s, rows, models, threshold) {
   const el = document.getElementById(`simtrades-validation-${s}`);
   if (!models.length) { el.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>'; return; }
-  el.innerHTML = models.map(m => {
-    const { total, taux } = computeUsage(rows.filter(r => r.model === m));
-    const pct = taux === null ? null : taux * 100;
-    const validated = pct !== null && pct >= threshold;
-    const cls = pct === null ? '' : (validated ? 'validated-ok' : 'validated-bad');
-    return `<div class="kpi-card ${cls}">`
-      + `<div class="kpi-card-title"><span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}</div>`
-      + `<div class="kpi-row"><span>Taux d'utilisation ${infoDot('tcrate')}</span><b>${fmtPct(taux)}</b></div>`
-      + `<div class="kpi-row"><span>n (lignes)</span><b>${total}</b></div>`
-      + `<div class="kpi-row"><span>Verdict</span><b>${pct === null ? '—' : (validated ? 'Validé' : 'Non validé')}</b></div>`
-      + `</div>`;
+  const globalTitle = `Tous modèles (global) ${infoDot('tcvalidatedglobal')}`;
+  const globalCard = validationCardHtml(globalTitle, rows, threshold, 'validation-global');
+  const modelCards = models.map(m => {
+    const swatch = `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}`;
+    return validationCardHtml(swatch, rows.filter(r => r.model === m), threshold);
   }).join('');
+  el.innerHTML = globalCard + modelCards;
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
