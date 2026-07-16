@@ -13,3 +13,4 @@ tracking_export.csv
 
 # Dashboard : artefact de build régénéré par la CI Pages, plus versionné (cf. BRIEF_dashboard_externalisation.md)
 Run/dashboard.html
+Run/data/

@@ -575,6 +575,12 @@ const KPI_DEFINITIONS = {
   diraccchg: "Dir. Acc (variations) — % de bon sens sur la variation prédite vs le dernier prix connu, avec IC binomial de Wilson à 95%. Si l'IC contient 50%, indiscernable du pile-ou-face.",
   dmdef: "Diebold-Mariano vs persistence — test de différence de perte quadratique (variance Newey-West, correction HLN). p < 0.05 et DM < 0 : le modèle bat significativement le naïf.",
   skillverdict: "Verdict de skill — synthèse Theil's U + DM : 'beats naive' / 'no better than naive' / 'worse than naive'. Règle de lecture du Point 1 du brief.",
+  tcsource: "Source — origine de la ligne : 'oos' (backtest hors-échantillon, reconstruit a posteriori) ou 'live' (prédiction produite en production ce jour-là).",
+  tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
+  tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
+  tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
+  tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
+  tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
 };
 
 function infoDot(defKey) {
@@ -981,8 +987,8 @@ function renderSimTradesTable(ticker) {
     return;
   }
 
-  let html = '<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source</th><th>Modèle</th>'
-    + '<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s)</th><th>Counter</th></tr></thead><tbody>';
+  let html = `<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source ${infoDot('tcsource')}</th><th>Modèle</th>`
+    + `<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s) ${infoDot('tcsignal')}</th><th>Counter ${infoDot('tccounter')}</th></tr></thead><tbody>`;
   filtered.forEach(r => {
     const color = MODEL_COLORS[r.model] || '#888';
     const tcText = r.signals.length
@@ -1025,13 +1031,13 @@ function renderUsageStats(s, rows) {
   const taux = total ? usableCount / total : null;
 
   const tiles = [
-    { label: 'Utilisation brute', value: String(usableCount), cls: '' },
-    { label: 'Performance simulation (Σ counter)', value: fmt(counterSum, 0),
+    { label: 'Utilisation brute', def: 'tcusage', value: String(usableCount), cls: '' },
+    { label: 'Performance simulation (Σ counter)', def: 'tcperf', value: fmt(counterSum, 0),
       cls: counterSum > 0 ? 'pos' : (counterSum < 0 ? 'neg' : '') },
-    { label: "Taux d'utilisation", value: fmtPct(taux), cls: '' },
+    { label: "Taux d'utilisation", def: 'tcrate', value: fmtPct(taux), cls: '' },
   ];
   el.innerHTML = tiles.map(t =>
-    `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`
+    `<div class="stat-tile"><div class="label">${t.label} ${infoDot(t.def)}</div><div class="value ${t.cls}">${t.value}</div></div>`
   ).join('');
 }
 
