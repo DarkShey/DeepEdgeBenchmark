@@ -591,7 +591,7 @@ const KPI_DEFINITIONS = {
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
   tcsourcefilter: "Source des prédictions — 'live' : vraies prédictions, produites en production ce jour-là. 'oos' : fausses prédictions au sens strict — reconstruites a posteriori sur la période de validation/backtest, pas produites avec les autres, mais utiles pour évaluer la règle sur plus de données.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
-  tcvalidatedglobal: "Validation globale — même règle que par modèle, mais le taux d'utilisation est calculé sur les lignes de TOUS les modèles actuellement cochés confondus (pas de moyenne des taux individuels). Dépend donc des cases modèle cochées ci-dessus.",
+  tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
 };
 
 function infoDot(defKey) {
@@ -1110,19 +1110,20 @@ function validationCardHtml(titleHtml, rowsSubset, threshold, extraClass) {
     + `</div>`;
 }
 
-// Validation par modèle (+ une carte globale, tous modèles cochés confondus) : un
-// modèle -- ou l'ensemble -- est "validé" sur cette sélection (pipeline, source(s),
-// D+1, actif courant) si son taux d'utilisation atteint le seuil choisi.
+// Une seule carte de validation, qui s'adapte à la sélection de modèles (cases à cocher
+// ci-dessus) : le détail du modèle si un seul est coché, l'agrégation de tous les
+// modèles cochés confondus (pas une moyenne des taux individuels) s'ils sont plusieurs.
 function renderValidationCards(s, rows, models, threshold) {
   const el = document.getElementById(`simtrades-validation-${s}`);
   if (!models.length) { el.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>'; return; }
-  const globalTitle = `Tous modèles (global) ${infoDot('tcvalidatedglobal')}`;
-  const globalCard = validationCardHtml(globalTitle, rows, threshold, 'validation-global');
-  const modelCards = models.map(m => {
+  if (models.length === 1) {
+    const m = models[0];
     const swatch = `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}`;
-    return validationCardHtml(swatch, rows.filter(r => r.model === m), threshold);
-  }).join('');
-  el.innerHTML = globalCard + modelCards;
+    el.innerHTML = validationCardHtml(swatch, rows.filter(r => r.model === m), threshold);
+    return;
+  }
+  const title = `${models.length} modèles sélectionnés (agrégé) ${infoDot('tcvalidatedglobal')}`;
+  el.innerHTML = validationCardHtml(title, rows, threshold, 'validation-global');
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
