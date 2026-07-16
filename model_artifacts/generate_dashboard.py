@@ -15,8 +15,15 @@ jour par jour des test cases TC1.1-TC1.5 (`validation/sim_trades.py`), le TC qui
 un signal ce jour-là et son counter — restreint à D+1 (seul horizon supporté par ces
 règles, cf. docstring de validation/sim_trades.py).
 
+Depuis 2026-07 : par défaut, les séries lourdes (predictions/prices) ne sont plus
+embarquées dans le HTML mais écrites à côté dans data/<run_date>.json, chargées par le
+navigateur au fil de la sélection de date (fetch), pour garder un poids de page borné
+quel que soit le nombre de dates historiques. `--inline` retrouve l'ancien comportement
+mono-fichier (tout embarqué), utile pour prévisualiser en file:// sans serveur.
+
 Exécution (depuis DeepEdgeBenchmark/) :
-    python -m model_artifacts.generate_dashboard
+    python -m model_artifacts.generate_dashboard --inline   # mono-fichier, file:// OK
+    python -m model_artifacts.generate_dashboard             # mode CI : coquille + data/*.json
     python -m model_artifacts.generate_dashboard --run-root Run --out Run/dashboard.html
 """
 
@@ -229,7 +236,11 @@ def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
     return out
 
 
-def render_html(run_data: dict, run_root_label: str) -> str:
+def render_html(run_data: dict, run_root_label: str, external_series: bool = False) -> str:
+    """external_series=False (mode --inline) : predictions/prices embarquées dans le
+    payload comme avant, page autonome ouvrable en file://. external_series=True (mode
+    par défaut) : predictions/prices exclues du payload -- le JS les récupère par
+    fetch('data/<date>.json') à la demande (cf. main() pour l'écriture de ces fichiers)."""
     records = run_data["records"]
     asset_catalog = build_asset_catalog(records)
     models_present = [m for m in MODEL_ORDER if any(r["model"] == m for r in records)]
@@ -243,15 +254,30 @@ def render_html(run_data: dict, run_root_label: str) -> str:
         "assets": asset_catalog,
         "records": records,
         "run_dates": run_data["run_dates"],
-        "predictions": run_data["predictions"],
-        "prices": run_data["prices"],
         "sim_trades_daily": collect_sim_trades_daily(),
         "sim_trades_models": SIM_TRADES_MODELS,
         "sim_trades_pipelines": SIM_TRADES_PIPELINES,
         "tc_pipeline": TC_PIPELINE,
+        "external_series": external_series,
     }
+    if not external_series:
+        payload["predictions"] = run_data["predictions"]
+        payload["prices"] = run_data["prices"]
     data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     return HTML_TEMPLATE.replace("__DATA_JSON__", data_json)
+
+
+def write_date_series_files(run_data: dict, data_dir: Path) -> None:
+    """Écrit data/<run_date>.json (predictions + prices de cette seule date) -- appelé
+    uniquement en mode externe (cf. render_html external_series=True)."""
+    data_dir.mkdir(parents=True, exist_ok=True)
+    for run_date in run_data["run_dates"]:
+        series = {
+            "predictions": run_data["predictions"].get(run_date, {}),
+            "prices": run_data["prices"].get(run_date, {}),
+        }
+        series_json = json.dumps(series, ensure_ascii=False)
+        (data_dir / f"{run_date}.json").write_text(series_json, encoding="utf-8")
 
 
 HTML_TEMPLATE = r"""<title>Dashboard KPI — Modèles de prévision</title>
@@ -434,6 +460,35 @@ td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 60
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script>
 const DATA = __DATA_JSON__;
+
+// ---- Séries par date (predictions/prices) : embarquées (mode --inline) ou chargées à
+// la demande via fetch('data/<date>.json') (mode par défaut, cf. generate_dashboard.py).
+const dataCache = new Map();
+function seedDataCacheFromInline() {
+  if (DATA.external_series) return;
+  (DATA.run_dates || []).forEach(d => {
+    dataCache.set(d, {
+      predictions: (DATA.predictions || {})[d] || {},
+      prices: (DATA.prices || {})[d] || {},
+    });
+  });
+}
+async function ensureDateData(date) {
+  if (!date || dataCache.has(date)) return dataCache.get(date) || { predictions: {}, prices: {} };
+  if (!DATA.external_series) return { predictions: {}, prices: {} };
+  try {
+    const res = await fetch(`data/${date}.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    dataCache.set(date, d);
+    return d;
+  } catch (err) {
+    console.error(`Échec du chargement de data/${date}.json`, err);
+    return { predictions: {}, prices: {}, error: true };
+  }
+}
+function predsBucket(date) { return (dataCache.get(date) || {}).predictions || {}; }
+function pricesBucket(date) { return (dataCache.get(date) || {}).prices || {}; }
 
 const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const MODEL_COLORS = isDark ? DATA.model_colors_dark : DATA.model_colors_light;
@@ -718,7 +773,7 @@ function wireAssetPanel(a) {
     if (d === st.date) opt.selected = true;
     dateSel.appendChild(opt);
   });
-  dateSel.addEventListener('change', () => { st.date = dateSel.value; refreshAssetTab(ticker); });
+  dateSel.addEventListener('change', () => { switchAssetDate(ticker, dateSel.value, dateSel); });
 
   const horizons = [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
   const hEl = document.getElementById(`horizon-${s}`);
@@ -800,6 +855,33 @@ function wireAssetPanel(a) {
 function refreshAssetTab(ticker) {
   renderAssetKpis(ticker);
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+}
+
+// Changement de date de run pour un actif : si les séries de cette date ne sont pas
+// encore en cache, les récupère (fetch, mode externe) avant de rafraîchir l'onglet --
+// affiche un état de chargement le temps du fetch, un message d'erreur s'il échoue.
+async function switchAssetDate(ticker, date, dateSel) {
+  const st = assetState[ticker];
+  st.date = date;
+  if (dataCache.has(date) || !DATA.external_series) { refreshAssetTab(ticker); return; }
+
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short;
+  dateSel.disabled = true;
+  document.getElementById(`kpi-cards-${s}`).innerHTML = '<div class="no-data">Chargement…</div>';
+  const chartEl = document.getElementById(`chart-${s}`);
+  if (chartEl) chartEl.innerHTML = '<div class="no-data">Chargement…</div>';
+
+  const result = await ensureDateData(date);
+  dateSel.disabled = false;
+  if (st.date !== date) return; // l'utilisateur a changé de date entre-temps
+
+  if (result.error) {
+    document.getElementById(`kpi-cards-${s}`).innerHTML =
+      '<div class="no-data">Erreur de chargement des données pour cette date. Réessayez.</div>';
+    return;
+  }
+  refreshAssetTab(ticker);
 }
 
 // =============================================================================
@@ -1036,7 +1118,7 @@ function renderAssetKpis(ticker) {
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
   cardsEl.innerHTML = '';
 
-  const priceBucket = (DATA.prices[st.date] || {})[ticker];
+  const priceBucket = (pricesBucket(st.date) || {})[ticker];
   const anyRec = DATA.records.find(r => r.asset === ticker && r.horizon === st.horizon && r.run_date === st.date);
   const lastPrice = priceBucket ? priceBucket.points[priceBucket.points.length - 1] : null;
   const lastPriceCard = document.createElement('div');
@@ -1064,7 +1146,7 @@ function renderAssetKpis(ticker) {
         const pct = forecastPct(rec);
         const warn = isWarn(rec, st.warnThreshold);
         const pctText = pct === null ? '' : ` (${pct > 0 ? '+' : ''}${fmt(pct, 1)}%)`;
-        const predSeries = ((DATA.predictions[st.date] || {})[ticker] || {})[m] || {};
+        const predSeries = ((predsBucket(st.date) || {})[ticker] || {})[m] || {};
         const backtestPoints = predSeries[st.horizon] || [];
         const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
         rowsHtml = [
@@ -1157,7 +1239,7 @@ function renderAssetChart(ticker) {
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
 
-  const priceBucket = (DATA.prices[st.date] || {})[ticker];
+  const priceBucket = (pricesBucket(st.date) || {})[ticker];
   if (!priceBucket) {
     container.innerHTML = '<div class="no-data">Aucune donnée de prix pour cette date de run.</div>';
     dateRangeEl.textContent = '';
@@ -1207,7 +1289,7 @@ function renderAssetChart(ticker) {
   }
 
   const checked = MODELS.filter(m => st.models.has(m));
-  const predBucket = (DATA.predictions[st.date] || {})[ticker] || {};
+  const predBucket = (predsBucket(st.date) || {})[ticker] || {};
   const forecastAnchorDate = windowEnd;
   const forecastAnchorClose = (allPoints.find(p => p.date === forecastAnchorDate) || {}).close ?? lastClose;
   const forecastTargetDate = addDays(forecastAnchorDate, FORECAST_DAYS_OFFSET[st.horizon] || 1);
@@ -1634,11 +1716,19 @@ function renderComparisonTab() {
 // Boot
 // =============================================================================
 
-renderSubtitle();
-buildTabBar();
-buildAssetPanels();
-renderComparisonTab();
-document.getElementById('table-search').addEventListener('input', renderComparisonTable);
+async function boot() {
+  seedDataCacheFromInline();
+  renderSubtitle();
+  buildTabBar();
+  // Toutes les fiches actif démarrent sur la même date (la plus récente, cf. assetState
+  // ci-dessus) -- un seul fetch couvre le rendu KPI initial de tous les actifs.
+  const latestDate = DATA.run_dates[DATA.run_dates.length - 1];
+  if (latestDate) await ensureDateData(latestDate);
+  buildAssetPanels();
+  renderComparisonTab();
+  document.getElementById('table-search').addEventListener('input', renderComparisonTable);
+}
+boot();
 </script>
 """
 
@@ -1647,6 +1737,11 @@ def main():
     p = argparse.ArgumentParser(description="Génère un dashboard HTML des KPI depuis Run/")
     p.add_argument("--run-root", default=str(REPO_ROOT / "Run"))
     p.add_argument("--out", default=None, help="défaut : <run-root>/dashboard.html")
+    p.add_argument("--inline", action="store_true",
+                    help="mono-fichier autonome (embarque toutes les séries) -- "
+                         "ouvrable en file://, pratique en dev. Sans ce flag (défaut, "
+                         "utilisé en CI) : coquille légère + data/<date>.json à côté de "
+                         "--out, à servir via un serveur HTTP (fetch ne marche pas en file://).")
     args = p.parse_args()
 
     run_root = Path(args.run_root)
@@ -1655,9 +1750,17 @@ def main():
     run_data = collect_run_data(run_root)
     if not run_data["records"]:
         print(f"Aucun metrics.json trouvé sous {run_root}")
-    html = render_html(run_data, str(run_root))
+    html = render_html(run_data, str(run_root), external_series=not args.inline)
     out_path.write_text(html, encoding="utf-8")
-    print(f"Dashboard généré : {out_path}  ({len(run_data['records'])} combinaisons)")
+    if args.inline:
+        print(f"Dashboard généré (mono-fichier) : {out_path}  ({len(run_data['records'])} combinaisons)")
+    else:
+        data_dir = out_path.parent / "data"
+        write_date_series_files(run_data, data_dir)
+        print(f"Dashboard généré : {out_path} + {len(run_data['run_dates'])} fichier(s) dans {data_dir}"
+              f"  ({len(run_data['records'])} combinaisons)")
+        print("  Aperçu local : servez le dossier via `python -m http.server` "
+              "(fetch() ne fonctionne pas en file://) ou utilisez --inline.")
 
 
 if __name__ == "__main__":
