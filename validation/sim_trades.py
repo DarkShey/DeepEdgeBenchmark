@@ -1447,6 +1447,7 @@ def daily_detail(db_path=DEFAULT_DB_PATH, asset=None, models=None) -> list:
         signals = [{
             "tc_id": RULE_TC_ID[m["rule_version"]], "rule_version": m["rule_version"],
             "branch": m["branch"], "counter": m["counter"], "roi": m["roi"], "status": m["status"],
+            "gated_out": m["gated_out"],
         } for m in trades_by_key.get(key, [])]
         results.append({
             "source": row["source"], "d_date": row["d_date"], "target_date": row["target_date"],

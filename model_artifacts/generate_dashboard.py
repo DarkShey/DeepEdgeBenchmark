@@ -455,6 +455,13 @@ td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 60
 .chart-checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
 .chart-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .chart-wrap { min-height: 480px; }
+.tc-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-secondary);
+  margin: -2px 0 14px;
+}
+.tc-legend .tc-legend-item { white-space: nowrap; }
+.tc-legend b { color: var(--text-primary); }
+td.gated-out-cell { color: var(--text-muted); font-style: italic; }
 </style>
 
 <h1>Dashboard KPI — Modèles de prévision</h1>
@@ -592,6 +599,7 @@ const KPI_DEFINITIONS = {
   tcsourcefilter: "Vraies vs fausses prédictions — vraie : d_date à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), qu'elle soit techniquement marquée 'live' ou 'oos' (des jours ont été rejoués en 'oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14/07, mais restent de vraies prédictions). Fausse : tout ce qui précède, reconstruction de backtest sur la période de validation.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
   tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
+  tcgatedcol: "Sideways gaté (TC1.5b) — même signal plat que TC1.5, mais écarté si le marché est jugé trop volatil/stressé (gate régime, cf. légende). N'entre PAS dans le pipeline 'daily' (Test case(s)/Counter/validation ci-dessus) : colonne d'inspection à part, indépendante du filtre pipeline. 'Écarté (vol/stress élevé)' = signal plat détecté mais rejeté par le gate. Sinon : counter (justesse, identique à TC1.5) + pnl proxy short-vol entre parenthèses (JAMAIS un rendement exécuté, cf. BRIEF_sideways_v2.md).",
 };
 
 function infoDot(defKey) {
@@ -711,12 +719,16 @@ function assetPanelSkeleton(a) {
 
     <div class="card" id="simtrades-card-${s}" style="display:none;">
       <h2>Test cases (TC1.1&ndash;TC1.5, D+1) &mdash; jour par jour</h2>
+      <div class="tc-legend" id="simtrades-legend-${s}"></div>
       <div class="controls-row" style="margin-bottom:12px;">
         <div class="toggle-group" id="simtrades-pipeline-${s}"></div>
         <div class="model-checks" id="simtrades-models-${s}"></div>
         <div class="chart-checks" id="simtrades-sources-${s}"></div>
         <label class="field-label">
           <input type="checkbox" id="simtrades-onlysignal-${s}" checked> Seulement les jours avec signal
+        </label>
+        <label class="field-label">
+          <input type="checkbox" id="simtrades-showgated-${s}"> Afficher la colonne Sideways gaté (TC1.5b) ${infoDot('tcgatedcol')}
         </label>
       </div>
       <div style="overflow:auto; max-height:480px;" id="simtrades-table-${s}"></div>
@@ -930,12 +942,33 @@ function isRealPrediction(row) {
   return row.d_date >= (REAL_PREDICTION_START[row.model] || REAL_PREDICTION_START_DEFAULT);
 }
 
+// Légende statique TC1.1-1.5(b) affichée dans la carte "Test cases" -- cf.
+// validation/sim_trades.py (bull_calm_d1/pi95_conf/bear_calm_d1/bear_stress_d1/
+// sideways_d1/sideways_gated_d1) et BRIEF_sideways_d1.md / BRIEF_sideways_v2.md.
+const TC_DEFINITIONS = [
+  { id: 'TC1.1', name: 'Bull-Calm', desc: 'hausse prédite (predicted > P(D)), position longue modérée' },
+  { id: 'TC1.2', name: 'Bull-Stress', desc: 'hausse quasi certaine même au pire cas du PI (pi_low > P(D)), position longue forte' },
+  { id: 'TC1.3', name: 'Bear-Calm', desc: 'baisse prédite (predicted < P(D)), position courte modérée' },
+  { id: 'TC1.4', name: 'Bear-Stress', desc: 'baisse quasi certaine même au meilleur cas du PI (pi_high < P(D)), position courte forte' },
+  { id: 'TC1.5', name: 'Sideways', desc: 'journée plate prédite (P(D) dans la bande, variation prédite négligeable), pas de position, test de justesse pur' },
+  { id: 'TC1.5b', name: 'Sideways gaté', desc: 'comme TC1.5, mais écarté si le marché est jugé trop volatil/stressé ; ajoute un P&L proxy short-vol' },
+];
+
+function renderTcLegend(s) {
+  const el = document.getElementById(`simtrades-legend-${s}`);
+  el.innerHTML = TC_DEFINITIONS.map(d =>
+    `<span class="tc-legend-item"><b>${d.id}</b> ${d.name} — ${d.desc}</span>`
+  ).join('');
+}
+
 const simTradesState = {};
 
 function setupSimTradesControls(a) {
   const s = a.short, ticker = a.ticker;
   const rows = (DATA.sim_trades_daily || {})[ticker];
   if (!rows || !rows.length) return;   // pas de données pour cet actif -> rien à câbler
+
+  renderTcLegend(s);
 
   const models = DATA.sim_trades_models || [];
   const pipelines = DATA.sim_trades_pipelines || [];
@@ -945,7 +978,7 @@ function setupSimTradesControls(a) {
   const activePipelines = new Set(Object.values(DATA.tc_pipeline || {}));
   simTradesState[ticker] = {
     models: new Set(models), pipeline: 'daily',
-    predKinds: new Set(['real', 'fake']), validateThreshold: 80,
+    predKinds: new Set(['real', 'fake']), validateThreshold: 80, showGated: false,
   };
 
   const pEl = document.getElementById(`simtrades-pipeline-${s}`);
@@ -1018,6 +1051,11 @@ function setupSimTradesControls(a) {
   });
 
   document.getElementById(`simtrades-onlysignal-${s}`).addEventListener('change', () => renderSimTradesTable(ticker));
+
+  document.getElementById(`simtrades-showgated-${s}`).addEventListener('change', (e) => {
+    simTradesState[ticker].showGated = e.target.checked;
+    renderSimTradesTable(ticker);
+  });
 }
 
 function renderSimTradesTable(ticker) {
@@ -1038,9 +1076,16 @@ function renderSimTradesTable(ticker) {
   // sur TOUTES ces lignes, indépendamment de la case "Seulement les jours avec signal"
   // ci-dessous (sinon la cocher fausserait le taux d'utilisation en réduisant le
   // dénominateur).
+  // tc15b extrait AVANT le filtrage pipeline (TC1.5b n'est rattaché à aucune famille
+  // "daily"/"weekly"/"monthly" dans tc_pipeline -- le filtre pipeline l'exclurait sinon
+  // toujours des `signals`) : colonne à part, affichée indépendamment du pipeline choisi.
   const base = rows
     .filter(r => state.models.has(r.model) && state.predKinds.has(isRealPrediction(r) ? 'real' : 'fake'))
-    .map(r => ({ ...r, signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline) }));
+    .map(r => ({
+      ...r,
+      tc15b: r.signals.find(sig => sig.tc_id === 'TC1.5b') || null,
+      signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline),
+    }));
 
   renderUsageStats(s, base);
   const validationModels = (DATA.sim_trades_models || []).filter(m => state.models.has(m));
@@ -1055,8 +1100,11 @@ function renderSimTradesTable(ticker) {
     return;
   }
 
+  const showGated = state.showGated;
   let html = `<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source ${infoDot('tcsource')}</th><th>Modèle</th>`
-    + `<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s) ${infoDot('tcsignal')}</th><th>Counter ${infoDot('tccounter')}</th></tr></thead><tbody>`;
+    + `<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s) ${infoDot('tcsignal')}</th><th>Counter ${infoDot('tccounter')}</th>`
+    + (showGated ? `<th>Sideways gaté (TC1.5b) ${infoDot('tcgatedcol')}</th>` : '')
+    + '</tr></thead><tbody>';
   filtered.forEach(r => {
     const color = MODEL_COLORS[r.model] || '#888';
     const tcText = r.signals.length
@@ -1069,10 +1117,28 @@ function renderSimTradesTable(ticker) {
     html += `<tr><td>${r.d_date}</td><td>${r.target_date}</td><td>${r.source}</td>`
       + `<td><span style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${color};margin-right:6px;"></span>${r.model}</td>`
       + `<td>${fmt(r.reference_price, 2)}</td><td>${fmt(r.predicted, 2)}</td><td>${fmt(r.realized_price, 2)}</td>`
-      + `<td>${tcText}</td><td>${counterText}</td></tr>`;
+      + `<td>${tcText}</td><td>${counterText}</td>`;
+    if (showGated) {
+      const g = gatedCellInfo(r.tc15b);
+      html += `<td class="${g.cls}">${g.text}</td>`;
+    }
+    html += '</tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+}
+
+// Contenu de la colonne optionnelle "Sideways gaté (TC1.5b)" : pas de signal v1 (aucun
+// jour plat candidat) -> "—" ; signal v1 mais écarté par le gate régime/volatilité
+// (gated_out=1, "flat suspect") -> écarté, distinct d'une vraie absence de signal ;
+// résolu -> counter (justesse, identique à TC1.5) + pnl_shortvol (proxy short-vol, cf.
+// BRIEF_sideways_v2.md §3, PAS un rendement exécuté) ; encore ouvert -> "ouvert".
+function gatedCellInfo(g) {
+  if (!g) return { text: '—', cls: '' };
+  if (g.gated_out) return { text: 'Écarté (vol/stress élevé)', cls: 'gated-out-cell' };
+  if (g.branch === null) return { text: g.status === 'open' ? 'ouvert' : '—', cls: '' };
+  const counterText = g.counter > 0 ? '+' + g.counter : String(g.counter);
+  return { text: `${counterText} (pnl ${fmt(g.roi, 2)})`, cls: '' };
 }
 
 // Utilisation brute / performance simulation / taux d'utilisation : une ligne (jour ×
