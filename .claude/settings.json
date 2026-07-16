@@ -43,7 +43,11 @@
       "Bash(rm -f C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test2.html)",
       "Bash(git restore *)",
       "Bash(python -m model_artifacts.generate_dashboard --inline --out C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test3.html)",
-      "Bash(rm -f C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test3.html)"
+      "Bash(rm -f C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test3.html)",
+      "Bash(python -m model_artifacts.generate_dashboard --inline --out C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test4.html)",
+      "Bash(rm -f C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test4.html)",
+      "Bash(python -m model_artifacts.generate_dashboard --inline --out C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test5.html)",
+      "Bash(rm -f C:/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/643ec52f-200e-4570-92a0-50f11b1ef5da/scratchpad/tc_test5.html)"
     ]
   }
 }
