@@ -426,6 +426,12 @@ tbody tr:hover { background: rgba(128,128,128,0.06); }
 .kpi-row.warn { background: rgba(214,58,58,0.10); border-radius: 4px; margin: 1px -6px; padding: 3px 6px; }
 .kpi-row.warn b { color: #d63a3a; }
 td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 600; border-radius: 4px; }
+.kpi-card.validated-ok { background: rgba(27,175,122,0.10); border-color: var(--pos-color); }
+.kpi-card.validated-bad { background: rgba(214,69,80,0.10); border-color: var(--neg-color); }
+@media (prefers-color-scheme: dark) {
+  .kpi-card.validated-ok { background: rgba(46,204,154,0.14); }
+  .kpi-card.validated-bad { background: rgba(229,96,107,0.14); }
+}
 .last-price-card {
   flex: 1 1 220px; border: 1px solid var(--text-primary); border-radius: 8px; padding: 12px 14px;
   background: rgba(128,128,128,0.05);
@@ -581,6 +587,8 @@ const KPI_DEFINITIONS = {
   tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
   tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
+  tcsourcefilter: "Source des prédictions — 'live' : vraies prédictions, produites en production ce jour-là. 'oos' : fausses prédictions au sens strict — reconstruites a posteriori sur la période de validation/backtest, pas produites avec les autres, mais utiles pour évaluer la règle sur plus de données.",
+  tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
 };
 
 function infoDot(defKey) {
@@ -703,12 +711,21 @@ function assetPanelSkeleton(a) {
       <div class="controls-row" style="margin-bottom:12px;">
         <div class="toggle-group" id="simtrades-pipeline-${s}"></div>
         <div class="model-checks" id="simtrades-models-${s}"></div>
+        <div class="chart-checks" id="simtrades-sources-${s}"></div>
         <label class="field-label">
           <input type="checkbox" id="simtrades-onlysignal-${s}" checked> Seulement les jours avec signal
         </label>
       </div>
       <div style="overflow:auto; max-height:480px;" id="simtrades-table-${s}"></div>
       <div class="stat-tiles" id="simtrades-usage-${s}" style="margin-top:16px;"></div>
+      <div class="controls-row" style="margin-top:20px; margin-bottom:4px;">
+        <h2 style="margin:0;">Validation par modèle ${infoDot('tcvalidated')}</h2>
+        <label class="threshold-field">Seuil de validation
+          <input type="range" id="simtrades-threshold-${s}" min="0" max="100" step="1" value="80">
+          <span>&ge;<b id="simtrades-threshold-value-${s}">80</b>%</span>
+        </label>
+      </div>
+      <div class="kpi-cards" id="simtrades-validation-${s}"></div>
     </div>
   `;
 }
@@ -910,7 +927,10 @@ function setupSimTradesControls(a) {
   // Python) -- seule "daily" l'est aujourd'hui ; les autres restent grisées jusqu'à ce
   // que de nouvelles règles (D+7, mensuelles) leur soient rattachées.
   const activePipelines = new Set(Object.values(DATA.tc_pipeline || {}));
-  simTradesState[ticker] = { models: new Set(models), pipeline: 'daily' };
+  simTradesState[ticker] = {
+    models: new Set(models), pipeline: 'daily',
+    sources: new Set(['live', 'oos']), validateThreshold: 80,
+  };
 
   const pEl = document.getElementById(`simtrades-pipeline-${s}`);
   pEl.innerHTML = '';
@@ -953,6 +973,31 @@ function setupSimTradesControls(a) {
     mEl.appendChild(label);
   });
 
+  const sourceEl = document.getElementById(`simtrades-sources-${s}`);
+  sourceEl.innerHTML = '';
+  const sourceLabel = { live: `Vraies prédictions (live) ${infoDot('tcsourcefilter')}`, oos: 'Fausses prédictions (oos, validation)' };
+  ['live', 'oos'].forEach(src => {
+    const label = document.createElement('label');
+    label.className = 'chart-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = simTradesState[ticker].sources.has(src);
+    cb.addEventListener('change', () => {
+      if (cb.checked) simTradesState[ticker].sources.add(src); else simTradesState[ticker].sources.delete(src);
+      renderSimTradesTable(ticker);
+    });
+    label.appendChild(cb);
+    label.insertAdjacentHTML('beforeend', sourceLabel[src]);
+    sourceEl.appendChild(label);
+  });
+
+  const threshEl = document.getElementById(`simtrades-threshold-${s}`);
+  const threshValueEl = document.getElementById(`simtrades-threshold-value-${s}`);
+  threshEl.addEventListener('input', () => {
+    simTradesState[ticker].validateThreshold = Number(threshEl.value);
+    threshValueEl.textContent = threshEl.value;
+    renderSimTradesTable(ticker);
+  });
+
   document.getElementById(`simtrades-onlysignal-${s}`).addEventListener('change', () => renderSimTradesTable(ticker));
 }
 
@@ -968,15 +1013,18 @@ function renderSimTradesTable(ticker) {
   const onlySignal = document.getElementById(`simtrades-onlysignal-${s}`).checked;
   const tcPipeline = DATA.tc_pipeline || {};
 
-  // Filtre modèle(s) + pipeline sélectionné (daily pour l'instant), signaux restreints
-  // à la famille choisie. Servie telle quelle à renderUsageStats -- calculée sur TOUTES
-  // ces lignes, indépendamment de la case "Seulement les jours avec signal" ci-dessous
-  // (sinon la cocher fausserait le taux d'utilisation en réduisant le dénominateur).
+  // Filtre modèle(s) + source(s) (live/oos) + pipeline sélectionné (daily pour
+  // l'instant), signaux restreints à la famille choisie. Servie telle quelle à
+  // renderUsageStats/renderValidationCards -- calculée sur TOUTES ces lignes,
+  // indépendamment de la case "Seulement les jours avec signal" ci-dessous (sinon la
+  // cocher fausserait le taux d'utilisation en réduisant le dénominateur).
   const base = rows
-    .filter(r => state.models.has(r.model))
+    .filter(r => state.models.has(r.model) && state.sources.has(r.source))
     .map(r => ({ ...r, signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline) }));
 
   renderUsageStats(s, base);
+  const validationModels = (DATA.sim_trades_models || []).filter(m => state.models.has(m));
+  renderValidationCards(s, base, validationModels, state.validateThreshold);
 
   let filtered = base;
   if (onlySignal) filtered = filtered.filter(r => r.signals.length > 0);
@@ -1013,9 +1061,9 @@ function renderSimTradesTable(ticker) {
 // un trader, et un signal résolu négativement ne l'était pas non plus. La performance
 // (Σ counter) somme tous les signaux résolus, positifs et négatifs. Le taux rapporte
 // l'utilisation brute au nombre total de lignes de la sélection courante (modèle(s) +
-// pipeline) -- signaux ouverts (non encore résolus) comptés non-utilisables pour l'instant.
-function renderUsageStats(s, rows) {
-  const el = document.getElementById(`simtrades-usage-${s}`);
+// source(s) + pipeline) -- signaux ouverts (non encore résolus) comptés non-utilisables
+// pour l'instant.
+function computeUsage(rows) {
   const total = rows.length;
   let usableCount = 0;
   let counterSum = 0;
@@ -1028,7 +1076,12 @@ function renderUsageStats(s, rows) {
     });
     if (rowUsable) usableCount++;
   });
-  const taux = total ? usableCount / total : null;
+  return { total, usableCount, counterSum, taux: total ? usableCount / total : null };
+}
+
+function renderUsageStats(s, rows) {
+  const el = document.getElementById(`simtrades-usage-${s}`);
+  const { usableCount, counterSum, taux } = computeUsage(rows);
 
   const tiles = [
     { label: 'Utilisation brute', def: 'tcusage', value: String(usableCount), cls: '' },
@@ -1039,6 +1092,25 @@ function renderUsageStats(s, rows) {
   el.innerHTML = tiles.map(t =>
     `<div class="stat-tile"><div class="label">${t.label} ${infoDot(t.def)}</div><div class="value ${t.cls}">${t.value}</div></div>`
   ).join('');
+}
+
+// Validation par modèle : un modèle est "validé" sur cette sélection (pipeline,
+// source(s), D+1, actif courant) si son taux d'utilisation atteint le seuil choisi.
+function renderValidationCards(s, rows, models, threshold) {
+  const el = document.getElementById(`simtrades-validation-${s}`);
+  if (!models.length) { el.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>'; return; }
+  el.innerHTML = models.map(m => {
+    const { total, taux } = computeUsage(rows.filter(r => r.model === m));
+    const pct = taux === null ? null : taux * 100;
+    const validated = pct !== null && pct >= threshold;
+    const cls = pct === null ? '' : (validated ? 'validated-ok' : 'validated-bad');
+    return `<div class="kpi-card ${cls}">`
+      + `<div class="kpi-card-title"><span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}</div>`
+      + `<div class="kpi-row"><span>Taux d'utilisation ${infoDot('tcrate')}</span><b>${fmtPct(taux)}</b></div>`
+      + `<div class="kpi-row"><span>n (lignes)</span><b>${total}</b></div>`
+      + `<div class="kpi-row"><span>Verdict</span><b>${pct === null ? '—' : (validated ? 'Validé' : 'Non validé')}</b></div>`
+      + `</div>`;
+  }).join('');
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
