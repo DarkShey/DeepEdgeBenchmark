@@ -600,6 +600,12 @@ const KPI_DEFINITIONS = {
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
   tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
   tcgatedcol: "Sideways gaté (TC1.5b) — même signal plat que TC1.5, mais écarté si le marché est jugé trop volatil/stressé (gate régime, cf. légende). N'entre PAS dans le pipeline 'daily' (Test case(s)/Counter/validation ci-dessus) : colonne d'inspection à part, indépendante du filtre pipeline. 'Écarté (vol/stress élevé)' = signal plat détecté mais rejeté par le gate. Sinon : counter (justesse, identique à TC1.5) + pnl proxy short-vol entre parenthèses (JAMAIS un rendement exécuté, cf. BRIEF_sideways_v2.md).",
+  tc11: "TC1.1 Bull-Calm — signal : predicted > P(D) ET P(D) ≥ pi_low (exclut les jours déjà sous la borne basse, qui relèvent de TC1.2). Position longue. Résolution : réel > pi_high → +2 ; P(D) < réel ≤ pi_high → +1 ; pi_low ≤ réel ≤ P(D) → -1 ; réel < pi_low → -2.",
+  tc12: "TC1.2 Bull-Stress — signal plus strict que TC1.1 : pi_low > P(D) (même la borne basse du PI 95% prédit une hausse, quasi-certitude). Mêmes branches de résolution que TC1.1 (+2/+1/-1/-2).",
+  tc13: "TC1.3 Bear-Calm — miroir de TC1.1 pour une position courte. Signal : predicted < P(D) ET P(D) ≤ pi_high (exclut les jours déjà au-dessus de la borne haute, qui relèvent de TC1.4). Résolution : réel < pi_low → +2 ; réel < P(D) → +1 ; P(D) ≤ réel ≤ pi_high → -1 ; réel > pi_high → -2.",
+  tc14: "TC1.4 Bear-Stress — signal plus strict que TC1.3 : pi_high < P(D) (même la borne haute du PI prédit une baisse, quasi-certitude). Mêmes branches de résolution que TC1.3 (+2/+1/-1/-2).",
+  tc15: "TC1.5 Sideways — signal : P(D) dans [pi_low, pi_high] ET |predicted − P(D)| ≤ 10% de la largeur du PI (k=0.10). Pas de position (roi toujours null), teste uniquement la justesse : quasi immobile (≤25% de la largeur) → +2 ; reste dans la bande → +1 ; petit dépassement (≤50% de la largeur au-delà) → -1 ; gros dépassement → -2.",
+  tc15b: "TC1.5b Sideways gaté — même signal v1 que TC1.5, filtré en plus par le régime : rejeté si vol_bucket > 1 ou (en live) stress_score > 0.30. Résolution/justesse identiques à TC1.5 si le signal passe le filtre. Ajoute un P&L proxy de short straddle (pnl_shortvol, borné [-1, +1]) — jamais un rendement exécuté, cf. BRIEF_sideways_v2.md.",
 };
 
 function infoDot(defKey) {
@@ -946,18 +952,18 @@ function isRealPrediction(row) {
 // validation/sim_trades.py (bull_calm_d1/pi95_conf/bear_calm_d1/bear_stress_d1/
 // sideways_d1/sideways_gated_d1) et BRIEF_sideways_d1.md / BRIEF_sideways_v2.md.
 const TC_DEFINITIONS = [
-  { id: 'TC1.1', name: 'Bull-Calm', desc: 'hausse prédite (predicted > P(D)), position longue modérée' },
-  { id: 'TC1.2', name: 'Bull-Stress', desc: 'hausse quasi certaine même au pire cas du PI (pi_low > P(D)), position longue forte' },
-  { id: 'TC1.3', name: 'Bear-Calm', desc: 'baisse prédite (predicted < P(D)), position courte modérée' },
-  { id: 'TC1.4', name: 'Bear-Stress', desc: 'baisse quasi certaine même au meilleur cas du PI (pi_high < P(D)), position courte forte' },
-  { id: 'TC1.5', name: 'Sideways', desc: 'journée plate prédite (P(D) dans la bande, variation prédite négligeable), pas de position, test de justesse pur' },
-  { id: 'TC1.5b', name: 'Sideways gaté', desc: 'comme TC1.5, mais écarté si le marché est jugé trop volatil/stressé ; ajoute un P&L proxy short-vol' },
+  { id: 'TC1.1', name: 'Bull-Calm', desc: 'hausse prédite (predicted > P(D)), position longue modérée', def: 'tc11' },
+  { id: 'TC1.2', name: 'Bull-Stress', desc: 'hausse quasi certaine même au pire cas du PI (pi_low > P(D)), position longue forte', def: 'tc12' },
+  { id: 'TC1.3', name: 'Bear-Calm', desc: 'baisse prédite (predicted < P(D)), position courte modérée', def: 'tc13' },
+  { id: 'TC1.4', name: 'Bear-Stress', desc: 'baisse quasi certaine même au meilleur cas du PI (pi_high < P(D)), position courte forte', def: 'tc14' },
+  { id: 'TC1.5', name: 'Sideways', desc: 'journée plate prédite (P(D) dans la bande, variation prédite négligeable), pas de position, test de justesse pur', def: 'tc15' },
+  { id: 'TC1.5b', name: 'Sideways gaté', desc: 'comme TC1.5, mais écarté si le marché est jugé trop volatil/stressé ; ajoute un P&L proxy short-vol', def: 'tc15b' },
 ];
 
 function renderTcLegend(s) {
   const el = document.getElementById(`simtrades-legend-${s}`);
   el.innerHTML = TC_DEFINITIONS.map(d =>
-    `<span class="tc-legend-item"><b>${d.id}</b> ${d.name} — ${d.desc}</span>`
+    `<span class="tc-legend-item"><b>${d.id}</b> ${d.name} ${infoDot(d.def)} — ${d.desc}</span>`
   ).join('');
 }
 
