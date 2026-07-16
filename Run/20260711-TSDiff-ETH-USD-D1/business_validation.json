@@ -1,5 +1,5 @@
 {
-  "id": 14625,
+  "id": 66517,
   "run_id": "run_20260711T000000",
   "tc_id": "TC_ETH-USD_D1",
   "model": "TSDiff",
@@ -15,13 +15,14 @@
   "verdict_integrite": 1,
   "verdict_plausibilite": 1,
   "created_at": "2026-07-15T17:41:23",
-  "y_true": null,
-  "in_interval": null,
-  "abs_error": null,
-  "abs_error_naif": null,
-  "beats_naif": null,
-  "direction_correct": null,
-  "evaluated_at": null,
+  "y_true": 1805.7880859375,
+  "in_interval": 1,
+  "abs_error": 28.0067138671875,
+  "abs_error_naif": 10.0948486328125,
+  "beats_naif": 0,
+  "direction_correct": 0,
+  "evaluated_at": "2026-07-16",
   "source": "live",
+  "daily_duplicate": 0,
   "horizon_trading_days": 1
 }

@@ -23,5 +23,6 @@
   "direction_correct": 1,
   "evaluated_at": "2026-07-13",
   "source": "live",
+  "daily_duplicate": 0,
   "horizon_trading_days": 1
 }
