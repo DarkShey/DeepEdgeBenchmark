@@ -1,15 +1,16 @@
 name: Deploy dashboard to GitHub Pages
 
-# Publie Run/dashboard.html sur GitHub Pages (renommé index.html à la racine du
-# site) à chaque mise à jour du dashboard, plus déclenchement manuel possible.
-# Contourne la limite de l'UI GitHub qui ne rend pas les gros fichiers HTML dans
-# la vue repo (ni en "raw", servi en text/plain).
+# Le dashboard n'est plus committé (cf. BRIEF_dashboard_externalisation.md, étape 1) :
+# ce workflow le régénère depuis les artefacts Run/ + validation/tracking.db à chaque
+# push touchant les données, puis le publie sur GitHub Pages.
 
 on:
   push:
     branches: [main]
     paths:
-      - 'Run/dashboard.html'
+      - 'Run/**'
+      - 'validation/tracking.db'
+      - 'model_artifacts/generate_dashboard.py'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -30,10 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Stage dashboard as site index
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install minimal deps
+        run: pip install pandas pyarrow numpy
+      - name: Generate dashboard
         run: |
           mkdir -p _site
-          cp Run/dashboard.html _site/index.html
+          python -m model_artifacts.generate_dashboard --out _site/index.html
       - uses: actions/configure-pages@v5
         with:
           enablement: true
