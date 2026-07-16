@@ -583,13 +583,13 @@ const KPI_DEFINITIONS = {
   diraccchg: "Dir. Acc (variations) — % de bon sens sur la variation prédite vs le dernier prix connu, avec IC binomial de Wilson à 95%. Si l'IC contient 50%, indiscernable du pile-ou-face.",
   dmdef: "Diebold-Mariano vs persistence — test de différence de perte quadratique (variance Newey-West, correction HLN). p < 0.05 et DM < 0 : le modèle bat significativement le naïf.",
   skillverdict: "Verdict de skill — synthèse Theil's U + DM : 'beats naive' / 'no better than naive' / 'worse than naive'. Règle de lecture du Point 1 du brief.",
-  tcsource: "Source — origine de la ligne : 'oos' (backtest hors-échantillon, reconstruit a posteriori) ou 'live' (prédiction produite en production ce jour-là).",
+  tcsource: "Source (colonne technique) — 'oos' (rejouée hors-échantillon, backfill inclus) ou 'live' (production ce jour-là). Ne détermine PAS le filtre Vraies/Fausses prédictions ci-dessus : certains jours 'oos' (backfills des 8, 11, 13, 14/07) sont bien de vraies prédictions, cf. Vraies/Fausses.",
   tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
   tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
   tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
   tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
-  tcsourcefilter: "Source des prédictions — 'live' : vraies prédictions, produites en production ce jour-là. 'oos' : fausses prédictions au sens strict — reconstruites a posteriori sur la période de validation/backtest, pas produites avec les autres, mais utiles pour évaluer la règle sur plus de données.",
+  tcsourcefilter: "Vraies vs fausses prédictions — vraie : d_date à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), qu'elle soit techniquement marquée 'live' ou 'oos' (des jours ont été rejoués en 'oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14/07, mais restent de vraies prédictions). Fausse : tout ce qui précède, reconstruction de backtest sur la période de validation.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
   tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
 };
@@ -917,6 +917,19 @@ async function switchAssetDate(ticker, date, dateSel) {
 // règles — l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin).
 // =============================================================================
 
+// Vraie vs fausse prédiction : NE dépend PAS de la colonne source (live/oos) -- des
+// jours ont été rejoués en 'oos' faute d'avoir tourné en 'live' le jour même (panne/
+// backfill des 8, 11, 13, 14/07), mais restent de vraies prédictions au sens où elles
+// ont été produites comme telles. Règle métier : vraie <=> d_date >= date de démarrage
+// réel du modèle (06/07/2026 pour les modèles historiques, 08/07/2026 pour TSDiff,
+// arrivé plus tard dans la grille) ; tout ce qui précède est une fausse prédiction
+// (reconstruction de backtest sur la période de validation).
+const REAL_PREDICTION_START = { TSDiff: '2026-07-08' };
+const REAL_PREDICTION_START_DEFAULT = '2026-07-06';
+function isRealPrediction(row) {
+  return row.d_date >= (REAL_PREDICTION_START[row.model] || REAL_PREDICTION_START_DEFAULT);
+}
+
 const simTradesState = {};
 
 function setupSimTradesControls(a) {
@@ -932,7 +945,7 @@ function setupSimTradesControls(a) {
   const activePipelines = new Set(Object.values(DATA.tc_pipeline || {}));
   simTradesState[ticker] = {
     models: new Set(models), pipeline: 'daily',
-    sources: new Set(['live', 'oos']), validateThreshold: 80,
+    predKinds: new Set(['real', 'fake']), validateThreshold: 80,
   };
 
   const pEl = document.getElementById(`simtrades-pipeline-${s}`);
@@ -978,18 +991,21 @@ function setupSimTradesControls(a) {
 
   const sourceEl = document.getElementById(`simtrades-sources-${s}`);
   sourceEl.innerHTML = '';
-  const sourceLabel = { live: `Vraies prédictions (live) ${infoDot('tcsourcefilter')}`, oos: 'Fausses prédictions (oos, validation)' };
-  ['live', 'oos'].forEach(src => {
+  const predKindLabel = {
+    real: `Vraies prédictions ${infoDot('tcsourcefilter')}`,
+    fake: 'Fausses prédictions (backtest)',
+  };
+  ['real', 'fake'].forEach(kind => {
     const label = document.createElement('label');
     label.className = 'chart-check';
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = simTradesState[ticker].sources.has(src);
+    cb.type = 'checkbox'; cb.checked = simTradesState[ticker].predKinds.has(kind);
     cb.addEventListener('change', () => {
-      if (cb.checked) simTradesState[ticker].sources.add(src); else simTradesState[ticker].sources.delete(src);
+      if (cb.checked) simTradesState[ticker].predKinds.add(kind); else simTradesState[ticker].predKinds.delete(kind);
       renderSimTradesTable(ticker);
     });
     label.appendChild(cb);
-    label.insertAdjacentHTML('beforeend', sourceLabel[src]);
+    label.insertAdjacentHTML('beforeend', predKindLabel[kind]);
     sourceEl.appendChild(label);
   });
 
@@ -1016,13 +1032,14 @@ function renderSimTradesTable(ticker) {
   const onlySignal = document.getElementById(`simtrades-onlysignal-${s}`).checked;
   const tcPipeline = DATA.tc_pipeline || {};
 
-  // Filtre modèle(s) + source(s) (live/oos) + pipeline sélectionné (daily pour
-  // l'instant), signaux restreints à la famille choisie. Servie telle quelle à
-  // renderUsageStats/renderValidationCards -- calculée sur TOUTES ces lignes,
-  // indépendamment de la case "Seulement les jours avec signal" ci-dessous (sinon la
-  // cocher fausserait le taux d'utilisation en réduisant le dénominateur).
+  // Filtre modèle(s) + vraie/fausse prédiction (cf. isRealPrediction, PAS r.source) +
+  // pipeline sélectionné (daily pour l'instant), signaux restreints à la famille
+  // choisie. Servie telle quelle à renderUsageStats/renderValidationCards -- calculée
+  // sur TOUTES ces lignes, indépendamment de la case "Seulement les jours avec signal"
+  // ci-dessous (sinon la cocher fausserait le taux d'utilisation en réduisant le
+  // dénominateur).
   const base = rows
-    .filter(r => state.models.has(r.model) && state.sources.has(r.source))
+    .filter(r => state.models.has(r.model) && state.predKinds.has(isRealPrediction(r) ? 'real' : 'fake'))
     .map(r => ({ ...r, signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline) }));
 
   renderUsageStats(s, base);
