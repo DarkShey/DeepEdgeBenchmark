@@ -1,0 +1,2481 @@
+{
+  "scope": "source='oos' only (systematic historical backtest)",
+  "dimensions": {
+    "models": [
+      "ARIMA-GARCH",
+      "SARIMA",
+      "Prophet",
+      "LSTM",
+      "Naive",
+      "TSDiff"
+    ],
+    "assets": [
+      "BTC-USD",
+      "ETH-USD",
+      "SPY",
+      "ZN=F",
+      "TLT"
+    ],
+    "regime_cells (frequence, horizon_type, horizon_unit)": [
+      [
+        "daily",
+        "daily",
+        "D+1"
+      ],
+      [
+        "daily",
+        "daily",
+        "D+7"
+      ],
+      [
+        "daily",
+        "weekly",
+        "W+1"
+      ],
+      [
+        "daily",
+        "weekly",
+        "W+2"
+      ],
+      [
+        "daily",
+        "weekly",
+        "W+3"
+      ],
+      [
+        "weekly",
+        "weekly",
+        "W+1"
+      ],
+      [
+        "weekly",
+        "weekly",
+        "W+2"
+      ],
+      [
+        "weekly",
+        "weekly",
+        "W+3"
+      ]
+    ]
+  },
+  "consistency_checks": {
+    "n_rows_with_horizon_unit_inconsistent_with_horizon_type": 0,
+    "distinct_frequence_values": [
+      "daily",
+      "weekly"
+    ],
+    "distinct_horizon_type_values": [
+      "daily",
+      "weekly"
+    ],
+    "n_duplicate_oos_business_keys": 0
+  },
+  "coverage_summary": {
+    "n_total_cells": 240,
+    "n_filled": 240,
+    "n_empty": 0
+  },
+  "matrix": [
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 119,
+      "n_evaluated": 119,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 60,
+      "n_evaluated": 60,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 119,
+      "n_evaluated": 119,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 60,
+      "n_evaluated": 60,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "SARIMA",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 119,
+      "n_evaluated": 119,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 60,
+      "n_evaluated": 60,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Prophet",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 119,
+      "n_evaluated": 119,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 80,
+      "n_evaluated": 80,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 80,
+      "n_evaluated": 80,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "LSTM",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 172,
+      "n_evaluated": 172,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 119,
+      "n_evaluated": 119,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 60,
+      "n_evaluated": 60,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "Naive",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "BTC-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ETH-USD",
+      "n_predictions": 171,
+      "n_evaluated": 171,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "SPY",
+      "n_predictions": 117,
+      "n_evaluated": 117,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "ZN=F",
+      "n_predictions": 118,
+      "n_evaluated": 118,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+1",
+      "asset": "TLT",
+      "n_predictions": 117,
+      "n_evaluated": 117,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "BTC-USD",
+      "n_predictions": 60,
+      "n_evaluated": 60,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ETH-USD",
+      "n_predictions": 70,
+      "n_evaluated": 70,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "SPY",
+      "n_predictions": 50,
+      "n_evaluated": 50,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "ZN=F",
+      "n_predictions": 50,
+      "n_evaluated": 50,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "daily",
+      "horizon_unit": "D+7",
+      "asset": "TLT",
+      "n_predictions": 50,
+      "n_evaluated": 50,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "daily",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+1",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    },
+    {
+      "model": "TSDiff",
+      "frequence": "weekly",
+      "horizon_type": "weekly",
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "n_predictions": 30,
+      "n_evaluated": 30,
+      "empty": false
+    }
+  ]
+}
