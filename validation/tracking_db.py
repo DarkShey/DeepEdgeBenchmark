@@ -108,6 +108,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
         """)
         _migrate_predictions_add_source(conn)
         _migrate_predictions_add_daily_duplicate(conn)
+        _migrate_predictions_add_frequency_horizon(conn)
         # Idempotence des lignes OOS : tc_id y est NULL, donc hors de portée du
         # UNIQUE(tc_id, model, cutoff_date) ci-dessus (SQLite traite chaque NULL comme
         # distinct). Index partiel dédié, n'affecte jamais les lignes source='live'.
@@ -119,10 +120,18 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
         # l'a produite : (source, model, asset, horizon, cutoff_date) la rend unique par
         # construction, plus aucun doublon possible. DROP puis CREATE IF NOT EXISTS :
         # idempotent, se rejoue sans erreur qu'on parte de l'ancien ou du nouvel index.
+        #
+        # BRIEF_audit_combinaisons.md : `frequence`/`horizon_type` ajoutés à la clé --
+        # sans eux, une prédiction TSDiff-D quotidienne (frequence=daily,
+        # horizon_type=daily, horizon=1 = "D+1") et une prédiction TSDiff-W hebdo
+        # (frequence=weekly, horizon_type=weekly, horizon=1 = "W+1") sur le même actif
+        # au même cutoff_date collisionneraient sur l'ancienne clé (source, model,
+        # asset, horizon, cutoff_date) -- silencieusement ignorées ou écrasées selon
+        # l'appelant (cf. insert_oos_predictions, ON CONFLICT DO UPDATE).
         conn.execute("DROP INDEX IF EXISTS idx_predictions_oos_unique")
         conn.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS idx_predictions_oos_unique
-            ON predictions (source, model, asset, horizon, cutoff_date)
+            ON predictions (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
             WHERE source = 'oos'
         """)
         conn.commit()
@@ -236,6 +245,44 @@ def _migrate_predictions_add_daily_duplicate(conn) -> None:
     conn.execute("ALTER TABLE predictions ADD COLUMN daily_duplicate INTEGER NOT NULL DEFAULT 0")
 
 
+def _migrate_predictions_add_frequency_horizon(conn) -> None:
+    """Ajout idempotent de `frequence`/`horizon_type`/`horizon_unit` (BRIEF_audit_combinaisons.md
+    §0) sur une base existante : trois attributs qui distinguent COMMENT une prédiction
+    a été produite, jusqu'ici confondus dans la seule colonne `horizon` (INTEGER, un
+    nombre de jours) :
+      - `frequence`    : granularité d'ENTRAINEMENT du modèle ('daily' / 'weekly').
+      - `horizon_type` : granularité de la CIBLE visée ('daily' / 'weekly') -- distincte
+                         de `frequence` : un modèle entraîné en daily peut viser un
+                         horizon weekly (regime B, ex. TSDiff-D multi-pas).
+      - `horizon_unit` : le pas précis en toutes lettres ('D+1', 'D+7', 'W+1', 'W+2', 'W+3').
+
+    `horizon` (INTEGER) N'EST PAS touché -- toutes les requêtes/le code existants qui le
+    lisent comme un nombre de jours continuent de fonctionner sans changement.
+
+    `frequence`/`horizon_type` : ALTER TABLE ADD COLUMN avec DEFAULT constant 'daily'
+    (comme `daily_duplicate`) -- toutes les lignes existantes sont réellement du daily
+    natif, donc ce défaut est correct pour elles, pas juste un remplissage arbitraire.
+    `horizon_unit` n'a pas de defaut constant valide (dépend de `horizon`) : colonne
+    nullable ajoutée puis backfillée explicitement pour les lignes existantes."""
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(predictions)")}
+    if not cols:
+        return   # table qui vient d'être créée fraîche (CREATE TABLE ci-dessus les a déjà)
+    if "frequence" not in cols:
+        conn.execute("ALTER TABLE predictions ADD COLUMN frequence TEXT NOT NULL DEFAULT 'daily'")
+    if "horizon_type" not in cols:
+        conn.execute("ALTER TABLE predictions ADD COLUMN horizon_type TEXT NOT NULL DEFAULT 'daily'")
+    if "horizon_unit" not in cols:
+        conn.execute("ALTER TABLE predictions ADD COLUMN horizon_unit TEXT")
+    conn.execute("""
+        UPDATE predictions SET horizon_unit = 'D+' || horizon
+        WHERE horizon_unit IS NULL AND horizon_type = 'daily'
+    """)
+    conn.execute("""
+        UPDATE predictions SET horizon_unit = 'W+' || horizon
+        WHERE horizon_unit IS NULL AND horizon_type = 'weekly'
+    """)
+
+
 def register_test_case(tc_id, asset, horizon, description="", db_path=DEFAULT_DB_PATH) -> None:
     """Upsert d'un cas de référence (ON CONFLICT(tc_id) DO UPDATE)."""
     conn = _connect(db_path)
@@ -254,7 +301,14 @@ def register_test_case(tc_id, asset, horizon, description="", db_path=DEFAULT_DB
 def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
     """Valide le contrat, auto-enregistre le test_case, puis INSERT OR IGNORE
     (idempotent sur tc_id/model/cutoff_date). Retourne True si insérée, False
-    si doublon ignoré."""
+    si doublon ignoré.
+
+    `frequence`/`horizon_type`/`horizon_unit` (BRIEF_audit_combinaisons.md) sont
+    volontairement ABSENTS de RECORD_FIELDS : model_artifacts/pipeline.py (le seul
+    appelant live actuel) ne les fournit pas et n'a pas à changer. S'ils sont absents
+    du record, on applique le défaut 'daily natif' -- correct pour 100% des appelants
+    actuels, qui produisent tous du daily. Un futur appelant weekly les passe
+    explicitement dans `record` et ils sont respectés tels quels."""
     init_db(db_path)   # paresseux et idempotent : un run direct (ex. model_artifacts.pipeline,
                        # qui n'appelle jamais init_db lui-même) ne plante pas sur "table manquante"
     missing = [f for f in RECORD_FIELDS if f not in record]
@@ -263,13 +317,21 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
 
     register_test_case(record["tc_id"], record["asset"], record["horizon"], db_path=db_path)
 
+    frequence = record.get("frequence", "daily")
+    horizon_type = record.get("horizon_type", "daily")
+    horizon_unit = record.get("horizon_unit") or (
+        f"{'W' if horizon_type == 'weekly' else 'D'}+{record['horizon']}")
+
     conn = _connect(db_path)
     try:
-        placeholders = ", ".join(f":{f}" for f in RECORD_FIELDS)
-        columns = ", ".join(RECORD_FIELDS)
+        insert_fields = RECORD_FIELDS + ("frequence", "horizon_type", "horizon_unit")
+        placeholders = ", ".join(f":{f}" for f in insert_fields)
+        columns = ", ".join(insert_fields)
+        params = {f: record[f] for f in RECORD_FIELDS}
+        params.update(frequence=frequence, horizon_type=horizon_type, horizon_unit=horizon_unit)
         cur = conn.execute(
             f"INSERT OR IGNORE INTO predictions ({columns}) VALUES ({placeholders})",
-            {f: record[f] for f in RECORD_FIELDS},
+            params,
         )
         conn.commit()
         return cur.rowcount > 0

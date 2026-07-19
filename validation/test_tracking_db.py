@@ -670,12 +670,16 @@ def test_oos_unique_index_rejects_raw_duplicate_business_key(tmp_path):
 
 
 def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
-    """L'index (source, model, asset, horizon, cutoff_date) doit servir de cible de
-    conflit valide pour un upsert SQL direct -- prérequis pour
+    """L'index (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
+    doit servir de cible de conflit valide pour un upsert SQL direct -- prérequis pour
     sim_trades.insert_oos_predictions (§5 du brief, testé au niveau applicatif dans
     test_sim_trades.py). Ici, au niveau SQL brut : deux INSERT ... ON CONFLICT ... DO
     UPDATE sur la même clé métier avec des run_id différents -> 1 seule ligne, dont le
-    contenu est celui du dernier insert (keep-latest)."""
+    contenu est celui du dernier insert (keep-latest).
+
+    `frequence`/`horizon_type` (BRIEF_audit_combinaisons.md) omis de l'INSERT ->
+    defaultent à 'daily'/'daily' (identiques aux deux appels), donc la collision sur
+    la clé métier étendue se produit toujours comme avant leur ajout."""
     db_path = str(tmp_path / "t.db")
     td.init_db(db_path)
 
@@ -686,7 +690,8 @@ def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
                                      target_date, last_close, y_pred, y_lower, y_upper, y_true, source)
             VALUES (?, 'Prophet', 'SPY', 1, 'unknown', '2026-02-01', '2026-02-02',
                     100.0, ?, 95.0, 107.0, 102.0, 'oos')
-            ON CONFLICT (source, model, asset, horizon, cutoff_date) WHERE source='oos'
+            ON CONFLICT (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
+            WHERE source='oos'
             DO UPDATE SET run_id=excluded.run_id, y_pred=excluded.y_pred
         """, (run_id, y_pred))
         conn.commit()
@@ -703,3 +708,120 @@ def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
     assert len(rows) == 1
     assert rows[0]["run_id"] == "20260710-Prophet-SPY-D1"
     assert rows[0]["y_pred"] == pytest.approx(105.0)
+
+
+# ── frequence / horizon_type / horizon_unit (BRIEF_audit_combinaisons.md) ──────
+
+def test_fresh_db_has_frequency_horizon_columns_defaulting_daily(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    conn = sqlite3.connect(db_path)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(predictions)")}
+    conn.close()
+    assert {"frequence", "horizon_type", "horizon_unit"} <= cols
+
+
+def test_save_prediction_defaults_to_daily_native(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.save_prediction(make_record(horizon=7), db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+    assert row["horizon_type"] == "daily"
+    assert row["horizon_unit"] == "D+7"
+
+
+def test_save_prediction_respects_explicit_weekly_fields(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    record = make_record(horizon=2, tc_id="TC_W2", frequence="weekly",
+                         horizon_type="weekly", horizon_unit="W+2")
+    td.save_prediction(record, db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "weekly"
+    assert row["horizon_type"] == "weekly"
+    assert row["horizon_unit"] == "W+2"
+
+
+def test_legacy_db_migration_backfills_frequency_horizon(tmp_path):
+    """Une base créée AVANT ce brief (colonnes absentes) doit se retrouver, après
+    un simple appel à init_db(), avec toutes ses lignes existantes correctement
+    étiquetées daily natif -- ce sont réellement des prédictions daily, pas un
+    remplissage arbitraire."""
+    db_path = str(tmp_path / "t.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, tc_id TEXT,
+            model TEXT NOT NULL, asset TEXT NOT NULL, horizon INTEGER NOT NULL,
+            cutoff_date TEXT NOT NULL, target_date TEXT NOT NULL, regime TEXT NOT NULL,
+            last_close REAL NOT NULL, y_pred REAL NOT NULL, y_lower REAL NOT NULL,
+            y_upper REAL NOT NULL, verdict_integrite INTEGER, verdict_plausibilite INTEGER,
+            created_at TEXT, y_true REAL, in_interval INTEGER, abs_error REAL,
+            abs_error_naif REAL, beats_naif INTEGER, direction_correct INTEGER,
+            evaluated_at TEXT, source TEXT NOT NULL DEFAULT 'live',
+            daily_duplicate INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (tc_id, model, cutoff_date)
+        )
+    """)
+    conn.execute("""
+        INSERT INTO predictions (run_id, model, asset, horizon, cutoff_date, target_date,
+                                 regime, last_close, y_pred, y_lower, y_upper)
+        VALUES ('r1', 'ARIMA-GARCH', 'SPY', 7, '2026-01-01', '2026-01-08',
+                'calm', 100.0, 101.0, 95.0, 107.0)
+    """)
+    conn.commit()
+    conn.close()
+
+    td.init_db(db_path)   # doit migrer sans lever
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+    assert row["horizon_type"] == "daily"
+    assert row["horizon_unit"] == "D+7"
+
+
+def test_frequency_horizon_migration_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(), db_path=db_path)
+    td.init_db(db_path)   # ré-appel, ne doit pas lever ni modifier les données
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+
+
+def test_oos_index_lets_daily_and_weekly_coexist_same_asset_horizon_cutoff(tmp_path):
+    """Le coeur du problème BRIEF_audit_combinaisons.md §0 : un TSDiff-D (frequence=daily,
+    horizon_type=weekly, horizon=1 = 'W+1') et un TSDiff-W (frequence=weekly,
+    horizon_type=weekly, horizon=1) sur le MEME actif/horizon/cutoff_date sont deux
+    prédictions différentes -- l'ancien index (sans frequence/horizon_type) les aurait
+    fait collisionner (silently ignorées ou écrasées). Elles doivent coexister."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    conn = sqlite3.connect(db_path)
+
+    def insert(frequence):
+        conn.execute("""
+            INSERT INTO predictions (run_id, model, asset, horizon, regime, cutoff_date,
+                                     target_date, last_close, y_pred, y_lower, y_upper,
+                                     y_true, source, frequence, horizon_type, horizon_unit)
+            VALUES ('r', 'TSDiff', 'BTC-USD', 1, 'unknown', '2025-12-05', '2025-12-12',
+                    100.0, 101.0, 95.0, 107.0, 102.0, 'oos', ?, 'weekly', 'W+1')
+        """, (frequence,))
+
+    insert("daily")     # TSDiff-D visant W+1
+    insert("weekly")    # TSDiff-W natif W+1
+    conn.commit()
+    n = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert n == 2   # les deux coexistent, aucune n'a écrasé/ignoré l'autre
