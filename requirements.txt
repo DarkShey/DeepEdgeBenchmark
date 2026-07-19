@@ -20,6 +20,7 @@ pandas_ta>=0.3.14b
 # Test tooling (models/ + calibration/regime test suites)
 pytest>=7
 pytest-timeout>=2
+properscoring>=0.1      # experiments/test_metrics.py (crps_empirical cross-check)
 
 # model_artifacts/ (résidus ARIMA/SARIMA sérialisés en residuals.parquet)
 pyarrow>=14
