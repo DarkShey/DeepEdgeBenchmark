@@ -13,13 +13,29 @@ fuiter ici), applique la règle (`bull_calm_d1` + règle sœur `pi95_conf`, ou
 table distincte du brut -- inchangée par l'unification). Stdlib (sqlite3, json) +
 pandas (lecture parquet) uniquement, même contrainte que `tracking_db.py`.
 
-Ingestion OOS : lit toujours `Run/*-D1/predictions.parquet` comme source de vérité
-(alignement anti-look-ahead §2 de BRIEF_bull_calm_d1.md : `reference_price=actual[t-1]`,
-jamais `actual[t]`) mais insère désormais directement dans `predictions` (source='oos'),
-plus dans une table séparée -- `daily_oos_log` a été supprimée (BRIEF_db_unification.md
-§2.3), c'était une redondance pure avec `predictions`. Restreint aux dossiers `*-D1` :
-`predictions.parquet` d'un `*-D7` est un backtest rolling-origin espacé de plusieurs
-jours (pas un log quotidien consécutif), l'alignement D->D+1 ne s'y applique pas.
+Ingestion OOS : lit `Run/*-D1/` ET `Run/*-D7/predictions.parquet`, insère directement
+dans `predictions` (source='oos') -- plus de table séparée, `daily_oos_log` a été
+supprimée (BRIEF_db_unification.md §2.3), c'était une redondance pure avec `predictions`.
+
+DEUX chemins d'alignement anti-look-ahead distincts dans build_oos_prediction_rows(),
+PAS le même code pour D1 et D7 (BRIEF_comparaison_rigoureuse.md -- bug trouvé et corrigé :
+la version précédente appliquait le seul chemin D1 aux deux, silencieusement fausse pour
+D7) :
+  - **D1** (backtest quotidien dense, un point par jour de validation) : la ligne t-1 EST
+    la veille de la ligne t -- `reference_price=actual[t-1]`, `cutoff_date=date[t-1]`.
+  - **D7 et tout horizon multi-pas** (Gate2 "rolling origins", cf.
+    model_artifacts/pipeline.py `_run_model_d7_rolling` / `MAX_D7_ROLLING_ORIGINS=10`) :
+    au plus 10 origines ESPACÉES sur toute la fenêtre de validation (~17-18 jours d'écart
+    typique, jamais 1 jour) -- la ligne t-1 est une origine antérieure SANS RAPPORT avec
+    la cible de la ligne t, jamais sa veille. `reference_price`/`cutoff_date` sont
+    reconstruits depuis `prices.parquet` (série de prix réelle gelée, écrite par
+    write_prices_parquet, présente dans le même dossier) : on retrouve la position de
+    `target_date` dans cette série et on recule de `HORIZON_TRADING_DAYS[label]` pas de
+    bourse (5 pour "D7") -- exactement le calcul que `_run_model_d7_rolling` a fait à la
+    génération (`extended_train.iloc[-1]` à `target_idx - h_days`), simplement jamais
+    persisté tel quel dans predictions.parquet (seuls date/actual/predicted/pi_lower/
+    pi_upper y sont écrits). Dossier sans prices.parquet -> toutes ses lignes sont
+    droppées (aucune reconstruction fiable possible), pas de résultat silencieusement faux.
 
 `regime` : forcé à `"unknown"` pour `source="oos"`. `business_validation.json` (quand il
 existe) décrit la prévision LIVE la plus récente du combo, pas les ~112 jours historiques
@@ -52,6 +68,10 @@ DEFAULT_DB_PATH = "tracking.db"
 VALID_SOURCES = {"oos", "live"}
 _GROUP_BY_COLUMNS = {"asset", "model", "regime"}
 _HORIZON_LABEL_TO_INT = {"D1": 1, "D7": 7}
+# Pas de bourse entre l'origine et la cible pour un horizon Gate2 -- DISTINCT de
+# _HORIZON_LABEL_TO_INT ci-dessus (qui n'est que l'étiquette business "D+7"/horizon=7).
+# Source : model_artifacts/pipeline.py HORIZON_TRADING_DAYS.
+_HORIZON_LABEL_TO_TRADING_STEPS = {"D1": 1, "D7": 5}
 
 
 def _connect(db_path=DEFAULT_DB_PATH):
@@ -92,9 +112,13 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
     `sim_trades` si absente (résultats calculés, CREATE TABLE IF NOT EXISTS, idempotent
     -- schéma §7 de BRIEF_bull_calm_d1.md, `in_band` ajoutée par BRIEF_sideways_d1.md
     §10) et (re)crée la vue `all_predictions` (BRIEF_db_unification.md §2.4) : lecture
-    du brut au vocabulaire test-case, filtrée horizon=1 (mes test cases sont D+1
-    uniquement ; `predictions` contient aussi du live horizon=7 qui ne doit jamais
-    fuiter dans le backtest ou les KPIs) et `daily_duplicate = 0` (BRIEF_correction_sim_trades.md
+    du brut au vocabulaire test-case, filtrée horizon=1 ET horizon_type='daily' (mes
+    test cases sont D+1 uniquement ; `predictions` contient aussi du live horizon=7 ET,
+    depuis BRIEF_audit_combinaisons.md, du weekly horizon=1 qui signifie "W+1" -- même
+    valeur numérique que "D+1" mais une prédiction complètement différente. Sans le
+    filtre horizon_type, un W+1 se glisserait dans all_predictions comme s'il s'agissait
+    d'un vrai D+1 et pourrait finir dans sim_trades / les règles de trading, qui n'ont
+    jamais été pensées pour un horizon hebdomadaire) et `daily_duplicate = 0` (BRIEF_correction_sim_trades.md
     §3 : ignore les copies OOS flaguées par tracking_db.flag_daily_duplicates -- le live
     reste entièrement visible, ses lignes sont toutes à 0 par construction). Vue recréée
     à chaque appel (DROP+CREATE, pas IF NOT EXISTS) pour ne jamais rester sur une
@@ -161,6 +185,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 y_true      AS realized_price,  source
             FROM predictions
             WHERE horizon = 1
+              AND horizon_type = 'daily'
               AND daily_duplicate = 0
         """)
         conn.commit()
@@ -465,27 +490,75 @@ def _date_str(ts) -> str:
 
 
 def build_oos_prediction_rows(run_dir, source="oos"):
-    """Lit predictions.parquet + metrics.json d'un dossier Run/<...>-D1/, applique
-    l'alignement anti-look-ahead (t>=1 ; t=0 ignoré faute de t-1, cf. BRIEF_bull_calm_d1.md
-    §2/§6.1). Exclut les lignes NaN / bornes cassées (pi_lower > pi_upper). Retourne des
-    lignes au format de la table `predictions` unifiée (BRIEF_db_unification.md §2.2) :
-    `cutoff_date`/`last_close`/`y_pred`/`y_lower`/`y_upper`/`y_true`, `source='oos'`.
-    Les colonnes métier live (tc_id, verdict_*, created_at, ...) sont absentes de ces
-    dicts -> NULL par schéma une fois insérées (jamais renseignées pour l'OOS).
-    Retourne (rows, n_dropped)."""
+    """Lit predictions.parquet + metrics.json d'un dossier Run/<...>-D1/ ou -D7/,
+    applique l'alignement anti-look-ahead adapté à la structure de CE backtest (cf.
+    docstring du module -- D1 dense vs D7/rolling-origin, deux chemins distincts,
+    PAS le même code). Exclut les lignes NaN / bornes cassées (pi_lower > pi_upper).
+    Retourne des lignes au format de la table `predictions` unifiée
+    (BRIEF_db_unification.md §2.2) : `cutoff_date`/`last_close`/`y_pred`/`y_lower`/
+    `y_upper`/`y_true`, `source='oos'`. Les colonnes métier live (tc_id, verdict_*,
+    created_at, ...) sont absentes de ces dicts -> NULL par schéma une fois
+    insérées (jamais renseignées pour l'OOS). Retourne (rows, n_dropped)."""
     run_dir = Path(run_dir)
     df = pd.read_parquet(run_dir / "predictions.parquet").sort_values("date").reset_index(drop=True)
     metrics = json.loads((run_dir / "metrics.json").read_text())
     model = metrics["model"]
     asset = metrics["asset"]
-    horizon = _HORIZON_LABEL_TO_INT.get(metrics.get("horizon"), 1)
+    horizon_label = metrics.get("horizon")
+    horizon = _HORIZON_LABEL_TO_INT.get(horizon_label, 1)
+    steps = _HORIZON_LABEL_TO_TRADING_STEPS.get(horizon_label, 1)
 
     run_id = run_dir.name
     rows = []
     n_dropped = 0
 
-    for t in range(1, len(df)):
-        reference_price = df.loc[t - 1, "actual"]
+    if steps <= 1:
+        # D1 : backtest quotidien dense -- t-1 EST la veille de t.
+        for t in range(1, len(df)):
+            reference_price = df.loc[t - 1, "actual"]
+            predicted = df.loc[t, "predicted"]
+            pi_lower = df.loc[t, "pi_lower"]
+            pi_upper = df.loc[t, "pi_upper"]
+            realized_price = df.loc[t, "actual"]
+
+            values = (reference_price, predicted, pi_lower, pi_upper, realized_price)
+            if not all(_is_finite(v) for v in values) or pi_lower > pi_upper:
+                n_dropped += 1
+                continue
+
+            rows.append({
+                "run_id": run_id, "model": model, "asset": asset, "horizon": horizon,
+                "regime": "unknown",   # jamais business_validation.json ici, cf. docstring module
+                "cutoff_date": _date_str(df.loc[t - 1, "date"]),
+                "target_date": _date_str(df.loc[t, "date"]),
+                "last_close": float(reference_price), "y_pred": float(predicted),
+                "y_lower": float(pi_lower), "y_upper": float(pi_upper),
+                "y_true": float(realized_price),
+                "source": source,
+            })
+        return rows, n_dropped
+
+    # D7 (et tout horizon Gate2 multi-pas) : origines glissantes ESPACÉES -- t-1 n'a
+    # aucun rapport avec la cible de t. cutoff_date/last_close reconstruits depuis
+    # prices.parquet (série de prix réelle gelée par le pipeline), en reculant de
+    # `steps` pas de bourse depuis target_date -- exactement le calcul fait à la
+    # génération (cf. docstring du module), jamais persisté tel quel ailleurs.
+    prices_path = run_dir / "prices.parquet"
+    if not prices_path.exists():
+        return [], len(df)   # aucune reconstruction fiable possible -- tout dropper, rien de faux
+
+    prices = pd.read_parquet(prices_path).sort_values("date").reset_index(drop=True)
+    date_to_pos = {pd.Timestamp(d): i for i, d in enumerate(prices["date"])}
+
+    for t in range(len(df)):
+        target_ts = pd.Timestamp(df.loc[t, "date"])
+        target_pos = date_to_pos.get(target_ts)
+        if target_pos is None or target_pos - steps < 0:
+            n_dropped += 1
+            continue
+        cutoff_pos = target_pos - steps
+
+        reference_price = prices.loc[cutoff_pos, "close"]
         predicted = df.loc[t, "predicted"]
         pi_lower = df.loc[t, "pi_lower"]
         pi_upper = df.loc[t, "pi_upper"]
@@ -498,8 +571,8 @@ def build_oos_prediction_rows(run_dir, source="oos"):
 
         rows.append({
             "run_id": run_id, "model": model, "asset": asset, "horizon": horizon,
-            "regime": "unknown",   # jamais business_validation.json ici, cf. docstring module
-            "cutoff_date": _date_str(df.loc[t - 1, "date"]),
+            "regime": "unknown",
+            "cutoff_date": _date_str(prices.loc[cutoff_pos, "date"]),
             "target_date": _date_str(df.loc[t, "date"]),
             "last_close": float(reference_price), "y_pred": float(predicted),
             "y_lower": float(pi_lower), "y_upper": float(pi_upper),
@@ -526,21 +599,40 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
     dernier insert pour une date donnée est bien le run le plus récent -- « garde le
     dernier » n'est correct que si l'appelant ingère dans cet ordre.
 
-    Retourne le nombre de lignes affectées (insérées OU mises à jour)."""
+    Retourne le nombre de lignes affectées (insérées OU mises à jour).
+
+    `frequence`/`horizon_type`/`horizon_unit` (BRIEF_audit_combinaisons.md) : absents
+    des rows produites par build_oos_prediction_rows() (daily uniquement, pas modifiée
+    -- 100% des appelants actuels via ingest_oos() restent daily natif), donc défaultés
+    ici à 'daily'/'daily'/'D+{horizon}' quand absents. Un futur appelant weekly les
+    passe explicitement dans chaque row et ils sont respectés tels quels. Ajoutés à la
+    clé ON CONFLICT (cf. idx_predictions_oos_unique dans tracking_db.py) : sans ça, une
+    prédiction weekly et une prédiction daily sur le même (model, asset, horizon,
+    cutoff_date) s'écraseraient l'une l'autre au lieu de coexister."""
     if not rows:
         return 0
     td.init_db(db_path)
     cols = ("run_id", "model", "asset", "horizon", "regime", "cutoff_date", "target_date",
-            "last_close", "y_pred", "y_lower", "y_upper", "y_true", "source")
+            "last_close", "y_pred", "y_lower", "y_upper", "y_true", "source",
+            "frequence", "horizon_type", "horizon_unit")
     placeholders = ", ".join(f":{c}" for c in cols)
     columns = ", ".join(cols)
     conn = _connect(db_path)
     try:
         n = 0
         for row in rows:
+            horizon_type = row.get("horizon_type", "daily")
+            row = {
+                **row,
+                "frequence": row.get("frequence", "daily"),
+                "horizon_type": horizon_type,
+                "horizon_unit": row.get("horizon_unit") or
+                    f"{'W' if horizon_type == 'weekly' else 'D'}+{row['horizon']}",
+            }
             cur = conn.execute(f"""
                 INSERT INTO predictions ({columns}) VALUES ({placeholders})
-                ON CONFLICT (source, model, asset, horizon, cutoff_date) WHERE source='oos'
+                ON CONFLICT (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
+                WHERE source='oos'
                 DO UPDATE SET
                     run_id      = excluded.run_id,
                     target_date = excluded.target_date,
@@ -549,7 +641,8 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
                     y_lower     = excluded.y_lower,
                     y_upper     = excluded.y_upper,
                     y_true      = excluded.y_true,
-                    regime      = excluded.regime
+                    regime      = excluded.regime,
+                    horizon_unit = excluded.horizon_unit
             """, row)
             n += cur.rowcount
         conn.commit()
@@ -559,21 +652,34 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
 
 
 def ingest_oos(run_root="Run", db_path=DEFAULT_DB_PATH) -> dict:
-    """Parcourt tous les Run/*-D1/ par ordre lexicographique (skip silencieusement si
-    predictions.parquet ou metrics.json manque), construit et insère (upsert « garde
-    le dernier », cf. insert_oos_predictions) dans `predictions` (source='oos').
-    L'ordre lexicographique = chronologique (préfixe `YYYYMMDD` du nom de dossier,
-    BRIEF_prevention_doublons.md §5) : essentiel pour que le dernier combo traité pour
-    une date donnée soit bien le run le plus récent. Idempotent.
+    """Parcourt tous les Run/*-D1/ ET Run/*-D7/ par ordre lexicographique (skip
+    silencieusement si predictions.parquet ou metrics.json manque), construit et
+    insère (upsert « garde le dernier », cf. insert_oos_predictions) dans
+    `predictions` (source='oos'). L'ordre lexicographique = chronologique (préfixe
+    `YYYYMMDD` du nom de dossier, BRIEF_prevention_doublons.md §5) : essentiel pour
+    que le dernier combo traité pour une date donnée soit bien le run le plus récent
+    -- D1 et D7 ne peuvent jamais se chevaucher sur la clé métier (horizon différent),
+    donc les trier/traiter ensemble ou séparément est équivalent. Idempotent.
+
+    D7 (BRIEF_audit_combinaisons.md) : 286 dossiers Run/*-D7/ avec un
+    predictions.parquet complet existaient déjà sur disque, jamais ingérés
+    auparavant (glob D1 seul, oubli historique) -- d'où la case regime A / D+7
+    entièrement vide dans la matrice de couverture malgré le calcul déjà fait.
+    build_oos_prediction_rows lit `metrics.json["horizon"]="D7"` -> horizon=7 sans
+    changement de code ; frequence/horizon_type/horizon_unit prennent leurs défauts
+    daily/daily/D+7 dans insert_oos_predictions (régime A, comme D+1).
 
     Reconstruit ensuite `sim_trades` (source='oos') depuis zéro (cf.
     rebuild_oos_sim_trades, §6 du brief) : l'upsert peut changer `run_id`/`y_pred`
     d'une ligne déjà en base, et `sim_trades` est indexé sur `run_id` -- plus sûr de
     tout regénérer (l'OOS est déterministe et entièrement résolu) que d'essayer de
-    rapiécer les anciens signaux."""
+    rapiécer les anciens signaux. `all_predictions` (lue par generate_sim_trades)
+    filtre horizon=1 AND horizon_type='daily' -- le D+7 n'y apparaît jamais (attendu,
+    les règles de trading sont D+1 uniquement), pas de risque de fuite ici."""
     td.init_db(db_path)
     inserted = dropped = combos = 0
-    for run_dir in sorted(Path(run_root).glob("*-D1")):
+    run_dirs = sorted(Path(run_root).glob("*-D1")) + sorted(Path(run_root).glob("*-D7"))
+    for run_dir in run_dirs:
         if not (run_dir / "predictions.parquet").exists() or not (run_dir / "metrics.json").exists():
             continue
         rows, n_dropped = build_oos_prediction_rows(run_dir)

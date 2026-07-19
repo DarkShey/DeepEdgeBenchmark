@@ -31,9 +31,12 @@ def make_prediction_record(**overrides):
 
 
 def write_fake_run_dir(tmp_path, name="20260707-ARIMA-SPY-D1", model="ARIMA-GARCH",
-                       asset="SPY", horizon_label="D1", rows=None):
-    """Fabrique un dossier Run/<name>/ minimal (predictions.parquet + metrics.json)
-    conforme au contrat lu par sim_trades.build_oos_prediction_rows."""
+                       asset="SPY", horizon_label="D1", rows=None, prices=None):
+    """Fabrique un dossier Run/<name>/ minimal (predictions.parquet + metrics.json,
+    + prices.parquet si fourni) conforme au contrat lu par
+    sim_trades.build_oos_prediction_rows. `prices` (dict avec cles "date"/"close")
+    est nécessaire pour un horizon rolling-origin (D7) -- reconstruction de
+    cutoff_date/last_close, cf. docstring du module."""
     run_dir = tmp_path / name
     run_dir.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
@@ -42,6 +45,8 @@ def write_fake_run_dir(tmp_path, name="20260707-ARIMA-SPY-D1", model="ARIMA-GARC
         '{"model": "%s", "asset": "%s", "horizon": "%s", "n_val": %d}'
         % (model, asset, horizon_label, len(df))
     )
+    if prices is not None:
+        pd.DataFrame(prices).to_parquet(run_dir / "prices.parquet")
     return run_dir
 
 
@@ -1221,6 +1226,33 @@ def test_all_predictions_view_excludes_flagged_oos_duplicates(tmp_path):
     assert [r["run_id"] for r in rows_after] == ["20260710-ARIMA-SPY-D1"]   # seul le survivant reste visible
 
 
+def test_all_predictions_view_excludes_weekly_horizon_1_rows(tmp_path):
+    """BRIEF_audit_combinaisons.md : horizon=1 signifie 'D+1' pour un daily natif mais
+    'W+1' pour un weekly natif -- meme valeur numerique, prediction totalement
+    differente. La vue all_predictions (lue par generate_sim_trades, des regles de
+    trading pensees pour du D+1 uniquement) ne doit jamais laisser passer un W+1."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    daily_row = {
+        "run_id": "r1", "model": "TSDiff", "asset": "BTC-USD", "horizon": 1,
+        "regime": "unknown", "cutoff_date": "2025-12-05", "target_date": "2025-12-06",
+        "last_close": 100.0, "y_pred": 101.0, "y_lower": 95.0, "y_upper": 107.0,
+        "y_true": 102.0, "source": "oos",
+    }
+    weekly_row = {
+        **daily_row, "run_id": "r2", "target_date": "2025-12-12",
+        "frequence": "weekly", "horizon_type": "weekly", "horizon_unit": "W+1",
+    }
+    st.insert_oos_predictions([daily_row, weekly_row], db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT run_id FROM all_predictions WHERE source='oos'").fetchall()
+    conn.close()
+    assert [r["run_id"] for r in rows] == ["r1"]   # seule la ligne daily/D+1 est visible
+
+
 def test_reconcile_never_touches_live_sim_trades(tmp_path):
     db_path = str(tmp_path / "t.db")
     st.init_db(db_path)
@@ -1337,6 +1369,63 @@ def test_insert_oos_predictions_upsert_keeps_latest_run(tmp_path):
     assert rows[0]["y_lower"] == pytest.approx(96.0)
 
 
+def test_insert_oos_predictions_defaults_missing_frequency_fields_to_daily(tmp_path):
+    """build_oos_prediction_rows() (daily uniquement) ne fournit pas frequence/
+    horizon_type/horizon_unit -- insert_oos_predictions doit les défaulter à
+    'daily'/'daily'/'D+{horizon}' plutôt que planter ou les laisser NULL."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+    rows = {
+        "date": pd.to_datetime(["2026-02-01", "2026-02-02"]),
+        "actual": [100.0, 102.0], "predicted": [999.0, 103.0],
+        "pi_lower": [999.0, 95.0], "pi_upper": [999.0, 110.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path / "runs", name="20260701-ARIMA-SPY-D1", rows=rows)
+    log_rows, _ = st.build_oos_prediction_rows(run_dir)
+    assert "frequence" not in log_rows[0]   # confirme la prémisse : le builder ne les fournit pas
+
+    st.insert_oos_predictions(log_rows, db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions WHERE source='oos'").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+    assert row["horizon_type"] == "daily"
+    assert row["horizon_unit"] == "D+1"
+
+
+def test_insert_oos_predictions_weekly_row_coexists_with_daily_same_key(tmp_path):
+    """Coeur du garde-fou BRIEF_audit_combinaisons.md : une ligne 'weekly' passée
+    explicitement à insert_oos_predictions doit coexister avec une ligne 'daily' sur
+    le même (model, asset, horizon, cutoff_date) -- pas de collision silencieuse sur
+    l'index OOS étendu."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    daily_row = {
+        "run_id": "r1", "model": "TSDiff", "asset": "BTC-USD", "horizon": 1,
+        "regime": "unknown", "cutoff_date": "2025-12-05", "target_date": "2025-12-06",
+        "last_close": 100.0, "y_pred": 101.0, "y_lower": 95.0, "y_upper": 107.0,
+        "y_true": 102.0, "source": "oos",
+    }
+    weekly_row = {
+        **daily_row, "run_id": "r2", "target_date": "2025-12-12",
+        "frequence": "weekly", "horizon_type": "weekly", "horizon_unit": "W+1",
+    }
+    st.insert_oos_predictions([daily_row], db_path=db_path)
+    st.insert_oos_predictions([weekly_row], db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT frequence, horizon_type FROM predictions WHERE source='oos' ORDER BY frequence"
+    ).fetchall()
+    conn.close()
+    assert len(rows) == 2
+    assert {r["frequence"] for r in rows} == {"daily", "weekly"}
+
+
 def test_ingest_oos_reingestion_is_idempotent(tmp_path):
     """§8/§9 : rejouer ingest_oos sur les mêmes Run/*-D1 n'ajoute aucune ligne
     predictions ni ne duplique un signal (upsert idempotent : mêmes données -> même
@@ -1359,6 +1448,88 @@ def test_ingest_oos_reingestion_is_idempotent(tmp_path):
     assert n_predictions == 1                       # aucun doublon créé par le rejeu
     assert stats_first["combos"] == stats_second["combos"] == 1
     assert n_bull_calm_trades == 1                   # signal reconstruit, jamais dupliqué
+
+
+def _fake_d7_prices(n_days=20, start="2026-01-05", base=100.0):
+    """20 jours de bourse consécutifs, close = base + i (valeurs connues, faciles
+    à vérifier dans les tests de reconstruction cutoff/last_close)."""
+    dates = pd.bdate_range(start, periods=n_days)
+    return {"date": dates, "close": [base + i for i in range(n_days)]}
+
+
+def test_ingest_oos_also_processes_d7_folders(tmp_path):
+    """BRIEF_audit_combinaisons.md : ingest_oos doit ingerer Run/*-D7/ en plus de
+    Run/*-D1/ (regression du trou de couverture regime A / D+7 -- glob D1 seul
+    laissait des dossiers D7 complets sur disque jamais ingeres)."""
+    run_root = tmp_path / "Run"
+    write_fake_run_dir(run_root, name="20260710-ARIMA-SPY-D1", rows=_DUP_ROWS)
+
+    prices = _fake_d7_prices()
+    target_date = prices["date"][10]   # position 10 -> cutoff a la position 10-5=5
+    d7_rows = {
+        "date": [target_date], "actual": [111.0], "predicted": [110.5],
+        "pi_lower": [105.0], "pi_upper": [115.0],
+    }
+    write_fake_run_dir(run_root, name="20260710-ARIMA-SPY-D7", horizon_label="D7",
+                       rows=d7_rows, prices=prices)
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    stats = st.ingest_oos(run_root=str(run_root), db_path=db_path)
+    assert stats["combos"] == 2
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT horizon, frequence, horizon_type, horizon_unit, cutoff_date, target_date, last_close "
+        "FROM predictions WHERE source='oos'"
+    ).fetchall()
+    conn.close()
+
+    by_horizon = {r["horizon"]: r for r in rows}
+    assert set(by_horizon) == {1, 7}
+    assert by_horizon[7]["frequence"] == "daily"
+    assert by_horizon[7]["horizon_type"] == "daily"
+    assert by_horizon[7]["horizon_unit"] == "D+7"
+    # cutoff/last_close correctement reconstruits depuis prices.parquet (position
+    # 10-5=5 -> date de bourse n5, close=100+5=105.0) -- PAS depuis une ligne t-1
+    # inexistante dans predictions.parquet (une seule ligne ici).
+    assert by_horizon[7]["cutoff_date"] == str(prices["date"][5].date())
+    assert by_horizon[7]["target_date"] == str(target_date.date())
+    assert by_horizon[7]["last_close"] == pytest.approx(105.0)
+
+    # the D+7 row must NOT leak into all_predictions (D+1-only trading rules)
+    conn = sqlite3.connect(db_path)
+    n_all_pred = conn.execute("SELECT COUNT(*) FROM all_predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert n_all_pred == 1
+
+
+def test_build_oos_prediction_rows_d7_drops_all_rows_without_prices_parquet(tmp_path):
+    """Garde-fou du bug BRIEF_comparaison_rigoureuse.md : sans prices.parquet, aucune
+    reconstruction fiable de cutoff_date/last_close n'est possible pour du D7 --
+    on droppe TOUT plutot que de retomber sur l'ancienne logique t-1 fausse."""
+    run_dir = write_fake_run_dir(tmp_path, name="fake-D7", horizon_label="D7", rows=_DUP_ROWS)
+    rows, n_dropped = st.build_oos_prediction_rows(run_dir)
+    assert rows == []
+    assert n_dropped == len(_DUP_ROWS["date"])
+
+
+def test_build_oos_prediction_rows_d7_drops_target_too_close_to_price_history_start(tmp_path):
+    """Un target dans les 5 premiers jours de prices.parquet n'a pas assez
+    d'historique pour reculer de 5 pas de bourse -- droppé, pas une exception ni
+    une fausse date."""
+    prices = _fake_d7_prices()
+    target_date = prices["date"][2]   # position 2 < steps=5 -> pas de cutoff valide
+    d7_rows = {
+        "date": [target_date], "actual": [102.0], "predicted": [101.5],
+        "pi_lower": [98.0], "pi_upper": [105.0],
+    }
+    run_dir = write_fake_run_dir(tmp_path, name="fake-D7", horizon_label="D7",
+                                 rows=d7_rows, prices=prices)
+    rows, n_dropped = st.build_oos_prediction_rows(run_dir)
+    assert rows == []
+    assert n_dropped == 1
 
 
 def test_rebuild_oos_sim_trades_never_touches_live(tmp_path):
