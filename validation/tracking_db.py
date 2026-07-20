@@ -412,6 +412,72 @@ def flag_daily_duplicates(db_path=DEFAULT_DB_PATH) -> int:
         conn.close()
 
 
+def flag_oos_superseded_by_live(db_path=DEFAULT_DB_PATH) -> int:
+    """Marque daily_duplicate=1 sur les lignes OOS survivantes (daily_duplicate=0)
+    dont la clé (model, asset, horizon, frequence, horizon_type, cutoff_date) est
+    aussi couverte par au moins une ligne `live` : une fois qu'une vraie prédiction
+    live existe pour une date donnée, le backtest OOS correspondant n'apporte plus
+    d'information -- ce n'est plus une reconstruction de ce qui aurait été prédit,
+    c'est la même date que la ligne live, en double dans les agrégats.
+
+    Clé de correspondance volontairement SANS `target_date` : le décalage business_lag
+    (jour calendaire côté live vs jour de bourse côté OOS, cf. BRIEF §doublons
+    sim_trades) fait parfois diverger le target_date entre les deux lignes d'un même
+    cutoff_date -- mais c'est la même date de prédiction en double, pas deux
+    prédictions différentes.
+
+    Contrairement à flag_daily_duplicates, ne fait PAS de reset préalable : cette
+    fonction n'ajoute que des 1 (jamais de 0->1 puis retour à 0 tout seule), donc
+    rejouer sans changement de données ne change rien (idempotent), mais elle ne
+    peut pas "annuler" un cutoff_date dont la ligne live aurait été supprimée entre
+    deux appels -- ce n'est pas un usage attendu (les lignes live ne sont jamais
+    supprimées). Doit s'exécuter APRÈS flag_daily_duplicates() dans le script one-shot
+    (validation/correction/apply_live_supersedes_oos_flag.py) : un appel ultérieur à
+    flag_daily_duplicates() seul réinitialiserait ces flags (son propre reset ne porte
+    que sur `source='oos'`, sans distinguer leur origine) -- il faut alors rejouer
+    aussi cette fonction pour les restaurer.
+
+    Ne touche jamais les lignes source='live'. Ne supprime aucune ligne. Retourne le
+    nombre de lignes nouvellement passées à 1."""
+    conn = _connect(db_path)
+    try:
+        n_before = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+
+        cur = conn.execute("""
+            UPDATE predictions
+            SET daily_duplicate = 1
+            WHERE source = 'oos' AND daily_duplicate = 0
+              AND EXISTS (
+                  SELECT 1 FROM predictions AS live
+                  WHERE live.source = 'live'
+                    AND live.model = predictions.model
+                    AND live.asset = predictions.asset
+                    AND live.horizon = predictions.horizon
+                    AND live.frequence = predictions.frequence
+                    AND live.horizon_type = predictions.horizon_type
+                    AND live.cutoff_date = predictions.cutoff_date
+              )
+        """)
+        n_newly_flagged = cur.rowcount
+
+        n_after = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+        n_live_flagged = conn.execute(
+            "SELECT COUNT(*) FROM predictions WHERE source='live' AND daily_duplicate=1"
+        ).fetchone()[0]
+
+        if n_after != n_before or n_live_flagged != 0:
+            conn.rollback()
+            raise RuntimeError(
+                "flag_oos_superseded_by_live : contrôle interne échoué, rollback effectué "
+                f"(n_before={n_before} n_after={n_after} live_flaggees={n_live_flagged})"
+            )
+
+        conn.commit()
+        return n_newly_flagged
+    finally:
+        conn.close()
+
+
 def _sign(x: float) -> int:
     if x > 0:
         return 1

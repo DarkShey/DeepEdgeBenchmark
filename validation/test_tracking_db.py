@@ -629,6 +629,93 @@ def test_flag_daily_duplicates_is_idempotent(tmp_path):
     assert total == 2   # aucune ligne supprimée par le rejeu
 
 
+# ── flag_oos_superseded_by_live ───────────────────────────────────────────────
+
+
+def test_flag_oos_superseded_by_live_flags_matching_cutoff_date(tmp_path):
+    """Même si le target_date diverge (décalage business_lag), une ligne oos partage
+    la même clé (model, asset, horizon, frequence, horizon_type, cutoff_date) qu'une
+    ligne live -> doit être flaguée : c'est la même date de prédiction en double."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(
+        model="Prophet", asset="SPY", cutoff_date="2026-07-06", target_date="2026-07-07",
+    ), db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY",
+                     cutoff_date="2026-07-06", target_date="2026-07-08")   # target divergent
+
+    n_flagged = td.flag_oos_superseded_by_live(db_path=db_path)
+    assert n_flagged == 1
+
+    conn = sqlite3.connect(db_path)
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+    assert oos_flag == 1
+
+
+def test_flag_oos_superseded_by_live_leaves_unmatched_oos_alone(tmp_path):
+    """Pas de ligne live pour ce cutoff_date -> le backtest oos reste la seule source
+    d'information pour cette date, il ne doit pas être flagué."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(
+        model="Prophet", asset="SPY", cutoff_date="2026-07-06",
+    ), db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2025-12-05")
+
+    n_flagged = td.flag_oos_superseded_by_live(db_path=db_path)
+    assert n_flagged == 0
+
+    conn = sqlite3.connect(db_path)
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+    assert oos_flag == 0
+
+
+def test_flag_oos_superseded_by_live_never_flags_live_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(model="Prophet", asset="SPY", cutoff_date="2026-07-06"),
+                        db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2026-07-06")
+
+    td.flag_oos_superseded_by_live(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    live_flagged = conn.execute(
+        "SELECT COUNT(*) FROM predictions WHERE source='live' AND daily_duplicate=1"
+    ).fetchone()[0]
+    conn.close()
+    assert live_flagged == 0
+
+
+def test_flag_oos_superseded_by_live_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(model="Prophet", asset="SPY", cutoff_date="2026-07-06"),
+                        db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2026-07-06")
+
+    n_first = td.flag_oos_superseded_by_live(db_path=db_path)
+    n_second = td.flag_oos_superseded_by_live(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    total = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+
+    assert n_first == 1
+    assert n_second == 0   # déjà flaguée, rien de nouveau au 2e appel
+    assert oos_flag == 1
+    assert total == 2   # aucune ligne supprimée
+
+
 def test_export_csv_oos_daily_duplicate_filter_is_a_noop_once_no_duplicates_remain(tmp_path):
     """Depuis BRIEF_prevention_doublons.md, export_csv (comme toute fonction qui
     s'auto-initialise) ne peut plus être appelée sur une base contenant encore des
