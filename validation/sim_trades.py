@@ -182,7 +182,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 cutoff_date AS d_date, target_date,
                 last_close  AS reference_price, y_pred AS predicted,
                 y_lower     AS pi_lower,        y_upper AS pi_upper,
-                y_true      AS realized_price,  source
+                y_true      AS realized_price,  source,  real_flag
             FROM predictions
             WHERE horizon = 1
               AND horizon_type = 'daily'
@@ -614,7 +614,7 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
     td.init_db(db_path)
     cols = ("run_id", "model", "asset", "horizon", "regime", "cutoff_date", "target_date",
             "last_close", "y_pred", "y_lower", "y_upper", "y_true", "source",
-            "frequence", "horizon_type", "horizon_unit")
+            "frequence", "horizon_type", "horizon_unit", "real_flag")
     placeholders = ", ".join(f":{c}" for c in cols)
     columns = ", ".join(cols)
     conn = _connect(db_path)
@@ -628,6 +628,15 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
                 "horizon_type": horizon_type,
                 "horizon_unit": row.get("horizon_unit") or
                     f"{'W' if horizon_type == 'weekly' else 'D'}+{row['horizon']}",
+                # real_flag ('live'/'oos', vraie vs fausse prédiction) est INDEPENDANT
+                # de `source='oos'` ici (provenance technique, jamais réécrite) -- une
+                # prédiction réelle rejouée via ce chemin OOS après une panne de prod
+                # (backfills) doit quand même porter real_flag='live', cf.
+                # tracking_db.compute_real_flag. Recalculé + réécrit à CHAQUE upsert
+                # (DO UPDATE SET ci-dessous) : si une ligne bascule de fausse à vraie
+                # entre deux ingestions (rare, mais possible si le seuil de démarrage
+                # est ajusté), le flag ne reste jamais figé sur sa première valeur.
+                "real_flag": td.compute_real_flag(row["model"], row["cutoff_date"]),
             }
             cur = conn.execute(f"""
                 INSERT INTO predictions ({columns}) VALUES ({placeholders})
@@ -642,7 +651,8 @@ def insert_oos_predictions(rows, db_path=DEFAULT_DB_PATH) -> int:
                     y_upper     = excluded.y_upper,
                     y_true      = excluded.y_true,
                     regime      = excluded.regime,
-                    horizon_unit = excluded.horizon_unit
+                    horizon_unit = excluded.horizon_unit,
+                    real_flag   = excluded.real_flag
             """, row)
             n += cur.rowcount
         conn.commit()
@@ -1556,7 +1566,8 @@ def daily_detail(db_path=DEFAULT_DB_PATH, asset=None, models=None) -> list:
             "gated_out": m["gated_out"],
         } for m in trades_by_key.get(key, [])]
         results.append({
-            "source": row["source"], "d_date": row["d_date"], "target_date": row["target_date"],
+            "source": row["source"], "real_flag": row["real_flag"],
+            "d_date": row["d_date"], "target_date": row["target_date"],
             "model": row["model"], "asset": row["asset"],
             "reference_price": row["reference_price"], "predicted": row["predicted"],
             "pi_lower": row["pi_lower"], "pi_upper": row["pi_upper"],

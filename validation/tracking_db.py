@@ -51,6 +51,28 @@ EVAL_FIELDS = (
     "beats_naif", "direction_correct", "evaluated_at",
 )
 
+# `real_flag` ('live'/'oos') : vraie vs fausse prédiction, cf. BRIEF_db_unification.md
+# et model_artifacts/generate_dashboard.py (ex-isRealPrediction, désormais lue depuis
+# cette colonne plutôt que recalculée en JS). VOLONTAIREMENT distincte de `source`
+# (provenance technique live=prod/oos=backtest, utilisée comme clé de jointure/unicité
+# partout ailleurs dans predictions/sim_trades) : certaines vraies prédictions ont été
+# rejouées en source='oos' après une panne de prod (backfills du 8, 11, 13, 14, 17-20
+# juillet 2026), donc real_flag='live' et source='oos' peuvent légitimement coexister
+# sur une même ligne. Une tentative antérieure de réutiliser `source` pour porter ce
+# sens a cassé la jointure predictions<->sim_trades (cf. git log d675188) -- real_flag
+# n'est JAMAIS une clé de jointure ni d'unicité, purement une colonne d'affichage/filtre.
+REAL_PREDICTION_START = {"TSDiff": "2026-07-08"}
+REAL_PREDICTION_START_DEFAULT = "2026-07-06"
+
+
+def compute_real_flag(model: str, cutoff_date: str) -> str:
+    """'live' si cutoff_date >= date de démarrage réel du modèle, 'oos' sinon --
+    même règle que l'ex-isRealPrediction JS de model_artifacts/generate_dashboard.py,
+    ici la seule source de vérité (la JS lit désormais la colonne calculée)."""
+    threshold = REAL_PREDICTION_START.get(model, REAL_PREDICTION_START_DEFAULT)
+    return "live" if cutoff_date >= threshold else "oos"
+
+
 _GROUP_BY_COLUMNS = {"model", "asset", "horizon", "regime"}
 
 
@@ -103,12 +125,14 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 evaluated_at          TEXT,
                 source                TEXT NOT NULL DEFAULT 'live',
                 daily_duplicate       INTEGER NOT NULL DEFAULT 0,
+                real_flag             TEXT NOT NULL DEFAULT 'oos',
                 UNIQUE (tc_id, model, cutoff_date)
             )
         """)
         _migrate_predictions_add_source(conn)
         _migrate_predictions_add_daily_duplicate(conn)
         _migrate_predictions_add_frequency_horizon(conn)
+        _migrate_predictions_add_real_flag(conn)
         # Idempotence des lignes OOS : tc_id y est NULL, donc hors de portée du
         # UNIQUE(tc_id, model, cutoff_date) ci-dessus (SQLite traite chaque NULL comme
         # distinct). Index partiel dédié, n'affecte jamais les lignes source='live'.
@@ -283,6 +307,31 @@ def _migrate_predictions_add_frequency_horizon(conn) -> None:
     """)
 
 
+def _migrate_predictions_add_real_flag(conn) -> None:
+    """Ajout idempotent de `real_flag` ('live'/'oos', vraie vs fausse prédiction, cf.
+    docstring de compute_real_flag) sur une base existante. Colonne nullable ajoutée
+    puis backfillée explicitement via compute_real_flag(model, cutoff_date) -- pas de
+    DEFAULT constant valide (dépend de model/cutoff_date, comme horizon_unit), pas de
+    CASE SQL dupliquant REAL_PREDICTION_START (source de vérité unique = la fonction
+    Python). Backfill par petite boucle + executemany (~15k lignes actuelles, trivial) :
+    tourne à CHAQUE appel de init_db() (comme les autres migrations lazy de ce module),
+    donc auto-réparatrice pour toute ligne qui aurait échappé au calcul à l'insertion
+    (save_prediction / insert_oos_predictions la renseignent déjà, cf. leurs docstrings)."""
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(predictions)")}
+    if not cols:
+        return   # table qui vient d'être créée fraîche (CREATE TABLE ci-dessus l'a déjà)
+    if "real_flag" not in cols:
+        conn.execute("ALTER TABLE predictions ADD COLUMN real_flag TEXT")
+    rows = conn.execute(
+        "SELECT id, model, cutoff_date FROM predictions WHERE real_flag IS NULL"
+    ).fetchall()
+    if rows:
+        conn.executemany(
+            "UPDATE predictions SET real_flag = ? WHERE id = ?",
+            [(compute_real_flag(row["model"], row["cutoff_date"]), row["id"]) for row in rows],
+        )
+
+
 def register_test_case(tc_id, asset, horizon, description="", db_path=DEFAULT_DB_PATH) -> None:
     """Upsert d'un cas de référence (ON CONFLICT(tc_id) DO UPDATE)."""
     conn = _connect(db_path)
@@ -321,14 +370,19 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
     horizon_type = record.get("horizon_type", "daily")
     horizon_unit = record.get("horizon_unit") or (
         f"{'W' if horizon_type == 'weekly' else 'D'}+{record['horizon']}")
+    # real_flag calculé en défense en profondeur (pas seulement via la migration lazy
+    # de init_db()) : un lecteur peut interroger predictions juste après cet insert,
+    # avant le prochain appel à init_db() qui backfillerait sinon la ligne.
+    real_flag = compute_real_flag(record["model"], record["cutoff_date"])
 
     conn = _connect(db_path)
     try:
-        insert_fields = RECORD_FIELDS + ("frequence", "horizon_type", "horizon_unit")
+        insert_fields = RECORD_FIELDS + ("frequence", "horizon_type", "horizon_unit", "real_flag")
         placeholders = ", ".join(f":{f}" for f in insert_fields)
         columns = ", ".join(insert_fields)
         params = {f: record[f] for f in RECORD_FIELDS}
-        params.update(frequence=frequence, horizon_type=horizon_type, horizon_unit=horizon_unit)
+        params.update(frequence=frequence, horizon_type=horizon_type, horizon_unit=horizon_unit,
+                     real_flag=real_flag)
         cur = conn.execute(
             f"INSERT OR IGNORE INTO predictions ({columns}) VALUES ({placeholders})",
             params,

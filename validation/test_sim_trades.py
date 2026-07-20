@@ -1369,6 +1369,42 @@ def test_insert_oos_predictions_upsert_keeps_latest_run(tmp_path):
     assert rows[0]["y_lower"] == pytest.approx(96.0)
 
 
+def test_insert_oos_predictions_sets_real_flag_independently_of_source(tmp_path):
+    """Cas exact des backfills (8, 11, 13, 14, 17-20/07) : une prédiction réelle rejouée
+    via le chemin OOS après une panne de prod doit porter real_flag='live' MEME si
+    source='oos' -- les deux colonnes portent des sens indépendants (cf.
+    tracking_db.compute_real_flag)."""
+    db_path = str(tmp_path / "t.db")
+    st.init_db(db_path)
+
+    rows_fake = {
+        "date": pd.to_datetime(["2026-07-05", "2026-07-06"]),   # cutoff_date=07-05 < seuil réel
+        "actual": [100.0, 102.0], "predicted": [999.0, 103.0],
+        "pi_lower": [999.0, 95.0], "pi_upper": [999.0, 110.0],
+    }
+    rows_real = {
+        "date": pd.to_datetime(["2026-07-06", "2026-07-07"]),   # cutoff_date=07-06 >= seuil réel
+        "actual": [100.0, 102.0], "predicted": [999.0, 103.0],
+        "pi_lower": [999.0, 95.0], "pi_upper": [999.0, 110.0],
+    }
+    run_fake = write_fake_run_dir(tmp_path / "runs", name="20260705-ARIMA-SPY-D1", rows=rows_fake)
+    run_real = write_fake_run_dir(tmp_path / "runs", name="20260706-ARIMA-SPY-D1", rows=rows_real)
+
+    log_fake, _ = st.build_oos_prediction_rows(run_fake)
+    log_real, _ = st.build_oos_prediction_rows(run_real)
+    st.insert_oos_predictions(log_fake, db_path=db_path)
+    st.insert_oos_predictions(log_real, db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {r["cutoff_date"]: r for r in conn.execute("SELECT * FROM predictions WHERE source='oos'")}
+    conn.close()
+    assert rows["2026-07-05"]["source"] == "oos"
+    assert rows["2026-07-05"]["real_flag"] == "oos"      # fausse : avant le seuil
+    assert rows["2026-07-06"]["source"] == "oos"
+    assert rows["2026-07-06"]["real_flag"] == "live"     # vraie malgré source='oos' (backfill)
+
+
 def test_insert_oos_predictions_defaults_missing_frequency_fields_to_daily(tmp_path):
     """build_oos_prediction_rows() (daily uniquement) ne fournit pas frequence/
     horizon_type/horizon_unit -- insert_oos_predictions doit les défaulter à

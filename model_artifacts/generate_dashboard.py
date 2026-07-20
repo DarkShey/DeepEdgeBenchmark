@@ -232,7 +232,8 @@ def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
             rows = []
         out[asset] = [
             {
-                "source": r["source"], "d_date": r["d_date"], "target_date": r["target_date"],
+                "source": r["source"], "real_flag": r["real_flag"],
+                "d_date": r["d_date"], "target_date": r["target_date"],
                 "model": r["model"],
                 "reference_price": _num(r["reference_price"]), "predicted": _num(r["predicted"]),
                 "pi_lower": _num(r["pi_lower"]), "pi_upper": _num(r["pi_upper"]),
@@ -598,13 +599,13 @@ const KPI_DEFINITIONS = {
   diraccchg: "Dir. Acc (variations) — % de bon sens sur la variation prédite vs le dernier prix connu, avec IC binomial de Wilson à 95%. Si l'IC contient 50%, indiscernable du pile-ou-face.",
   dmdef: "Diebold-Mariano vs persistence — test de différence de perte quadratique (variance Newey-West, correction HLN). p < 0.05 et DM < 0 : le modèle bat significativement le naïf.",
   skillverdict: "Verdict de skill — synthèse Theil's U + DM : 'beats naive' / 'no better than naive' / 'worse than naive'. Règle de lecture du Point 1 du brief.",
-  tcsource: "Source (colonne technique) — 'oos' (rejouée hors-échantillon, backfill inclus) ou 'live' (production ce jour-là). Ne détermine PAS le filtre Vraies/Fausses prédictions ci-dessus : certains jours 'oos' (backfills des 8, 11, 13, 14/07) sont bien de vraies prédictions, cf. Vraies/Fausses.",
+  tcsource: "Source (colonne technique) — 'oos' (rejouée hors-échantillon, backfill inclus) ou 'live' (production ce jour-là). Ne détermine PAS le filtre Vraies/Fausses prédictions ci-dessus (qui lit la colonne séparée real_flag) : certains jours 'oos' (backfills des 8, 11, 13, 14, 17-20/07) sont bien de vraies prédictions, cf. Vraies/Fausses.",
   tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
   tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
   tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
   tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
-  tcsourcefilter: "Vraies vs fausses prédictions — vraie : d_date à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), qu'elle soit techniquement marquée 'live' ou 'oos' (des jours ont été rejoués en 'oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14/07, mais restent de vraies prédictions). Fausse : tout ce qui précède, reconstruction de backtest sur la période de validation.",
+  tcsourcefilter: "Vraies vs fausses prédictions — lit real_flag (calculé et stocké côté base, validation/tracking_db.py::compute_real_flag) : vraie ('live') à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), indépendamment de la colonne technique source (des jours ont été rejoués en source='oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14, 17-20/07, mais restent real_flag='live'). Fausse ('oos') : tout ce qui précède, reconstruction de backtest sur la période de validation.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
   tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
   tcgatedcol: "Sideways gaté (TC1.5b) — même signal plat que TC1.5, mais écarté si le marché est jugé trop volatil/stressé (gate régime, cf. légende). N'entre PAS dans le pipeline 'daily' (Test case(s)/Counter/validation ci-dessus) : colonne d'inspection à part, indépendante du filtre pipeline. 'Écarté (vol/stress élevé)' = signal plat détecté mais rejeté par le gate. Sinon : counter (justesse, identique à TC1.5) + pnl proxy short-vol entre parenthèses (JAMAIS un rendement exécuté, cf. BRIEF_sideways_v2.md).",
@@ -943,17 +944,14 @@ async function switchAssetDate(ticker, date, dateSel) {
 // règles — l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin).
 // =============================================================================
 
-// Vraie vs fausse prédiction : NE dépend PAS de la colonne source (live/oos) -- des
-// jours ont été rejoués en 'oos' faute d'avoir tourné en 'live' le jour même (panne/
-// backfill des 8, 11, 13, 14/07), mais restent de vraies prédictions au sens où elles
-// ont été produites comme telles. Règle métier : vraie <=> d_date >= date de démarrage
-// réel du modèle (06/07/2026 pour les modèles historiques, 08/07/2026 pour TSDiff,
-// arrivé plus tard dans la grille) ; tout ce qui précède est une fausse prédiction
-// (reconstruction de backtest sur la période de validation).
-const REAL_PREDICTION_START = { TSDiff: '2026-07-08' };
-const REAL_PREDICTION_START_DEFAULT = '2026-07-06';
+// Vraie vs fausse prédiction : NE dépend PAS de la colonne source (live/oos, provenance
+// technique -- des jours ont été rejoués en 'oos' faute d'avoir tourné en 'live' le jour
+// même, panne/backfill des 8, 11, 13, 14, 17-20/07, mais restent de vraies prédictions
+// au sens où elles ont été produites comme telles). Dépend de `real_flag`, calculé et
+// stocké côté base (validation/tracking_db.py::compute_real_flag, seule source de
+// vérité désormais -- la règle n'est plus dupliquée ici en JS).
 function isRealPrediction(row) {
-  return row.d_date >= (REAL_PREDICTION_START[row.model] || REAL_PREDICTION_START_DEFAULT);
+  return row.real_flag === 'live';
 }
 
 // Légende statique TC1.1-1.5(b) affichée dans la carte "Test cases" -- cf.

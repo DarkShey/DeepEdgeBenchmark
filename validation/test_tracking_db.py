@@ -887,6 +887,78 @@ def test_frequency_horizon_migration_is_idempotent(tmp_path):
     assert row["frequence"] == "daily"
 
 
+def test_compute_real_flag_uses_per_model_threshold():
+    assert td.compute_real_flag("ARIMA-GARCH", "2026-07-05") == "oos"
+    assert td.compute_real_flag("ARIMA-GARCH", "2026-07-06") == "live"
+    assert td.compute_real_flag("TSDiff", "2026-07-06") == "oos"    # démarrage plus tardif
+    assert td.compute_real_flag("TSDiff", "2026-07-08") == "live"
+
+
+def test_save_prediction_sets_real_flag_from_cutoff_date(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.save_prediction(make_record(cutoff_date="2026-06-01"), db_path=db_path)   # fausse
+    td.save_prediction(make_record(tc_id="TC2", cutoff_date="2026-07-10"), db_path=db_path)   # vraie
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {r["cutoff_date"]: r["real_flag"] for r in conn.execute("SELECT * FROM predictions")}
+    conn.close()
+    assert rows["2026-06-01"] == "oos"
+    assert rows["2026-07-10"] == "live"
+
+
+def test_legacy_db_migration_backfills_real_flag(tmp_path):
+    """Une base créée AVANT ce brief (colonne real_flag absente) doit se retrouver,
+    après un simple appel à init_db(), avec real_flag correctement calculé pour
+    chaque ligne existante -- pas juste une valeur par défaut arbitraire."""
+    db_path = str(tmp_path / "t.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, tc_id TEXT,
+            model TEXT NOT NULL, asset TEXT NOT NULL, horizon INTEGER NOT NULL,
+            cutoff_date TEXT NOT NULL, target_date TEXT NOT NULL, regime TEXT NOT NULL,
+            last_close REAL NOT NULL, y_pred REAL NOT NULL, y_lower REAL NOT NULL,
+            y_upper REAL NOT NULL, verdict_integrite INTEGER, verdict_plausibilite INTEGER,
+            created_at TEXT, y_true REAL, in_interval INTEGER, abs_error REAL,
+            abs_error_naif REAL, beats_naif INTEGER, direction_correct INTEGER,
+            evaluated_at TEXT, source TEXT NOT NULL DEFAULT 'live',
+            daily_duplicate INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (tc_id, model, cutoff_date)
+        )
+    """)
+    conn.execute("""
+        INSERT INTO predictions (run_id, tc_id, model, asset, horizon, cutoff_date, target_date,
+                                 regime, last_close, y_pred, y_lower, y_upper, source)
+        VALUES ('r1', 'TC1', 'ARIMA-GARCH', 'BTC-USD', 1, '2026-07-08', '2026-07-09',
+                'calm', 100.0, 101.0, 95.0, 107.0, 'oos')
+    """)
+    conn.commit()
+    conn.close()
+
+    td.init_db(db_path)   # doit migrer + backfiller real_flag sans lever
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    # 2026-07-08 >= seuil réel (06/07) -> vraie prédiction, MEME si source='oos'
+    # (backfill technique) : real_flag et source portent des sens indépendants.
+    assert row["source"] == "oos"
+    assert row["real_flag"] == "live"
+
+
+def test_real_flag_migration_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(cutoff_date="2026-07-10"), db_path=db_path)
+    td.init_db(db_path)   # ré-appel, ne doit pas lever ni modifier la valeur déjà backfillée
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["real_flag"] == "live"
+
+
 def test_oos_index_lets_daily_and_weekly_coexist_same_asset_horizon_cutoff(tmp_path):
     """Le coeur du problème BRIEF_audit_combinaisons.md §0 : un TSDiff-D (frequence=daily,
     horizon_type=weekly, horizon=1 = 'W+1') et un TSDiff-W (frequence=weekly,
