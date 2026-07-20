@@ -1,0 +1,49 @@
+{
+  "model": "Prophet",
+  "pytest_filter": "[prophet_model]",
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "9 passed, 46 deselected, 3 warnings in 5.17s",
+  "tests": [
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_perfect_prediction_gives_zero_error[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_directional_accuracy_known_case[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_pi_coverage_full_when_bounds_enclose_actual[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_pi_coverage_partial_when_one_point_outside[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_metrics.py::test_compute_metrics_inconsistent_lengths_raises_clear_error[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_fetch_data_monkeypatched_no_network[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_run_model_returns_expected_contract[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_next_step_returns_finite_point_and_interval[prophet_model]",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_models_common.py::test_point_in_time_no_lookahead[prophet_model]",
+      "outcome": "passed"
+    }
+  ],
+  "what_these_tests_check": {
+    "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift."
+  }
+}

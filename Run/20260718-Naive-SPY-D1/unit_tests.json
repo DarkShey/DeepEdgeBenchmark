@@ -1,0 +1,33 @@
+{
+  "model": "Naive",
+  "pytest_filter": "naive_model",
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "5 passed, 50 deselected in 1.09s",
+  "tests": [
+    {
+      "name": "models/test_naive_model.py::test_run_naive_predicts_previous_close_exactly",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_is_deterministic_across_seeds",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_interval_is_gaussian_rw_band",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_next_step_naive_returns_last_price",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_passes_verify_naive_audit",
+      "outcome": "passed"
+    }
+  ],
+  "what_these_tests_check": {
+    "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift."
+  }
+}
