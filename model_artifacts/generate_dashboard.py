@@ -10,10 +10,11 @@ par model_artifacts/pipeline.py et génère une page HTML autonome affichant, pa
 Plus un onglet Comparaison (tous actifs confondus, graphiques barres — fonctionnalité
 préexistante conservée telle quelle).
 
-En bas de chaque onglet actif où la donnée existe (BTC-USD pour l'instant) : un tableau
-jour par jour des test cases TC1.1-TC1.5 (`validation/sim_trades.py`), le TC qui a généré
-un signal ce jour-là et son counter — restreint à D+1 (seul horizon supporté par ces
-règles, cf. docstring de validation/sim_trades.py).
+En bas de chaque onglet actif où la donnée existe (tous les actifs de
+calibration.regime.assets.ASSETS) : un tableau jour par jour des test cases TC1.1-TC1.5
+(`validation/sim_trades.py`), le TC qui a généré un signal ce jour-là et son counter —
+restreint à D+1 (seul horizon supporté par ces règles, cf. docstring de
+validation/sim_trades.py).
 
 Depuis 2026-07 : par défaut, les séries lourdes (predictions/prices) ne sont plus
 embarquées dans le HTML mais écrites à côté dans data/<run_date>.json, chargées par le
@@ -41,10 +42,17 @@ import sys
 sys.path.insert(0, str(REPO_ROOT))
 from validation import sim_trades as st
 
-# Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief), et un
-# seul actif pour l'instant (BTC-USD) -- étendre en ajoutant des tickers ici.
+# Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief). Tous les
+# actifs de calibration.regime.assets.ASSETS (source unique de vérité, cf. docstring de ce
+# module) -- fallback sur la liste connue si l'import échoue (même logique défensive que
+# _load_assets_order, pour ne jamais faire échouer la génération du reste du dashboard).
 SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff"]
-SIM_TRADES_ASSETS = ["BTC-USD"]
+try:
+    sys.path.insert(0, str(REPO_ROOT / "models"))
+    from calibration.regime.assets import ASSETS as _SIM_TRADES_ASSETS_REGISTRY
+    SIM_TRADES_ASSETS = [a["ticker"] for a in _SIM_TRADES_ASSETS_REGISTRY]
+except Exception:
+    SIM_TRADES_ASSETS = ["BTC-USD", "ETH-USD", "SPY", "ZN=F", "TLT"]
 SIM_TRADES_DB_PATH = "validation/tracking.db"
 
 # Bouton "pipeline" du tableau TC : famille de règles par horizon de résolution. Seul
@@ -930,7 +938,7 @@ async function switchAssetDate(ticker, date, dateSel) {
 
 // =============================================================================
 // Test cases TC1.1-TC1.5 (validation/sim_trades.py) — tableau jour par jour, en bas
-// de chaque onglet actif où la donnée existe (BTC-USD pour l'instant, cf.
+// de chaque onglet actif où la donnée existe (tous les actifs, cf.
 // SIM_TRADES_ASSETS côté Python). Restreint à D+1 (seul horizon supporté par ces
 // règles — l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin).
 // =============================================================================
