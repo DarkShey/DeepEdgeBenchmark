@@ -27,5 +27,6 @@
   "frequence": "daily",
   "horizon_type": "daily",
   "horizon_unit": "D+1",
+  "real_flag": "live",
   "horizon_trading_days": 1
 }
