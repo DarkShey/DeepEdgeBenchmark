@@ -1,34 +1,35 @@
 {
-  "RMSE": 10543.9724,
-  "MAE": 9161.9716,
-  "MAPE": 13.72,
+  "RMSE": 5872.6901,
+  "MAE": 4616.3027,
+  "MAPE": 6.5,
   "directional_accuracy": 53.05,
-  "pi_coverage_95": 80.61,
-  "pi_width_min": 16238.145708,
-  "pi_width_mean": 57309.608739,
-  "pi_width_max": 133275.491989,
+  "pi_coverage_95": 84.24,
+  "pi_width_min": 16003.712348,
+  "pi_width_mean": 17514.372754,
+  "pi_width_max": 18974.208222,
+  "crps": 3426.296301,
   "n_val": 165,
   "horizon": "D1",
   "asset": "BTC-USD",
   "model": "Prophet",
-  "theil_u": 5.7891,
-  "MASE": 7.2325,
-  "change_corr": 0.072,
-  "dir_acc_change": 42.42,
+  "theil_u": 4.1036,
+  "MASE": 4.1693,
+  "change_corr": -0.0532,
+  "dir_acc_change": 46.06,
   "dir_acc_ci95": [
-    35.14,
-    50.05
+    38.63,
+    53.67
   ],
-  "dir_acc_p_vs_coin": 0.0614,
-  "dm_stat": 6.129,
+  "dir_acc_p_vs_coin": 0.3502,
+  "dm_stat": 4.41,
   "dm_p": 0.0,
   "dm_lag": 5,
   "skill_vs_naive": "worse than naive",
   "forecast": {
     "last_date": "2026-07-21",
     "last_price": 66505.125,
-    "predicted": 65348.081072,
-    "pi_lower": 56413.369661,
-    "pi_upper": 73909.256601
+    "predicted": 65517.097839,
+    "pi_lower": 56985.520681,
+    "pi_upper": 74400.008179
   }
 }
