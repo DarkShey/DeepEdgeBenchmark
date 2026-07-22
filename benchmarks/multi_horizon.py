@@ -152,12 +152,18 @@ def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
 
 
 # ── LSTM ──────────────────────────────────────────────────────────────────────
-def fit_lstm(train: pd.Series, epochs: int = None, seed: int = None):
+def fit_lstm(train: pd.Series, epochs: int = None, seed: int = None, seq_len: int = None):
     """Fit le réseau une seule fois. Extrait de forecast_horizons_lstm.
     Retourne (model, scaler, std_résidus, série_scalée_complète) : tout ce qu'il
-    faut pour forecaster (forecast_from_fitted_lstm) ou sérialiser l'artefact."""
+    faut pour forecaster (forecast_from_fitted_lstm) ou sérialiser l'artefact.
+
+    `seq_len` (défaut `lstm_model.SEQ_LEN`, comportement daily inchangé) : régime
+    hebdo natif (BRIEF_lstm_weekly_retune.md) a besoin d'un lookback différent de
+    30 -- l'appelant doit repasser la MÊME valeur à `forecast_from_fitted_lstm`
+    (pas de round-trip via le tuple retourné, pour ne pas casser les appelants
+    existants qui dépaquettent (model, scaler, std, scaled))."""
     import lstm_model
-    seq_len = lstm_model.SEQ_LEN
+    seq_len = lstm_model.SEQ_LEN if seq_len is None else seq_len
     epochs = lstm_model.EPOCHS if epochs is None else epochs
     seed = lstm_model.DEFAULT_SEED if seed is None else seed
     lstm_model.set_seed(seed)
@@ -184,13 +190,17 @@ def fit_lstm(train: pd.Series, epochs: int = None, seed: int = None):
     return model, scaler, std, scaled
 
 
-def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list) -> dict:
+def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list,
+                              seq_len: int = None) -> dict:
     """Un seul rollout récursif de max(horizons) pas à partir d'objets déjà fittés :
     le réseau se ré-alimente de ses propres prédictions (jamais du vrai futur,
     contrainte point-in-time). L'IC s'élargit en sqrt(h) à partir de l'écart-type
-    des résidus d'entraînement (même convention que next_step_lstm)."""
+    des résidus d'entraînement (même convention que next_step_lstm).
+
+    `seq_len` : DOIT être la même valeur que celle passée à `fit_lstm` pour ce
+    `model` (défaut `lstm_model.SEQ_LEN`, comportement daily inchangé)."""
     import lstm_model
-    seq_len = lstm_model.SEQ_LEN
+    seq_len = lstm_model.SEQ_LEN if seq_len is None else seq_len
     max_h = max(horizons)
 
     buffer = list(scaled[-seq_len:])
@@ -214,11 +224,12 @@ def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list)
 
 
 def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
-                           seed: int = None) -> dict:
+                           seed: int = None, seq_len: int = None) -> dict:
     """Fit once (fit_lstm) puis forecast (forecast_from_fitted_lstm) — inchangé
-    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
-    model, scaler, std, scaled = fit_lstm(train, epochs=epochs, seed=seed)
-    return forecast_from_fitted_lstm(model, scaler, std, scaled, horizons)
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
+    `seq_len=None` -> défaut `lstm_model.SEQ_LEN`, comportement daily inchangé."""
+    model, scaler, std, scaled = fit_lstm(train, epochs=epochs, seed=seed, seq_len=seq_len)
+    return forecast_from_fitted_lstm(model, scaler, std, scaled, horizons, seq_len=seq_len)
 
 
 # ── Naive ─────────────────────────────────────────────────────────────────────

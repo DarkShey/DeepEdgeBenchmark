@@ -41,6 +41,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 import sys
 sys.path.insert(0, str(REPO_ROOT))
 from validation import sim_trades as st
+sys.path.insert(0, str(REPO_ROOT / "experiments"))
+import prob_kpi_common as pkc   # noqa: E402 -- réutilisé pour les KPI weekly (BRIEF_weekly_pipeline_integration.md)
 
 # Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief). Tous les
 # actifs de calibration.regime.assets.ASSETS (source unique de vérité, cf. docstring de ce
@@ -64,6 +66,21 @@ SIM_TRADES_PIPELINES = ["daily", "weekly", "monthly"]
 TC_PIPELINE = {
     "TC1.1": "daily", "TC1.2": "daily", "TC1.3": "daily", "TC1.4": "daily", "TC1.5": "daily",
 }
+
+# Weekly (régime C, BRIEF_weekly_pipeline_integration.md) : réduit à TSDiff seul (décision
+# de revue -- le gain mesuré du weekly n'existe QUE pour TSDiff, cf.
+# experiments/METHODOLOGIE_weekly_vs_daily.md ; les 5 autres modèles ont des données
+# weekly en base mais aucun gain démontré, donc pas de surface dédiée pour eux). Le
+# weekly n'est PAS plus précis pour TSDiff non plus (CRPS non significatif, p=0.236) --
+# seule sa calibration (couverture 95% 0,55 -> 0,78, p<0,001 Holm) est un résultat
+# solide. Ne jamais écrire/suggérer "plus précis".
+WEEKLY_KPI_MODELS = ["TSDiff"]
+# CRPS/couverture 50-80% recalculés depuis (y_pred,y_lower,y_upper) via un tirage
+# gaussien (cf. collect_weekly_kpis) : APPROXIMATION pour TSDiff (nuage réel non
+# gaussien, déjà collapsé en point+IC95 lors de la génération -- aucun nuage brut n'est
+# persisté). La couverture à 95%, elle, est recalculée directement depuis les bornes
+# stockées (in_interval), sans aucune hypothèse de forme -- seul chiffre "exact".
+WEEKLY_APPROX_CRPS_MODELS = ["TSDiff"]
 
 MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
@@ -245,6 +262,94 @@ def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
     return out
 
 
+def _weekly_row_samples(model: str, y_pred: float, y_lower: float, y_upper: float,
+                        last_close: float, n_samples: int, rng) -> "np.ndarray":
+    """Nuage d'échantillons pour une ligne weekly régime C, réutilisant
+    experiments/prob_kpi_common.sample_parametric pour les 5 modèles paramétriques
+    (recouvre exactement leur distribution prédictive stockée). TSDiff n'a pas de
+    nuage brut persisté ici (collapsé en point+IC95 dès la génération, cf.
+    weekly_headtohead_v2.run_pair_v2) -- prob_kpi_common refuse volontairement ce
+    modèle (réservé à son cas natif). Pour ce SEUL affichage dashboard, TSDiff est
+    traité par la même approximation gaussienne (sigma récupéré du PI stocké) déjà
+    documentée et utilisée telle quelle par experiments/weekly_vs_daily_pooled.py --
+    voir WEEKLY_APPROX_CRPS_MODELS, jamais présenté comme un résultat exact."""
+    if model == "TSDiff":
+        sigma = max((y_upper - y_lower) / (2.0 * pkc.Z95), 1e-10)
+        return rng.normal(loc=y_pred, scale=sigma, size=n_samples)
+    return pkc.sample_parametric(model, y_pred, y_lower, y_upper, last_close, n_samples, rng)
+
+
+def collect_weekly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
+                        seed: int = 42) -> dict:
+    """KPI probabilistes weekly (régime C uniquement, BRIEF_weekly_pipeline_integration.md
+    Couche A) par (actif x modèle x W+1/2/3) : point, IC95, couverture 95% EXACTE
+    (recalculée directement depuis les bornes stockées, sans hypothèse de forme --
+    seul chiffre valable pour tous les modèles y compris TSDiff), puis CRPS/couverture
+    50-80% via un nuage gaussien (exact pour les 5 modèles paramétriques, APPROXIMATION
+    pour TSDiff -- cf. WEEKLY_APPROX_CRPS_MODELS). Silencieux (liste vide) si
+    tracking.db est absent ou vide, même logique défensive que collect_sim_trades_daily."""
+    import numpy as np
+    import sqlite3
+
+    out = {}
+    try:
+        con = sqlite3.connect(db_path)
+        try:
+            df = pd.read_sql_query(
+                """
+                SELECT model, asset, horizon, horizon_unit, cutoff_date, target_date,
+                       last_close, y_pred, y_lower, y_upper, y_true, source, real_flag
+                FROM predictions
+                WHERE frequence = 'weekly' AND horizon_type = 'weekly'
+                      AND source IN ('oos', 'live') AND model IN ({})
+                """.format(",".join("?" * len(WEEKLY_KPI_MODELS))),
+                con, params=list(WEEKLY_KPI_MODELS),
+            )
+        finally:
+            con.close()
+    except Exception as exc:
+        print(f"[generate_dashboard] weekly KPI indisponibles ({exc})")
+        return out
+
+    if df.empty:
+        return out
+
+    rng = np.random.default_rng(seed)
+    for (asset, model, horizon_unit), g in df.groupby(["asset", "model", "horizon_unit"]):
+        realized = g[g["y_true"].notna()]
+        crps_vals, cov50, cov80 = [], [], []
+        for _, r in realized.iterrows():
+            samples = _weekly_row_samples(model, float(r.y_pred), float(r.y_lower),
+                                          float(r.y_upper), float(r.last_close),
+                                          n_samples, rng)
+            kpis = pkc.row_kpis(samples, float(r.y_true))
+            crps_vals.append(kpis["crps"])
+            cov50.append(kpis["cov50"])
+            cov80.append(kpis["cov80"])
+        cov95_direct = ((realized["y_true"] >= realized["y_lower"]) &
+                       (realized["y_true"] <= realized["y_upper"])).mean() if len(realized) else None
+
+        rows = [
+            {
+                "cutoff_date": r.cutoff_date, "target_date": r.target_date,
+                "last_close": _num(r.last_close), "y_pred": _num(r.y_pred),
+                "y_lower": _num(r.y_lower), "y_upper": _num(r.y_upper),
+                "y_true": _num(r.y_true), "source": r.source, "real_flag": r.real_flag,
+            }
+            for r in g.sort_values("cutoff_date").itertuples()
+        ]
+        out.setdefault(asset, {}).setdefault(model, {})[horizon_unit] = {
+            "n_total": int(len(g)), "n_realized": int(len(realized)),
+            "cov95_exact": _num(cov95_direct),
+            "cov50_gaussian": _num(np.mean(cov50)) if cov50 else None,
+            "cov80_gaussian": _num(np.mean(cov80)) if cov80 else None,
+            "crps_gaussian": _num(np.mean(crps_vals)) if crps_vals else None,
+            "crps_is_approx": model in WEEKLY_APPROX_CRPS_MODELS,
+            "rows": rows,
+        }
+    return out
+
+
 def render_html(run_data: dict, run_root_label: str, external_series: bool = False) -> str:
     """external_series=False (mode --inline) : predictions/prices embarquées dans le
     payload comme avant, page autonome ouvrable en file://. external_series=True (mode
@@ -267,6 +372,8 @@ def render_html(run_data: dict, run_root_label: str, external_series: bool = Fal
         "sim_trades_models": SIM_TRADES_MODELS,
         "sim_trades_pipelines": SIM_TRADES_PIPELINES,
         "tc_pipeline": TC_PIPELINE,
+        "weekly_kpis": collect_weekly_kpis(),
+        "weekly_kpi_models": WEEKLY_KPI_MODELS,
         "external_series": external_series,
     }
     if not external_series:
@@ -582,6 +689,10 @@ function hideTooltip() { tooltipEl.style.display = 'none'; }
 
 // ---- Définitions des KPI (bulle au survol du repère "ⓘ") -------------------
 const KPI_DEFINITIONS = {
+  weeklyintro: "Régime hebdomadaire natif (C), TSDiff uniquement — le weekly ne rend PAS TSDiff plus précis (CRPS non significatif, p=0.236, cf. experiments/METHODOLOGIE_weekly_vs_daily.md). Il est affiché ici parce qu'il corrige significativement sa sur-confiance sur la calibration de l'incertitude — jamais présenté comme un gain de précision. Les 5 autres modèles ont des données weekly en base mais aucun gain démontré, donc pas de surface dédiée.",
+  weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. C'est le résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm).",
+  weeklycov5080: "Couverture 50%/80% (gaussienne) — recalculée en tirant un nuage gaussien depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. APPROXIMATION pour TSDiff (nuage réel non gaussien, non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
+  weeklycrps: "CRPS (gaussien) — score de la distribution complète (précision + incertitude), calculé sur un nuage gaussien recalculé depuis (prédit, IC95). APPROXIMATION pour TSDiff (nuage réel non gaussien) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   mape: "MAPE — erreur absolue moyenne en % du prix réel. Comparable entre actifs de prix différents.",
@@ -656,6 +767,7 @@ DATA.assets.forEach(a => {
     showPred: true,
     warnThreshold: 20,
     subtab: 'kpis',
+    freq: 'daily',
   };
 });
 
@@ -686,13 +798,19 @@ function switchAssetTab(ticker) {
 
 function assetPanelSkeleton(a) {
   const s = a.short;
+  const hasWeekly = !!(DATA.weekly_kpis && DATA.weekly_kpis[a.ticker]);
   return `
     <div class="card controls-row">
       <div class="subtabbar" id="subtab-${s}">
         <button class="active" data-sub="kpis">KPIs</button>
         <button data-sub="chart">Graphique</button>
       </div>
-      <label class="field-label">Date de run
+      ${hasWeekly ? `
+      <div class="toggle-group" id="freq-${s}">
+        <button class="active" data-freq="daily">Daily</button>
+        <button data-freq="weekly">Weekly ${infoDot('weeklyintro')}</button>
+      </div>` : ''}
+      <label class="field-label" id="daterow-${s}">Date de run
         <select class="select-box" id="date-${s}"></select>
       </label>
       <div class="toggle-group" id="horizon-${s}"></div>
@@ -719,8 +837,8 @@ function assetPanelSkeleton(a) {
         <div class="chart-daterange" id="chart-daterange-${s}"></div>
         <div class="controls-row" style="margin-bottom:12px;">
           <div class="chart-checks" id="chart-checks-${s}">
-            <label class="chart-check"><input type="checkbox" id="showtrain-${s}" checked> Entraînement</label>
-            <label class="chart-check"><input type="checkbox" id="showval-${s}" checked> Validation</label>
+            <label class="chart-check" id="showtrain-label-${s}"><input type="checkbox" id="showtrain-${s}" checked> Entraînement</label>
+            <label class="chart-check" id="showval-label-${s}"><input type="checkbox" id="showval-${s}" checked> Validation</label>
             <label class="chart-check"><input type="checkbox" id="showpred-${s}" checked> Prédiction</label>
           </div>
           <label class="field-label">
@@ -816,20 +934,17 @@ function buildAssetPanels() {
   DATA.assets.forEach(a => wireAssetPanel(a));
 }
 
-function wireAssetPanel(a) {
-  const s = a.short, ticker = a.ticker, st = assetState[ticker];
-
-  const dateSel = document.getElementById(`date-${s}`);
-  DATA.run_dates.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d; opt.textContent = d;
-    if (d === st.date) opt.selected = true;
-    dateSel.appendChild(opt);
-  });
-  dateSel.addEventListener('change', () => { switchAssetDate(ticker, dateSel.value, dateSel); });
-
-  const horizons = [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
+// Reconstruit le toggle d'horizon selon la fréquence courante (daily: D1/D7 depuis
+// DATA.records ; weekly: W+1/2/3 fixes, TSDiff uniquement) -- appelé au chargement et
+// à chaque bascule du toggle Daily/Weekly (cf. wireAssetPanel).
+function buildHorizonToggle(ticker) {
+  const s = DATA.assets.find(x => x.ticker === ticker).short;
+  const st = assetState[ticker];
   const hEl = document.getElementById(`horizon-${s}`);
+  hEl.innerHTML = '';
+  const horizons = st.freq === 'weekly'
+    ? ['W+1', 'W+2', 'W+3']
+    : [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
   if (!horizons.includes(st.horizon)) st.horizon = horizons[0];
   horizons.forEach(h => {
     const btn = document.createElement('button');
@@ -842,6 +957,38 @@ function wireAssetPanel(a) {
     });
     hEl.appendChild(btn);
   });
+}
+
+function wireAssetPanel(a) {
+  const s = a.short, ticker = a.ticker, st = assetState[ticker];
+
+  const dateSel = document.getElementById(`date-${s}`);
+  DATA.run_dates.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (d === st.date) opt.selected = true;
+    dateSel.appendChild(opt);
+  });
+  dateSel.addEventListener('change', () => { switchAssetDate(ticker, dateSel.value, dateSel); });
+
+  buildHorizonToggle(ticker);
+
+  if (DATA.weekly_kpis && DATA.weekly_kpis[ticker]) {
+    const freqEl = document.getElementById(`freq-${s}`);
+    freqEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        st.freq = btn.dataset.freq;
+        freqEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+        const isWeekly = st.freq === 'weekly';
+        document.getElementById(`daterow-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`models-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`showtrain-label-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`showval-label-${s}`).style.display = isWeekly ? 'none' : '';
+        buildHorizonToggle(ticker);
+        refreshAssetTab(ticker);
+      });
+    });
+  }
 
   const mEl = document.getElementById(`models-${s}`);
   MODELS.forEach(m => {
@@ -908,6 +1055,156 @@ function wireAssetPanel(a) {
 function refreshAssetTab(ticker) {
   renderAssetKpis(ticker);
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+}
+
+// =============================================================================
+// Weekly (régime C, TSDiff uniquement) — BRIEF_weekly_pipeline_integration.md
+// Restreint à TSDiff (décision de revue) : seul modèle avec un gain mesuré (calibration,
+// PAS précision -- cf. weeklyintro/weeklycrps dans KPI_DEFINITIONS et le badge
+// DATA.weekly_calibration_badge). Les 5 autres modèles ont des données weekly en base
+// mais aucune surface dédiée ici, faute de gain démontré.
+// =============================================================================
+
+// Réutilise EXACTEMENT le schéma daily (cartes KPI + breakdown dans l'onglet KPIs,
+// graphique prix + prévision dans l'onglet Graphique) -- toggle Daily/Weekly bascule
+// le contenu de ces DEUX onglets existants, pas un 3e onglet à part (cf. revue).
+function weeklyRows(ticker) {
+  const weekly = (DATA.weekly_kpis[ticker] || {})['TSDiff'] || {};
+  const rows = [];
+  Object.entries(weekly).forEach(([horizonUnit, kpi]) => rows.push({ horizonUnit, ...kpi }));
+  rows.sort((a, b) => a.horizonUnit.localeCompare(b.horizonUnit));
+  return rows;
+}
+
+function renderWeeklyKpisInline(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short, st = assetState[ticker];
+
+  const rows = weeklyRows(ticker);
+  const cardsEl = document.getElementById(`kpi-cards-${s}`);
+  cardsEl.innerHTML = '';
+  const rec = rows.find(r => r.horizonUnit === st.horizon);
+  const card = document.createElement('div');
+  card.className = 'kpi-card';
+  let rowsHtml;
+  if (!rec) {
+    rowsHtml = '<div class="no-data">Pas de données</div>';
+  } else {
+    const crpsLabel = rec.crps_gaussian == null ? '—' :
+      fmt(rec.crps_gaussian, 3) + (rec.crps_is_approx ? ' (approx.)' : '');
+    rowsHtml = [
+      [`Couverture 95% ${infoDot('weeklycov95')}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
+      [`Couverture 50% / 80% ${infoDot('weeklycov5080')}`,
+       (rec.cov50_gaussian == null ? '—' : fmt(rec.cov50_gaussian * 100, 1) + ' %') + ' / ' +
+       (rec.cov80_gaussian == null ? '—' : fmt(rec.cov80_gaussian * 100, 1) + ' %')],
+      [`CRPS ${infoDot('weeklycrps')}`, crpsLabel],
+      ['n (réalisé/total)', `${rec.n_realized}/${rec.n_total}`],
+    ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
+  }
+  card.innerHTML = `<div class="kpi-card-title">`
+    + `<span class="swatch" style="background:${MODEL_COLORS['TSDiff']};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>TSDiff</div>`
+    + rowsHtml;
+  cardsEl.appendChild(card);
+
+  const wrap = document.getElementById(`breakdown-wrap-${s}`);
+  wrap.innerHTML = '';
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead><tr>
+      <th>Horizon</th><th>n (réalisé/total)</th>
+      <th>Couverture 95% ${infoDot('weeklycov95')}</th>
+      <th>Couverture 50% / 80% ${infoDot('weeklycov5080')}</th>
+      <th>CRPS ${infoDot('weeklycrps')}</th>
+    </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const crpsLabel = r.crps_gaussian == null ? '—' :
+      fmt(r.crps_gaussian, 3) + (r.crps_is_approx ? ' (approx.)' : '');
+    tr.innerHTML = `
+      <td>${r.horizonUnit}</td>
+      <td>${r.n_realized}/${r.n_total}</td>
+      <td>${r.cov95_exact == null ? '—' : fmt(r.cov95_exact * 100, 1) + '%'}</td>
+      <td>${r.cov50_gaussian == null ? '—' : fmt(r.cov50_gaussian * 100, 1) + '%'} / ${r.cov80_gaussian == null ? '—' : fmt(r.cov80_gaussian * 100, 1) + '%'}</td>
+      <td>${crpsLabel}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+// ---- Graphique weekly : prix hebdo réel + prévision TSDiff à l'horizon sélectionné --
+// Même schéma visuel que le Graphique daily (Plotly zoomable, bande IC95), sourcé
+// directement depuis DATA.weekly_kpis (déjà tout en mémoire, pas de fetch réseau
+// contrairement au daily en mode externe).
+function renderWeeklyChart(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short, st = assetState[ticker];
+  const container = document.getElementById(`chart-${s}`);
+  const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
+
+  const rows = weeklyRows(ticker);
+  if (!rows.length) {
+    container.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+    dateRangeEl.textContent = '';
+    return;
+  }
+
+  // Prix réel hebdo : un point par origine (cutoff_date, last_close), dédupliqué --
+  // last_close est identique pour un même cutoff_date quel que soit l'horizon.
+  const priceByDate = new Map();
+  rows.forEach(r => r.rows.forEach(row => priceByDate.set(row.cutoff_date, row.last_close)));
+  const priceDates = [...priceByDate.keys()].sort();
+  dateRangeEl.textContent = priceDates.length
+    ? `Historique hebdomadaire : ${priceDates[0]} → ${priceDates[priceDates.length - 1]}`
+    : '';
+
+  const traces = [{
+    x: priceDates, y: priceDates.map(d => priceByDate.get(d)),
+    mode: 'lines+markers', name: 'Réel (clôture hebdo)',
+    line: { color: ACTUAL_COLOR, width: 1.6 }, marker: { size: 4 },
+    hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
+  }];
+
+  const sel = (rows.find(r => r.horizonUnit === st.horizon) || {}).rows || [];
+  const sorted = sel.slice().sort((x, y) => x.target_date.localeCompare(y.target_date));
+  const color = MODEL_COLORS['TSDiff'];
+  if (sorted.length) {
+    if (st.showPI) {
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_upper),
+        mode: 'lines', line: { width: 0, color }, showlegend: false, hoverinfo: 'skip',
+      });
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_lower),
+        mode: 'lines', line: { width: 0, color }, fill: 'tonexty',
+        fillcolor: hexToRgba(color, 0.16), showlegend: false, hoverinfo: 'skip',
+      });
+    }
+    if (st.showPred) {
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_pred),
+        mode: 'lines+markers', name: `TSDiff (prévision ${st.horizon})`,
+        line: { color, width: 1.8, dash: 'dot' }, marker: { color, size: 5 },
+        hovertemplate: `%{x}<br>%{y:.2f}<extra>TSDiff ${st.horizon}</extra>`,
+      });
+    }
+  }
+
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: AXIS_TEXT_COLOR, family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 12 },
+    margin: { l: 55, r: 20, t: 30, b: 40 },
+    xaxis: { gridcolor: GRID_COLOR, showgrid: true },
+    yaxis: { gridcolor: GRID_COLOR, showgrid: true, title: 'Prix' },
+    legend: { orientation: 'h', y: -0.15 },
+    hovermode: 'x unified',
+  };
+  Plotly.newPlot(`chart-${s}`, traces, layout, { responsive: true, displaylogo: false });
 }
 
 // Changement de date de run pour un actif : si les séries de cette date ne sont pas
@@ -1299,6 +1596,7 @@ const BREAKDOWN_COLS = [
 function renderAssetKpis(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
+  if (st.freq === 'weekly') { renderWeeklyKpisInline(ticker); return; }
   const checked = MODELS.filter(m => st.models.has(m));
 
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
@@ -1422,6 +1720,7 @@ function renderBreakdownTable(ticker) {
 function renderAssetChart(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
+  if (st.freq === 'weekly') { renderWeeklyChart(ticker); return; }
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
 

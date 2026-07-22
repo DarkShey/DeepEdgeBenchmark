@@ -82,6 +82,21 @@ from epoch_sweep import three_way_split, week_targets, DEFAULT_N_VAL, DEFAULT_N_
 MODELS = ("ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive")
 LSTM_SEED = 42
 
+# LSTM régime C (BRIEF_lstm_weekly_retune.md) : SEQ_LEN choisi par actif sur le bloc de
+# validation (experiments/lstm_weekly_sweep.py, sélection CRPS + règle 1-SE), JAMAIS sur
+# le test régénéré ci-dessous. Régime B garde le défaut daily (lstm_model.SEQ_LEN=30,
+# non retouché) -- asymétrie assumée, cf. METHODOLOGIE_weekly_vs_daily.md.
+LSTM_WEEKLY_SWEEP_FILE = Path(__file__).resolve().parent / "lstm_weekly_sweep.json"
+
+
+def load_lstm_weekly_seq_len(path=LSTM_WEEKLY_SWEEP_FILE) -> dict:
+    """{asset_short: SEQ_LEN*} depuis experiments/lstm_weekly_sweep.py. Lève une erreur
+    claire si le sweep n'a pas été lancé -- pas de valeur par défaut silencieuse qui
+    court-circuiterait la sélection sur validation (garde-fou du brief)."""
+    if not Path(path).exists():
+        raise SystemExit(f"{path} introuvable -- lance experiments/lstm_weekly_sweep.py d'abord.")
+    return json.loads(Path(path).read_text())["selected_seq_len"]
+
 
 def forecast_horizons_sarima_weekly(train: pd.Series, horizons: list) -> dict:
     """SARIMA on weekly-resampled data -- seasonal_order disabled (see module
@@ -133,15 +148,27 @@ REGIME_C_FORECAST = {
 
 
 def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
-                    n_val: int, n_test: int, start: str, end: str) -> dict:
+                    n_val: int, n_test: int, start: str, end: str,
+                    lstm_weekly_seq_len: dict = None) -> dict:
     """regime: 'B' (daily-trained, multi-step) or 'C' (weekly-native).
+    `lstm_weekly_seq_len` : {asset_short: SEQ_LEN*}, requis seulement pour
+    model_name="LSTM" + regime="C" (cf. BRIEF_lstm_weekly_retune.md) -- construit le
+    partial forecast_horizons_lstm avec le SEQ_LEN retenu POUR CET ACTIF, au lieu du
+    défaut daily partagé par tous les autres modèles/régime B.
     Returns {"records": [...], "n_failed": int, "T0": str}."""
     daily = td.fetch_data(ticker, start, end)
     weekly, weekly_dates = build_weekly(daily)
     train_end_pos, val_pos, test_pos = three_way_split(weekly, n_val, n_test)
     T0_date = weekly_dates.iloc[train_end_pos]
 
-    forecast_fn = (REGIME_C_FORECAST if regime == "C" else REGIME_B_FORECAST)[model_name]
+    if model_name == "LSTM" and regime == "C":
+        if lstm_weekly_seq_len is None or asset_short not in lstm_weekly_seq_len:
+            raise SystemExit(f"pas de SEQ_LEN* pour {asset_short} -- lance "
+                            f"experiments/lstm_weekly_sweep.py --assets {asset_short} d'abord.")
+        forecast_fn = functools.partial(mh.forecast_horizons_lstm, epochs=None, seed=LSTM_SEED,
+                                        seq_len=lstm_weekly_seq_len[asset_short])
+    else:
+        forecast_fn = (REGIME_C_FORECAST if regime == "C" else REGIME_B_FORECAST)[model_name]
     records, n_failed = [], 0
 
     for k, m in enumerate(test_pos):
@@ -193,8 +220,15 @@ def main() -> None:
     p.add_argument("--end", default=None)
     p.add_argument("--out", default=str(Path(__file__).resolve().parent
                                        / "weekly_multimodel_results.json"))
+    p.add_argument("--lstm-sweep-file", default=str(LSTM_WEEKLY_SWEEP_FILE),
+                   help="SEQ_LEN* par actif pour LSTM régime C (experiments/lstm_weekly_sweep.py)")
     args = p.parse_args()
     end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
+
+    # Chargé seulement si nécessaire : les autres modèles/régime B n'en dépendent pas,
+    # pas de raison de faire échouer un run qui ne touche pas au LSTM régime C.
+    needs_lstm_c = "LSTM" in args.models and "C" in args.regimes
+    lstm_weekly_seq_len = load_lstm_weekly_seq_len(args.lstm_sweep_file) if needs_lstm_c else None
 
     all_records, meta = [], {}
     t0 = time.time()
@@ -204,7 +238,8 @@ def main() -> None:
                 t_cell = time.time()
                 print(f"[{model_name}/{asset}/{regime}] running {args.n_test} test origins ...")
                 res = run_model_asset(model_name, asset, ASSETS[asset], regime,
-                                      args.n_val, args.n_test, args.start, end)
+                                      args.n_val, args.n_test, args.start, end,
+                                      lstm_weekly_seq_len=lstm_weekly_seq_len)
                 elapsed_cell = time.time() - t_cell
                 all_records.extend(res["records"])
                 meta[f"{model_name}|{asset}|{regime}"] = {
