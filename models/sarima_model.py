@@ -88,11 +88,21 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
 
 # ── SARIMA walk-forward backtest ─────────────────────────────────────────────
 def run_sarima(train: pd.Series, test: pd.Series,
-               order=ORDER, seasonal_order=SEASONAL_ORDER) -> dict:
-    """Rolling 1-step-ahead SARIMA forecast over the test window."""
+               order=ORDER, seasonal_order=SEASONAL_ORDER,
+               n_ensemble: int = 0, ensemble_seed=None) -> dict:
+    """Rolling 1-step-ahead SARIMA forecast over the test window.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` bootstrap samples of the next-step price by
+    resampling (with replacement) the in-sample residuals of that step's own fit
+    (`result.resid`) around its point forecast. Populates `result["ensemble"]`
+    (list of length len(test), one [n_ensemble] price array per step) for
+    empirical CRPS (cf. model_artifacts/crps_kpis.py)."""
     t0 = time.time()
     history = list(train.astype(float).values)
     preds, lower, upper = [], [], []
+    ensembles = [] if n_ensemble > 0 else None
+    rng = np.random.default_rng(ensemble_seed) if n_ensemble > 0 else None
 
     for i in range(len(test)):
         model  = SARIMAX(history, order=order, seasonal_order=seasonal_order,
@@ -101,7 +111,8 @@ def run_sarima(train: pd.Series, test: pd.Series,
         fc     = result.get_forecast(steps=1)
 
         pm = fc.predicted_mean
-        preds.append(float(pm.iloc[0] if hasattr(pm, "iloc") else pm[0]))
+        point = float(pm.iloc[0] if hasattr(pm, "iloc") else pm[0])
+        preds.append(point)
 
         ci = fc.conf_int(alpha=PI_ALPHA)
         if isinstance(ci, pd.DataFrame):
@@ -109,14 +120,21 @@ def run_sarima(train: pd.Series, test: pd.Series,
         else:
             lower.append(float(ci[0][0]));      upper.append(float(ci[0][1]))
 
+        if n_ensemble > 0:
+            residuals = np.asarray(result.resid, dtype=float)
+            ensembles.append(point + rng.choice(residuals, size=n_ensemble, replace=True))
+
         history.append(float(test.iloc[i]))   # walk forward
 
     train_time = time.time() - t0
     preds, lower, upper = map(np.array, (preds, lower, upper))
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test.values}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test.values}
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_sarima(series: pd.Series, order=ORDER, seasonal_order=SEASONAL_ORDER):

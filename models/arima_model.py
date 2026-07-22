@@ -110,12 +110,22 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
 
 # ── ARIMA-GARCH walk-forward backtest ────────────────────────────────────────
 def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
-                    order=ARIMA_ORDER, garch_refit_freq=GARCH_REFIT_FREQ) -> dict:
+                    order=ARIMA_ORDER, garch_refit_freq=GARCH_REFIT_FREQ,
+                    n_ensemble: int = 0, ensemble_seed=None) -> dict:
     """Rolling 1-step-ahead ARIMA-GARCH forecast over the test window.
 
     Mean equation : ARIMA(order) on 100*log-returns
     Volatility    : GARCH(1,1) on the ARIMA residuals -> 95% intervals
     Returns a dict of metrics plus the raw prediction/interval arrays.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` bootstrap samples of the next-step price by
+    resampling (with replacement) the GARCH standardized residuals
+    (resid / conditional_volatility) and applying them to that step's own mu/sigma
+    -- a residual bootstrap around the already-fitted mean/volatility forecast,
+    not a fresh distributional assumption. Populates `result["ensemble"]` (list of
+    length n_test, one [n_ensemble] price array per step) for empirical CRPS
+    (cf. model_artifacts/crps_kpis.py).
     """
     t0 = time.time()
 
@@ -130,6 +140,8 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
     lower  = np.empty(n_test)
     upper  = np.empty(n_test)
     sigmas = np.empty(n_test)
+    ensembles = [] if n_ensemble > 0 else None
+    rng = np.random.default_rng(ensemble_seed) if n_ensemble > 0 else None
 
     arima_res = ARIMA(
         returns, order=order,
@@ -161,6 +173,12 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
         upper[t]  = last_price * np.exp(mu + Z_95 * sigma)
         sigmas[t] = sigma
 
+        if n_ensemble > 0:
+            std_resid = np.asarray(garch_res.resid, dtype=float) / \
+                np.asarray(garch_res.conditional_volatility, dtype=float)
+            z_boot = rng.choice(std_resid, size=n_ensemble, replace=True)
+            ensembles.append(last_price * np.exp(mu + sigma * z_boot))
+
         # walk forward: append the realised return, then move on
         actual_price = test_prices[t]
         actual_ret   = np.log(actual_price / last_price) * 100.0
@@ -174,7 +192,7 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
     )
     metrics["Avg GARCH sigma"] = round(float(np.mean(sigmas)), 6)
 
-    return {
+    result = {
         **metrics,
         "predictions": preds,
         "lower": lower,
@@ -182,6 +200,9 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
         "index": test_series.index,
         "actual": test_prices,
     }
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_arima_garch(series: pd.Series, order=ARIMA_ORDER):

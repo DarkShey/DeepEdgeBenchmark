@@ -43,7 +43,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 import tensorflow as tf
 tf.get_logger().setLevel("ERROR")
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 
 
@@ -52,6 +52,8 @@ SEQ_LEN      = 30     # look-back window
 UNITS        = 64     # LSTM hidden units
 EPOCHS       = 30
 BATCH_SIZE   = 32
+DROPOUT_RATE = 0.2    # Dropout(rate) between LSTM and Dense -- also enables Monte
+                      # Carlo Dropout at inference (model(x, training=True), cf. run_lstm)
 DEFAULT_SEED = 42     # --seed default: TF training isn't bit-exact across machines,
                       # but fixing this makes a given run reproducible on the same machine.
 
@@ -116,9 +118,11 @@ def make_sequences(data: np.ndarray, seq_len: int):
     return np.array(X), np.array(y)
 
 
-def build_lstm(seq_len: int = SEQ_LEN, units: int = UNITS) -> Sequential:
+def build_lstm(seq_len: int = SEQ_LEN, units: int = UNITS,
+               dropout_rate: float = DROPOUT_RATE) -> Sequential:
     model = Sequential()
     model.add(LSTM(units, input_shape=(seq_len, 1), return_sequences=False))
+    model.add(Dropout(dropout_rate))
     model.add(Dense(1))
     model.compile(optimizer="adam", loss="mse")
     return model
@@ -126,8 +130,21 @@ def build_lstm(seq_len: int = SEQ_LEN, units: int = UNITS) -> Sequential:
 
 # ── LSTM walk-forward backtest ───────────────────────────────────────────────
 def run_lstm(train: pd.Series, test: pd.Series,
-             seq_len=SEQ_LEN, epochs=EPOCHS, batch_size=BATCH_SIZE) -> dict:
-    """Train on the scaled train window, roll 1-step-ahead over the test window."""
+             seq_len=SEQ_LEN, epochs=EPOCHS, batch_size=BATCH_SIZE,
+             n_ensemble: int = 0) -> dict:
+    """Train on the scaled train window, roll 1-step-ahead over the test window.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` Monte Carlo Dropout samples of the next-step
+    price -- a single batched forward pass with dropout kept active
+    (`model(x_batch, training=True)`, `x_batch` = the same input repeated
+    `n_ensemble` times, each row getting its own independent dropout mask), not
+    n_ensemble separate calls. Requires build_lstm's Dropout layer (cf.
+    DROPOUT_RATE) to actually vary between draws. Populates `result["ensemble"]`
+    (list of length len(test), one [n_ensemble] price array per step) for
+    empirical CRPS (cf. model_artifacts/crps_kpis.py). The point prediction used
+    for RMSE/PI (below) is unaffected -- still the plain `model.predict` (dropout
+    off)."""
     if len(train) <= seq_len:
         raise ValueError(
             f"train series has {len(train)} points, but seq_len={seq_len} requires "
@@ -147,10 +164,18 @@ def run_lstm(train: pd.Series, test: pd.Series,
               validation_split=0.1, callbacks=[es], verbose=0)
 
     preds_scaled = []
+    ensembles = [] if n_ensemble > 0 else None
     buffer = list(train_scaled.flatten()[-seq_len:])
     for i in range(len(test)):
         x = np.array(buffer[-seq_len:]).reshape(1, seq_len, 1)
         preds_scaled.append(model.predict(x, verbose=0)[0, 0])
+
+        if n_ensemble > 0:
+            x_batch = np.repeat(x, n_ensemble, axis=0)
+            mc_scaled = model(x_batch, training=True).numpy().flatten()
+            mc_prices = scaler.inverse_transform(mc_scaled.reshape(-1, 1)).flatten()
+            ensembles.append(mc_prices)
+
         buffer.append(test_scaled[i, 0])     # walk forward with the realised value
 
     preds = scaler.inverse_transform(np.array(preds_scaled).reshape(-1, 1)).flatten()
@@ -164,8 +189,11 @@ def run_lstm(train: pd.Series, test: pd.Series,
     train_time = time.time() - t0
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test.values}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test.values}
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_lstm(series: pd.Series, seq_len=SEQ_LEN, epochs=EPOCHS,

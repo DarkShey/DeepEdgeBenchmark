@@ -95,6 +95,8 @@ from benchmarks.regime_overlay import fit_predict_regime
 from validation import tracking_db as td
 from validation import verdict_rules
 
+from model_artifacts import crps_kpis
+
 # Point 1 du brief (IMPROVEMENTS_BRIEF.md) : métriques de skill vs baseline
 # persistence — MASE, Theil's U, corrélation des variations, DirAcc±IC binomial,
 # Diebold-Mariano (Newey-West HAC + correction HLN). Pur numpy/scipy.
@@ -465,29 +467,48 @@ def reuse_gate2_payload(prev_dir: Path, out_dir: Path) -> dict | None:
 
 def _run_model_d1(model_key: str, train: pd.Series, validation: pd.Series, seed, epochs) -> dict:
     """D+1 : réutilise tel quel le run_<model>(train, validation) walk-forward
-    1-step déjà existant dans models/*.py (aucune nouvelle logique de modélisation)."""
+    1-step déjà existant dans models/*.py (aucune nouvelle logique de modélisation).
+
+    Pour ARIMA-GARCH/SARIMA/Prophet/TSDiff, réclame en plus le nuage d'échantillons
+    par pas (bootstrap des résidus ou, pour TSDiff, ses échantillons natifs déjà
+    générés -- cf. n_ensemble/keep_samples de ces run_<model>) et le réduit
+    immédiatement à un scalaire "crps" (cf. crps_kpis.py) : le nuage brut n'a pas
+    besoin de survivre au-delà de cette fonction. LSTM (sous-process isolé, cf.
+    _run_lstm_via_worker) calcule déjà son propre "crps" côté worker -- rien à faire
+    ici, ce cas n'est d'ailleurs jamais atteint par le pipeline réel (cf.
+    process_asset_model, qui bascule sur lstm_worker_result avant d'appeler cette
+    fonction pour "LSTM")."""
     if model_key == "ARIMA-GARCH":
         import arima_model
-        return arima_model.run_arima_garch(train, validation)
-    if model_key == "SARIMA":
+        result = arima_model.run_arima_garch(train, validation,
+                                              n_ensemble=crps_kpis.DEFAULT_N_ENSEMBLE,
+                                              ensemble_seed=seed)
+    elif model_key == "SARIMA":
         import sarima_model
-        return sarima_model.run_sarima(train, validation)
-    if model_key == "Prophet":
+        result = sarima_model.run_sarima(train, validation,
+                                         n_ensemble=crps_kpis.DEFAULT_N_ENSEMBLE,
+                                         ensemble_seed=seed)
+    elif model_key == "Prophet":
         import prophet_model
-        return prophet_model.run_prophet(train, validation)
-    if model_key == "LSTM":
+        result = prophet_model.run_prophet(train, validation,
+                                           n_ensemble=crps_kpis.DEFAULT_N_ENSEMBLE,
+                                           ensemble_seed=seed)
+    elif model_key == "LSTM":
         import lstm_model
         lstm_model.set_seed(seed or lstm_model.DEFAULT_SEED)
         return lstm_model.run_lstm(train, validation, epochs=epochs or lstm_model.EPOCHS)
-    if model_key == "Naive":
+    elif model_key == "Naive":
         import naive_model
         naive_model.set_seed(seed or naive_model.DEFAULT_SEED)
         return naive_model.run_naive(train, validation)
-    if model_key == "TSDiff":
+    elif model_key == "TSDiff":
         import tsdiff_model
         tsdiff_model.set_seed(seed or tsdiff_model.DEFAULT_SEED)
-        return tsdiff_model.run_tsdiff(train, validation)
-    raise ValueError(model_key)
+        result = tsdiff_model.run_tsdiff(train, validation, keep_samples=True)
+    else:
+        raise ValueError(model_key)
+    result["crps"] = crps_kpis.crps_from_step_ensembles(result.pop("ensemble", None), result["actual"])
+    return result
 
 
 def _compute_metrics_for(model_key: str, actual, predicted, pi_lower, pi_upper) -> dict:
@@ -626,6 +647,7 @@ def _to_metrics_payload(result: dict, model_key: str, asset: str, horizon_label:
         "pi_width_min": _num(np.min(widths)) if widths.size else None,
         "pi_width_mean": _num(np.mean(widths)) if widths.size else None,
         "pi_width_max": _num(np.max(widths)) if widths.size else None,
+        "crps": _num(result.get("crps")),
         "n_val": n_val,
         "horizon": horizon_label,
         "asset": asset,

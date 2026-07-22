@@ -463,11 +463,19 @@ def forecast_from_fitted(model: TSDiff, hist_window, mu: float, sd: float,
 def run_tsdiff(train: pd.Series, test: pd.Series,
                seq_len=SEQ_LEN, horizon=HORIZON, hidden=HIDDEN, depth=DEPTH,
                cond_dim=COND_DIM, T=T_DIFFUSION, epochs=EPOCHS, batch_size=BATCH_SIZE,
-               k_denoise=K_DENOISE, n_samples=N_SAMPLES, ddim_eta=DDIM_ETA) -> dict:
+               k_denoise=K_DENOISE, n_samples=N_SAMPLES, ddim_eta=DDIM_ETA,
+               keep_samples: bool = False) -> dict:
     """Train on the train window's returns, roll 1-step-ahead over the test window.
 
     Point forecast = mean of the DDIM sample cloud; 95% PI = 2.5/97.5 sample
     quantiles (the diffusion model's own predictive distribution).
+
+    `keep_samples` (False = off, default -- no extra memory for existing callers):
+    the `n_samples`-wide price cloud already drawn at each step (normally reduced
+    to mean/quantiles and discarded) is instead kept in `result["ensemble"]` (list
+    of length len(test), one [n_samples] price array per step) for empirical CRPS
+    (cf. model_artifacts/crps_kpis.py) -- no extra sampling cost, TSDiff already
+    produces genuine forecast samples.
     """
     t0 = time.time()
     model, mu, sd = fit_tsdiff(train, seq_len, horizon, hidden, depth, cond_dim, T,
@@ -481,6 +489,7 @@ def run_tsdiff(train: pd.Series, test: pd.Series,
     test_p     = test.values.astype(float)
 
     preds, lower, upper = [], [], []
+    ensembles = [] if keep_samples else None
     for i in range(len(test_p)):
         price_samples = forecast_from_fitted(
             model, buffer, mu, sd, last_price, horizons=[1],
@@ -488,6 +497,8 @@ def run_tsdiff(train: pd.Series, test: pd.Series,
         preds.append(float(np.mean(price_samples)))
         lower.append(float(np.quantile(price_samples, 0.025)))
         upper.append(float(np.quantile(price_samples, 0.975)))
+        if keep_samples:
+            ensembles.append(price_samples)
         # walk forward with the realised value
         realised_r = np.log(test_p[i] / last_price)
         buffer.append((realised_r - mu) / sd)
@@ -497,8 +508,11 @@ def run_tsdiff(train: pd.Series, test: pd.Series,
     train_time = time.time() - t0
     metrics = compute_metrics(test_p, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test_p}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test_p}
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_tsdiff(series: pd.Series, seq_len=SEQ_LEN, horizon=HORIZON,

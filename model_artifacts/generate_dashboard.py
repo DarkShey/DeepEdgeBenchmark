@@ -145,7 +145,8 @@ def collect_run_data(run_root: Path) -> dict:
             "model": model, "asset": asset, "asset_class": metadata.get("asset_class", ""),
             "rmse_vs_naive": None,
             "horizon": horizon,
-            "RMSE": metrics.get("RMSE"), "MAE": metrics.get("MAE"), "MAPE": metrics.get("MAPE"),
+            "RMSE": metrics.get("RMSE"), "CRPS": metrics.get("crps"),
+            "MAE": metrics.get("MAE"), "MAPE": metrics.get("MAPE"),
             "directional_accuracy": metrics.get("directional_accuracy"),
             "pi_coverage_95": metrics.get("pi_coverage_95"),
             "pi_width_min": metrics.get("pi_width_min"),
@@ -480,6 +481,7 @@ h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
 .stat-tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
 .stat-tile .value.pos { color: var(--pos-color); }
 .stat-tile .value.neg { color: var(--neg-color); }
+.stat-tile .value .frac { font-size: 14px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
 .panel-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
 }
@@ -694,6 +696,7 @@ const KPI_DEFINITIONS = {
   weeklycov5080: "Couverture 50%/80% (gaussienne) — recalculée en tirant un nuage gaussien depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. APPROXIMATION pour TSDiff (nuage réel non gaussien, non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
   weeklycrps: "CRPS (gaussien) — score de la distribution complète (précision + incertitude), calculé sur un nuage gaussien recalculé depuis (prédit, IC95). APPROXIMATION pour TSDiff (nuage réel non gaussien) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
+  crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant) ou Naive (hors scope). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
   mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   mape: "MAPE — erreur absolue moyenne en % du prix réel. Comparable entre actifs de prix différents.",
   diracc: "Exactitude directionnelle — % de fois où le modèle a prédit le bon sens (hausse/baisse) par rapport à la veille.",
@@ -713,7 +716,7 @@ const KPI_DEFINITIONS = {
   tcsource: "Source (colonne technique) — 'oos' (rejouée hors-échantillon, backfill inclus) ou 'live' (production ce jour-là). Ne détermine PAS le filtre Vraies/Fausses prédictions ci-dessus (qui lit la colonne séparée real_flag) : certains jours 'oos' (backfills des 8, 11, 13, 14, 17-20/07) sont bien de vraies prédictions, cf. Vraies/Fausses.",
   tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
   tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
-  tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
+  tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2), sur le nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
   tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
   tcsourcefilter: "Vraies vs fausses prédictions — lit real_flag (calculé et stocké côté base, validation/tracking_db.py::compute_real_flag) : vraie ('live') à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), indépendamment de la colonne technique source (des jours ont été rejoués en source='oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14, 17-20/07, mais restent real_flag='live'). Fausse ('oos') : tout ce qui précède, reconstruction de backtest sur la période de validation.",
@@ -1476,10 +1479,10 @@ function computeUsage(rows) {
 
 function renderUsageStats(s, rows) {
   const el = document.getElementById(`simtrades-usage-${s}`);
-  const { usableCount, counterSum, taux } = computeUsage(rows);
+  const { total, usableCount, counterSum, taux } = computeUsage(rows);
 
   const tiles = [
-    { label: 'Utilisation brute', def: 'tcusage', value: String(usableCount), cls: '' },
+    { label: 'Utilisation brute', def: 'tcusage', value: `${usableCount}<span class="frac">/ ${total}</span>`, cls: '' },
     { label: 'Performance simulation (Σ counter)', def: 'tcperf', value: fmt(counterSum, 0),
       cls: counterSum > 0 ? 'pos' : (counterSum < 0 ? 'neg' : '') },
     { label: "Taux d'utilisation", def: 'tcrate', value: fmtPct(taux), cls: '' },
@@ -1490,14 +1493,14 @@ function renderUsageStats(s, rows) {
 }
 
 function validationCardHtml(titleHtml, rowsSubset, threshold, extraClass) {
-  const { total, taux } = computeUsage(rowsSubset);
+  const { total, usableCount, taux } = computeUsage(rowsSubset);
   const pct = taux === null ? null : taux * 100;
   const validated = pct !== null && pct >= threshold;
   const cls = pct === null ? '' : (validated ? 'validated-ok' : 'validated-bad');
   return `<div class="kpi-card ${cls} ${extraClass || ''}">`
     + `<div class="kpi-card-title">${titleHtml}</div>`
     + `<div class="kpi-row"><span>Taux d'utilisation ${infoDot('tcrate')}</span><b>${fmtPct(taux)}</b></div>`
-    + `<div class="kpi-row"><span>n (lignes)</span><b>${total}</b></div>`
+    + `<div class="kpi-row"><span>n (lignes)</span><b>${usableCount} / ${total}</b></div>`
     + `<div class="kpi-row"><span>Verdict</span><b>${pct === null ? '—' : (validated ? 'Validé' : 'Non validé')}</b></div>`
     + `</div>`;
 }
@@ -1576,6 +1579,7 @@ const BREAKDOWN_COLS = [
   { key: 'model', label: 'Modèle' },
   { key: 'horizon', label: 'Horizon' },
   { key: 'RMSE', label: 'RMSE', digits: 4, def: 'rmse' },
+  { key: 'CRPS', label: 'CRPS', digits: 4, def: 'crps' },
   { key: 'rmse_vs_naive', label: 'RMSE / RMSE naïf', digits: 3, render: v => v == null ? '—' : `${fmt(v, 3)}×` },
   { key: 'MAE', label: 'MAE', digits: 4, def: 'mae' },
   { key: 'MAPE', label: 'MAPE (%)', digits: 2, def: 'mape' },
@@ -1635,6 +1639,7 @@ function renderAssetKpis(ticker) {
         const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
         rowsHtml = [
           [`RMSE ${infoDot('rmse')}`, fmt(rec.RMSE, 4)],
+          [`CRPS ${infoDot('crps')}`, rec.CRPS != null ? fmt(rec.CRPS, 4) : '—'],
           [`RMSE / RMSE naïf`, rec.rmse_vs_naive != null ? `${fmt(rec.rmse_vs_naive, 3)}×` : '—'],
           [`MAE ${infoDot('mae')}`, fmt(rec.MAE, 4)],
           [`MAPE ${infoDot('mape')}`, fmt(rec.MAPE, 2) + ' %'],

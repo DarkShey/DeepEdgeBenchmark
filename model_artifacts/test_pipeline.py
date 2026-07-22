@@ -24,9 +24,20 @@ from model_artifacts import pipeline as mp
 MODELS_TO_TEST = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM"]
 EXPECTED_METRICS_KEYS = {
     "RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
-    "pi_width_min", "pi_width_mean", "pi_width_max",
+    "pi_width_min", "pi_width_mean", "pi_width_max", "crps",
     "n_val", "horizon", "asset", "model",
+    # Métriques de skill vs baseline persistence (Point 1 du brief, cf.
+    # _honest_skill_metrics dans pipeline.py) : préexistant, cette liste était restée
+    # périmée depuis leur introduction (commit 33b98cc) -- corrigé au passage, sans
+    # rapport avec le CRPS.
+    "theil_u", "MASE", "change_corr", "dir_acc_change", "dir_acc_ci95",
+    "dir_acc_p_vs_coin", "dm_stat", "dm_p", "dm_lag", "skill_vs_naive",
 }
+
+# CRPS n'est calculé que pour D1 (Gate2 walk-forward existant, cf. crps_kpis.py) et
+# jamais pour Naive (hors scope -- baseline triviale, non demandé) : les autres
+# combinaisons doivent avoir crps=None, jamais un nombre halluciné.
+MODELS_WITH_D1_CRPS = {"ARIMA-GARCH", "SARIMA", "Prophet"}
 
 
 def synthetic_series(n=160, seed=0):
@@ -78,6 +89,15 @@ def test_gate2_passes_and_metrics_have_expected_keys(model_key, horizon_label, s
               ("RMSE", "MAE", "MAPE", "directional_accuracy", "pi_coverage_95",
                "pi_width_min", "pi_width_mean", "pi_width_max"))
     assert payload["pi_width_min"] <= payload["pi_width_mean"] <= payload["pi_width_max"]
+
+    # CRPS (bootstrap des résidus, cf. crps_kpis.py) : seulement pour D1 sur
+    # ARIMA-GARCH/SARIMA/Prophet -- D7, LSTM (calculé côté worker en pipeline réel,
+    # pas ici) et Naive (hors scope) doivent rester à None, jamais halluciné.
+    if horizon_label == "D1" and model_key in MODELS_WITH_D1_CRPS:
+        assert payload["crps"] is not None and np.isfinite(payload["crps"])
+        assert payload["crps"] >= 0
+    else:
+        assert payload["crps"] is None
 
     # series alimente predictions.parquet (cf. write_predictions_parquet) : un point par
     # jour de validation (D1) ou par origine glissante (D7), toutes les listes alignées.

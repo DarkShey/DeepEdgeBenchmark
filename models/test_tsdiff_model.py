@@ -42,6 +42,26 @@ def test_run_tsdiff_contract():
     # prediction interval is well-ordered and brackets the point estimate
     assert np.all(res["lower"] <= res["predictions"])
     assert np.all(res["predictions"] <= res["upper"])
+    # keep_samples=False (défaut, cf. _tiny) : pas de nuage conservé -- non-régression
+    # pour les appelants existants (CLI standalone, next_step_tsdiff, experiments/).
+    assert "ensemble" not in res
+
+
+def test_run_tsdiff_keep_samples_populates_step_clouds():
+    """keep_samples=True conserve le nuage n_samples déjà tiré à chaque pas (au lieu
+    de le réduire à mean/quantiles puis le jeter) -- consommé par
+    model_artifacts/crps_kpis.py pour le CRPS empirique."""
+    td.set_seed(0)
+    s = _series()
+    train, test = s.iloc[:60], s.iloc[60:]
+    res = td.run_tsdiff(train, test, keep_samples=True, **_tiny())
+
+    assert "ensemble" in res
+    assert len(res["ensemble"]) == len(test)
+    for cloud in res["ensemble"]:
+        cloud = np.asarray(cloud, dtype=float)
+        assert cloud.shape == (6,)   # n_samples de _tiny()
+        assert np.all(np.isfinite(cloud))
 
 
 def test_next_step_tsdiff_ordered():

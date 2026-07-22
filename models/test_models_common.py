@@ -71,6 +71,34 @@ def test_point_in_time_no_lookahead(model_module, run_fn, run_kwargs):
     assert truncated == pytest.approx(full_prefix, rel=5e-2, abs=5e-2)
 
 
+def test_run_model_n_ensemble_zero_omits_ensemble_key(run_fn, run_kwargs):
+    """Non-régression : n_ensemble=0 (défaut) reste le comportement actuel exact pour
+    tous les appelants existants (CLI standalone, next_step_*, experiments/) -- pas de
+    clé "ensemble" ajoutée au dict retourné."""
+    train, test = make_train_test()
+
+    result = run_fn(train, test, **run_kwargs)
+
+    assert "ensemble" not in result
+
+
+def test_run_model_n_ensemble_populates_step_clouds(run_fn, run_kwargs):
+    """n_ensemble>0 -- bootstrap des résidus (ARIMA/SARIMA/Prophet) ou MC-Dropout
+    (LSTM) -- doit produire un nuage fini de la bonne taille par pas de validation
+    (cf. model_artifacts/crps_kpis.py, qui consomme result["ensemble"])."""
+    train, test = make_train_test()
+    n_ensemble = 20
+
+    result = run_fn(train, test, n_ensemble=n_ensemble, **run_kwargs)
+
+    assert "ensemble" in result
+    assert len(result["ensemble"]) == len(test)
+    for cloud in result["ensemble"]:
+        cloud = np.asarray(cloud, dtype=float)
+        assert cloud.shape == (n_ensemble,)
+        assert np.all(np.isfinite(cloud))
+
+
 def test_lstm_run_raises_clear_error_when_series_shorter_than_lookback():
     lstm_model = importlib.import_module("lstm_model")
     train = synthetic_series(n=10, seed=0)   # shorter than SEQ_LEN=30
