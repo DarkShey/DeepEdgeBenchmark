@@ -1,0 +1,495 @@
+{
+  "config": {
+    "asset_scales_crps": {
+      "SPY": 2.4487460330481263,
+      "BTC-USD": 569.2611220663352,
+      "ETH-USD": 48.91018608929466,
+      "ZN=F": 0.3130232981434292,
+      "TLT": 0.7164583765119477
+    },
+    "scale_window": [
+      "2015-01-01",
+      "2025-12-05"
+    ],
+    "asset_classes": {
+      "SPY": "index",
+      "ZN=F": "bond",
+      "TLT": "bond",
+      "BTC-USD": "crypto",
+      "ETH-USD": "crypto"
+    },
+    "multiple_comparison_correction": "Holm, across the 6 models, applied SEPARATELY per question (and per calibration level)",
+    "metric": "empirical CRPS (Gneiting & Raftery 2007 eq.20) on the N=500 sample cloud persisted in experiments/samples/ -- NOT the Gaussian approximation pooled_analysis.py used (it had no sample cloud to work with).",
+    "inter_model_ranking_caveat": "Le classement inter-modeles n'est PAS poole ici (hors scope) : asymetrie de protocole TSDiff (train-once-forward, et ici de plus RE-entraine pour cette analyse faute de checkpoint persiste) vs les 5 autres modeles echantillonnes parametriquement depuis leur PI stockee sans reentrainement -- deux origines de nuage differentes, aucun test ne corrige ca.",
+    "power_caveat": "30 origines hebdomadaires chevauchantes -> puissance effective ~n/block_length, pas n. D+7 (~10 origines eparses) est encore plus limite. Regime C (TSDiff weekly-native) est quasi-vide dans la matrice actuelle (daily_duplicate=1 sur la quasi-totalite des lignes, verifie directement) -- question 1 sera 'donnees insuffisantes' pour TSDiff dans la plupart des cas."
+  },
+  "question_1_frequency_B_vs_C": {
+    "ARIMA-GARCH": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    },
+    "SARIMA": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    },
+    "Prophet": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    },
+    "LSTM": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    },
+    "Naive": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    },
+    "TSDiff": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 1
+      },
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    }
+  },
+  "question_2_D7_vs_W1": {
+    "ARIMA-GARCH": {
+      "crps_empirical_metric": {
+        "status": "tested",
+        "n": 35,
+        "effective_n": 11,
+        "mean_diff": -0.29053224253071175,
+        "ci95_lo": -0.6397084750108878,
+        "ci95_hi": 0.09239686501496389,
+        "dm_stat": -1.35075468991999,
+        "dm_lag": 3,
+        "p_value_dm": 0.1856958712956749,
+        "p_value_bootstrap": 0.1688,
+        "significant_dm": false,
+        "significant_bootstrap": false,
+        "concordant": true
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "pas de difference exploitable -- IC contenu dans [-0.6397, 0.0924]",
+      "p_value_bootstrap_holm": 0.6752,
+      "significant_after_holm": false
+    },
+    "SARIMA": {
+      "crps_empirical_metric": {
+        "status": "tested",
+        "n": 35,
+        "effective_n": 11,
+        "mean_diff": -0.30011809306514453,
+        "ci95_lo": -0.6735110456906848,
+        "ci95_hi": 0.09474118175105978,
+        "dm_stat": -1.3647767894249738,
+        "dm_lag": 3,
+        "p_value_dm": 0.1812877216357168,
+        "p_value_bootstrap": 0.1782,
+        "significant_dm": false,
+        "significant_bootstrap": false,
+        "concordant": true
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "pas de difference exploitable -- IC contenu dans [-0.6735, 0.0947]",
+      "p_value_bootstrap_holm": 0.6752,
+      "significant_after_holm": false
+    },
+    "Prophet": {
+      "crps_empirical_metric": {
+        "status": "tested",
+        "n": 35,
+        "effective_n": 11,
+        "mean_diff": -8.901704034844192,
+        "ci95_lo": -16.084200854227806,
+        "ci95_hi": -2.1127097899617873,
+        "dm_stat": -2.1232661488413824,
+        "dm_lag": 3,
+        "p_value_dm": 0.041090732743796196,
+        "p_value_bootstrap": 0.0006,
+        "significant_dm": true,
+        "significant_bootstrap": true,
+        "concordant": true
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "significatif (D+7 (daily) a un cout/erreur plus faible)",
+      "p_value_bootstrap_holm": 0.0029999999999999996,
+      "significant_after_holm": true
+    },
+    "LSTM": {
+      "crps_empirical_metric": {
+        "status": "tested",
+        "n": 40,
+        "effective_n": 13,
+        "mean_diff": -3.1857597906362853,
+        "ci95_lo": -5.124176582526916,
+        "ci95_hi": -1.4635905780919447,
+        "dm_stat": -3.1404770167386076,
+        "dm_lag": 3,
+        "p_value_dm": 0.0032124588907249505,
+        "p_value_bootstrap": 0.0,
+        "significant_dm": true,
+        "significant_bootstrap": true,
+        "concordant": true
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "significatif (D+7 (daily) a un cout/erreur plus faible)",
+      "p_value_bootstrap_holm": 0.0,
+      "significant_after_holm": true
+    },
+    "Naive": {
+      "crps_empirical_metric": {
+        "status": "tested",
+        "n": 35,
+        "effective_n": 11,
+        "mean_diff": -0.2812081521884509,
+        "ci95_lo": -0.6498030392384411,
+        "ci95_hi": 0.08762086866648842,
+        "dm_stat": -1.342035181145583,
+        "dm_lag": 3,
+        "p_value_dm": 0.1884785044468581,
+        "p_value_bootstrap": 0.1802,
+        "significant_dm": false,
+        "significant_bootstrap": false,
+        "concordant": true
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "pas de difference exploitable -- IC contenu dans [-0.6498, 0.0876]",
+      "p_value_bootstrap_holm": 0.6752,
+      "significant_after_holm": false
+    },
+    "TSDiff": {
+      "crps_empirical_metric": {
+        "status": "insufficient_data",
+        "n": 0
+      },
+      "power_note": "D+7 n'a que ~10 origines glissantes eparses par (modele,actif); l'alignement vendredi en retient une fraction -- puissance tres limitee, verdict a lire avec beaucoup de prudence.",
+      "verdict": "donnees insuffisantes",
+      "p_value_bootstrap_holm": 1.0,
+      "significant_after_holm": false
+    }
+  },
+  "question_3_calibration_by_level": {
+    "cov50": {
+      "ARIMA-GARCH": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.5671052631578948,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.05879059350503919,
+        "ci95_lo": 0.02463605823068309,
+        "ci95_hi": 0.09238521836506158,
+        "p_value_bootstrap": 0.0012,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0024,
+        "significant_after_holm": true
+      },
+      "SARIMA": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.6085526315789473,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.08174692049272117,
+        "ci95_lo": 0.04927211646136618,
+        "ci95_hi": 0.114795632698768,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "Prophet": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.4164473684210526,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.10862262038073908,
+        "ci95_lo": -0.1511758118701008,
+        "ci95_hi": -0.06494960806270997,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "LSTM": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1549,
+        "cov_observed_naive": 0.6604260813428018,
+        "n_cluster_aware": 913,
+        "effective_n": 304,
+        "coverage_gap_mean": 0.12376779846659365,
+        "ci95_lo": 0.08105147864184009,
+        "ci95_hi": 0.16319824753559695,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "Naive": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.6144736842105263,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.08846584546472565,
+        "ci95_lo": 0.055991041433370664,
+        "ci95_hi": 0.12262038073908174,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "TSDiff": {
+        "status": "tested",
+        "level": 0.5,
+        "n_raw_pooled_naive": 1395,
+        "cov_observed_naive": 0.5254480286738351,
+        "n_cluster_aware": 819,
+        "effective_n": 273,
+        "coverage_gap_mean": 0.013431013431013432,
+        "ci95_lo": -0.02442002442002442,
+        "ci95_hi": 0.052503052503052504,
+        "p_value_bootstrap": 0.4896,
+        "significant_bootstrap": false,
+        "verdict": "pas de miscalibration exploitable -- IC contenu dans [-0.0244, 0.0525]",
+        "p_value_bootstrap_holm": 0.4896,
+        "significant_after_holm": false
+      }
+    },
+    "cov80": {
+      "ARIMA-GARCH": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.8276315789473684,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.025867861142217202,
+        "ci95_lo": -0.0010218365061590436,
+        "ci95_hi": 0.05163773796192586,
+        "p_value_bootstrap": 0.059,
+        "significant_bootstrap": false,
+        "verdict": "pas de miscalibration exploitable -- IC contenu dans [-0.0010, 0.0516]",
+        "p_value_bootstrap_holm": 0.069,
+        "significant_after_holm": false
+      },
+      "SARIMA": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.8546052631578948,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.032026875699887984,
+        "ci95_lo": 0.002911534154535236,
+        "ci95_hi": 0.058902575587905896,
+        "p_value_bootstrap": 0.032,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.069,
+        "significant_after_holm": false
+      },
+      "Prophet": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.6302631578947369,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.19585666293393056,
+        "ci95_lo": -0.2434490481522956,
+        "ci95_hi": -0.1471444568868981,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "LSTM": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1549,
+        "cov_observed_naive": 0.8637830858618464,
+        "n_cluster_aware": 913,
+        "effective_n": 304,
+        "coverage_gap_mean": 0.04008762322015331,
+        "ci95_lo": 0.005585980284775427,
+        "ci95_hi": 0.07130339539978091,
+        "p_value_bootstrap": 0.023,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.069,
+        "significant_after_holm": false
+      },
+      "Naive": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.8532894736842105,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": 0.0337066069428891,
+        "ci95_lo": 0.006830907054871184,
+        "ci95_hi": 0.06058230683090702,
+        "p_value_bootstrap": 0.0122,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.053,
+        "significant_after_holm": false
+      },
+      "TSDiff": {
+        "status": "tested",
+        "level": 0.8,
+        "n_raw_pooled_naive": 1395,
+        "cov_observed_naive": 0.7598566308243727,
+        "n_cluster_aware": 819,
+        "effective_n": 273,
+        "coverage_gap_mean": -0.04847374847374847,
+        "ci95_lo": -0.08571428571428573,
+        "ci95_hi": -0.011233211233211271,
+        "p_value_bootstrap": 0.0106,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.053,
+        "significant_after_holm": false
+      }
+    },
+    "cov95": {
+      "ARIMA-GARCH": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.9328947368421052,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.01550951847704363,
+        "ci95_lo": -0.03342665173572225,
+        "ci95_hi": 0.0007278835386338628,
+        "p_value_bootstrap": 0.067,
+        "significant_bootstrap": false,
+        "verdict": "pas de miscalibration exploitable -- IC contenu dans [-0.0334, 0.0007]",
+        "p_value_bootstrap_holm": 0.0696,
+        "significant_after_holm": false
+      },
+      "SARIMA": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.9361842105263158,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.02670772676371776,
+        "ci95_lo": -0.04910414333706603,
+        "ci95_hi": -0.005991041433370619,
+        "p_value_bootstrap": 0.0066,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0264,
+        "significant_after_holm": true
+      },
+      "Prophet": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.8013157894736842,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.16556550951847707,
+        "ci95_lo": -0.20251959686450172,
+        "ci95_hi": -0.13027715565509537,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      },
+      "LSTM": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1549,
+        "cov_observed_naive": 0.9406068431245965,
+        "n_cluster_aware": 913,
+        "effective_n": 304,
+        "coverage_gap_mean": -0.025027382256297876,
+        "ci95_lo": -0.050219058050383306,
+        "ci95_hi": -0.003669222343921095,
+        "p_value_bootstrap": 0.0232,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0696,
+        "significant_after_holm": false
+      },
+      "Naive": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1520,
+        "cov_observed_naive": 0.9401315789473684,
+        "n_cluster_aware": 893,
+        "effective_n": 297,
+        "coverage_gap_mean": -0.021668533034714398,
+        "ci95_lo": -0.04351903695408729,
+        "ci95_hi": -0.0015117581187009646,
+        "p_value_bootstrap": 0.0326,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0696,
+        "significant_after_holm": false
+      },
+      "TSDiff": {
+        "status": "tested",
+        "level": 0.95,
+        "n_raw_pooled_naive": 1395,
+        "cov_observed_naive": 0.8781362007168458,
+        "n_cluster_aware": 819,
+        "effective_n": 273,
+        "coverage_gap_mean": -0.07698412698412696,
+        "ci95_lo": -0.10689865689865688,
+        "ci95_hi": -0.04768009768009764,
+        "p_value_bootstrap": 0.0,
+        "significant_bootstrap": true,
+        "verdict": "significativement mal calibre",
+        "p_value_bootstrap_holm": 0.0,
+        "significant_after_holm": true
+      }
+    }
+  }
+}

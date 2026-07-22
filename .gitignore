@@ -1,3 +1,4 @@
+.git.nosync/
 __pycache__/
 *.pyc
 *.pyo
