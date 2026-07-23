@@ -1,7 +1,8 @@
 """
-dashboard_d7_w1.py — mini-dashboard autonome, focalisé sur la seule comparaison
-D+7 (régime A, daily projeté à 7 jours calendaires) vs W+1 (régime C, weekly
-natif), sur les origines-vendredi (BRIEF_dashboard_D7_vs_W1.md).
+dashboard_d7_w1.py — mini-dashboard autonome, focalisé sur la comparaison
+Daily (régime B, modèle daily évalué à son horizon natif W+1) vs Weekly natif
+(régime C), sur l'horizon W+1 -- "pour prévoir 1 semaine, vaut-il mieux un
+modèle daily ou un modèle weekly natif ?" (BRIEF_dashboard_D7_vs_W1.md).
 
 Isolé de tout le reste : ne touche ni Run/dashboard.html, ni model_artifacts/
 generate_dashboard.py, ni le pipeline, ni le schema DB. Lit validation/tracking.db
@@ -10,24 +11,27 @@ models/arima_model.fetch_data, réutilisé tel quel) pour construire la baseline
 random walk. Écrit un unique fichier HTML autonome (aucun CDN/fetch requis pour
 l'ouvrir en file://) + un JSON de traçabilité.
 
-Appariement D+7/W+1 : importé de experiments/matrice_paired_tests.py
-(build_d7_w1_pairs, comparison_4_d7_vs_w1) -- pas recopié -- pour garantir un
-recoupement exact avec matrice_paired_tests.json (comparison_4_d7_vs_w1_friday_aligned).
+Choix de l'appariement (v2) : d'abord tenté sur D+7 (régime A, daily projeté à
+7 jours calendaires) vs W+1 (régime C), apparié uniquement sur les
+origines-vendredi -- ~9-14 paires/cellule, effective_n~3-4, et un écart de
+définition d'horizon (crypto: D+7 cible réellement cutoff+5j, pas +7j). Recablé
+sur regime B (frequence=daily, horizon_type=weekly, horizon_unit=W+1) vs regime C
+(frequence=weekly) : les deux côtés partagent EXACTEMENT le même target_date ET
+le même cutoff_date par construction (vérifié : 100% des paires), donnant 30
+paires/cellule (effective_n~10) sans aucune approximation d'horizon -- plus
+rigoureux, et ça retire l'essentiel des deux pièges méthodologiques (puissance,
+confusion horizon x régime) plutôt que de les afficher en gros encadrés.
 
-Note sur les deux horizons réels : pour les cryptos (BTC-USD/ETH-USD, marché
-7j/7), le D+7 documenté par matrice_paired_tests.verify_d7_definition cible en
-réalité cutoff+5 jours calendaires (pas +7) alors que W+1 cible bien cutoff+7 --
-c'est un écart de définition assumé et documenté ailleurs, pas une erreur ici.
-Chaque côté (D+7 / W+1) est donc évalué contre SA PROPRE baseline RW, calculée
-à SON PROPRE horizon réel (target_date - cutoff_date), jamais contre un horizon
-supposé commun de 7 jours.
+Appariement importé de experiments/matrice_paired_tests.py
+(build_daily_weekly_pairs, comparison_3_daily_vs_weekly) -- pas recopié -- pour
+garantir un recoupement exact avec matrice_paired_tests.json
+(comparison_3_daily_vs_weekly_per_model, filtré horizon_unit=W+1).
 
 Tests : bootstrap par blocs (experiments/paired_test.py, réutilisé, jamais
 réimplémenté), seed fixe. Le test par cellule (badge RMSE) appelle
-comparison_4_d7_vs_w1 tel quel (seed interne = 0, comme matrice_paired_tests.json,
-pour un recoupement exact). Les tests poolés (§2.2 du brief) utilisent --seed
-(défaut 42) -- cette distinction de seed est documentée dans le pied de page de
-la page générée.
+comparison_3_daily_vs_weekly tel quel (seed interne = 0, comme
+matrice_paired_tests.json, pour un recoupement exact). Les tests poolés
+utilisent --seed (défaut 42) -- distinction documentée dans le pied de page.
 
 Usage:
     python -m experiments.dashboard_d7_w1 --db-path validation/tracking.db \\
@@ -57,7 +61,8 @@ from arima_model import fetch_data          # noqa: E402
 ALPHA = 0.05                       # PI @ 95% -> Winkler/interval-score alpha
 BLOCK_LENGTH = mpt.BLOCK_LENGTH     # 3, identique à matrice_paired_tests
 MIN_PAIRED_POINTS = mpt.MIN_PAIRED_POINTS
-CELL_TEST_SEED = 0                 # comparison_4_d7_vs_w1 (importé) ne paramètre pas le seed -> toujours 0
+HORIZON_UNIT = "W+1"                # scope de ce dashboard : "1 semaine" uniquement
+CELL_TEST_SEED = 0                 # comparison_3_daily_vs_weekly (importé) ne paramètre pas le seed -> toujours 0
 MIN_RW_QUANTILE_SAMPLES = 20       # taille mini d'historique de rendements avant de faire confiance aux quantiles 2.5/97.5
 PRICE_HISTORY_START = "2015-01-01"  # yfinance tronque automatiquement si le ticker est plus jeune (ex: ETH-USD ~2017-11)
 
@@ -71,7 +76,7 @@ def winkler_score(y_true, lower, upper, alpha: float = ALPHA):
     rule) : pénalise la largeur de l'intervalle, PLUS une pénalité supplémentaire
     si y_true est en dehors, proportionnelle au dépassement et à 2/alpha.
     Seule métrique probabiliste calculable ici : la DB stocke (y_lower, y_upper),
-    pas d'échantillons -> pas de vrai CRPS (cf. brief §2.1)."""
+    pas d'échantillons -> pas de vrai CRPS."""
     y_true = np.asarray(y_true, dtype=float)
     lower = np.asarray(lower, dtype=float)
     upper = np.asarray(upper, dtype=float)
@@ -85,8 +90,8 @@ def winkler_score(y_true, lower, upper, alpha: float = ALPHA):
 
 
 def _selftest_winkler() -> None:
-    """Brief §6 : "Winkler vérifié sur un cas jouet (borne connue) avant de
-    peupler la page." l=90, u=110 (largeur 20) ; alpha=0.05 -> 2/alpha=40."""
+    """Winkler vérifié sur un cas jouet (borne connue) avant de peupler la page.
+    l=90, u=110 (largeur 20) ; alpha=0.05 -> 2/alpha=40."""
     cases = [
         (100.0, 90.0, 110.0, 20.0),               # dans l'intervalle -> juste la largeur
         (115.0, 90.0, 110.0, 20.0 + 40 * 5.0),     # 5 au-dessus de u -> 220.0
@@ -125,7 +130,7 @@ def rw_pi_bounds(returns_cache: dict, asset: str, price: pd.Series, h_days: int,
                   cutoff_date: str, last_close: float):
     """PI RW @95% : quantiles [2.5%, 97.5%] des rendements cumulés à h_days
     calendaires, calculés sur la fenêtre <= cutoff_date (walk-forward honnête,
-    aucune fuite de future) -- brief §2.2.1."""
+    aucune fuite de future)."""
     key = (asset, int(h_days))
     if key not in returns_cache:
         returns_cache[key] = historical_h_day_returns(price, h_days)
@@ -146,12 +151,12 @@ def load_price_history_cache(assets, end_date: str, refresh: bool = False) -> di
     """Un téléchargement yfinance par actif (via arima_model.fetch_data, réutilisé,
     pas recopié), couvrant toute la fenêtre nécessaire aux quantiles walk-forward
     de tous les cutoffs -- puis mis en cache localement (CSV). Nécessaire pour la
-    reproductibilité (brief §6, "deux runs à seed égal -> mêmes p-values") : les
-    métriques de cellule (RMSE, mean_diff du test par cellule) ne dépendent que de
-    la DB et sont déjà bit-à-bit stables d'un run à l'autre, mais sans ce cache,
-    chaque run refait un appel réseau à Yahoo Finance dont les tout derniers jours
-    peuvent être resservis avec un bruit de dernière décimale d'un appel à l'autre
-    -- assez pour faire dériver le 6e-7e chiffre des quantiles RW (donc du skill
+    reproductibilité ("deux runs à seed égal -> mêmes p-values") : les métriques
+    de cellule (RMSE, mean_diff du test par cellule) ne dépendent que de la DB et
+    sont déjà bit-à-bit stables d'un run à l'autre, mais sans ce cache, chaque run
+    refait un appel réseau à Yahoo Finance dont les tout derniers jours peuvent
+    être resservis avec un bruit de dernière décimale d'un appel à l'autre --
+    assez pour faire dériver le 6e-7e chiffre des quantiles RW (donc du skill
     poolé). Le cache élimine cette source de non-déterminisme externe au seed."""
     PRICE_CACHE_DIR.mkdir(exist_ok=True)
     end = (pd.Timestamp(end_date) + pd.Timedelta(days=5)).strftime("%Y-%m-%d")
@@ -173,19 +178,25 @@ def load_price_history_cache(assets, end_date: str, refresh: bool = False) -> di
     return cache
 
 
-# ── Assemblage des lignes appariées (une ligne = un (model, asset, origine-vendredi)) ──
+# ── Assemblage des lignes appariées (une ligne = un (model, asset, origine W+1)) ──
 def build_enriched_pairs(df: pd.DataFrame, price_cache: dict) -> pd.DataFrame:
-    pairs = mpt.build_d7_w1_pairs(df)
+    pairs = mpt.build_daily_weekly_pairs(df, horizon_units=[HORIZON_UNIT])
     if pairs.empty:
-        raise SystemExit("Aucune paire D+7/W+1 trouvée -- la DB a-t-elle des lignes OOS ?")
+        raise SystemExit(f"Aucune paire daily/weekly trouvée à l'horizon {HORIZON_UNIT} -- "
+                          "la DB a-t-elle des lignes OOS ?")
 
-    pairs["h_d7"] = (pd.to_datetime(pairs["target_date_d7"]) - pd.to_datetime(pairs["cutoff_date"])).dt.days
-    pairs["h_w1"] = (pd.to_datetime(pairs["target_date_w1"]) - pd.to_datetime(pairs["cutoff_date"])).dt.days
+    # côté daily et côté weekly partagent le même target_date (clé de jointure) ET
+    # le même cutoff_date (vérifié 100% identiques) -- un seul horizon réel par
+    # ligne, une seule baseline RW nécessaire (contrairement à D+7/W+1 où les
+    # deux côtés pouvaient cibler des horizons réels différents).
+    assert (pairs["cutoff_date_daily"] == pairs["cutoff_date_weekly"]).all(), \
+        "cutoff_date devrait être identique entre regime B et regime C à horizon natif -- vérifier la jointure"
+    pairs["cutoff_date"] = pairs["cutoff_date_daily"]
+    pairs["h"] = (pd.to_datetime(pairs["target_date"]) - pd.to_datetime(pairs["cutoff_date"])).dt.days
 
-    # RW calculée une fois par (asset, cutoff_date) unique (indépendante du modèle), puis rejointe.
+    # RW calculée une fois par (asset, cutoff_date) unique, puis rejointe.
     uniq = pairs.drop_duplicates(subset=["asset", "cutoff_date"])[
-        ["asset", "cutoff_date", "target_date_d7", "target_date_w1", "h_d7", "h_w1",
-         "last_close_d7", "last_close_w1", "y_true_d7", "y_true_w1"]
+        ["asset", "cutoff_date", "h", "last_close_daily", "y_true_daily"]
     ].copy()
 
     returns_cache: dict = {}
@@ -193,51 +204,42 @@ def build_enriched_pairs(df: pd.DataFrame, price_cache: dict) -> pd.DataFrame:
     for _, r in uniq.iterrows():
         asset = r["asset"]
         price = price_cache[asset]
-        rw_lo_d7, rw_hi_d7 = rw_pi_bounds(returns_cache, asset, price, r["h_d7"], r["cutoff_date"], r["last_close_d7"])
-        rw_lo_w1, rw_hi_w1 = rw_pi_bounds(returns_cache, asset, price, r["h_w1"], r["cutoff_date"], r["last_close_w1"])
+        rw_lo, rw_hi = rw_pi_bounds(returns_cache, asset, price, r["h"], r["cutoff_date"], r["last_close_daily"])
         rw_rows.append({
             "asset": asset, "cutoff_date": r["cutoff_date"],
-            "rw_point_d7": r["last_close_d7"], "rw_lower_d7": rw_lo_d7, "rw_upper_d7": rw_hi_d7,
-            "rw_point_w1": r["last_close_w1"], "rw_lower_w1": rw_lo_w1, "rw_upper_w1": rw_hi_w1,
+            "rw_point": r["last_close_daily"], "rw_lower": rw_lo, "rw_upper": rw_hi,
         })
     rw_df = pd.DataFrame(rw_rows)
     pairs = pairs.merge(rw_df, on=["asset", "cutoff_date"], how="left")
 
-    pairs["winkler_d7"] = winkler_score(pairs["y_true_d7"], pairs["y_lower_d7"], pairs["y_upper_d7"])
-    pairs["winkler_w1"] = winkler_score(pairs["y_true_w1"], pairs["y_lower_w1"], pairs["y_upper_w1"])
-    pairs["rw_sqerror_d7"] = (pairs["rw_point_d7"] - pairs["y_true_d7"]) ** 2
-    pairs["rw_sqerror_w1"] = (pairs["rw_point_w1"] - pairs["y_true_w1"]) ** 2
-    pairs["rw_winkler_d7"] = winkler_score(pairs["y_true_d7"], pairs["rw_lower_d7"], pairs["rw_upper_d7"])
-    pairs["rw_winkler_w1"] = winkler_score(pairs["y_true_w1"], pairs["rw_lower_w1"], pairs["rw_upper_w1"])
+    pairs["winkler_daily"] = winkler_score(pairs["y_true_daily"], pairs["y_lower_daily"], pairs["y_upper_daily"])
+    pairs["winkler_weekly"] = winkler_score(pairs["y_true_weekly"], pairs["y_lower_weekly"], pairs["y_upper_weekly"])
+    pairs["rw_sqerror"] = (pairs["rw_point"] - pairs["y_true_daily"]) ** 2   # y_true_daily == y_true_weekly (même target_date)
+    pairs["rw_winkler"] = winkler_score(pairs["y_true_daily"], pairs["rw_lower"], pairs["rw_upper"])
 
-    pairs["pi_width_d7"] = pairs["y_upper_d7"] - pairs["y_lower_d7"]
-    pairs["pi_width_w1"] = pairs["y_upper_w1"] - pairs["y_lower_w1"]
-    pairs["direction_d7"] = direction_correct(pairs["y_true_d7"], pairs["y_pred_d7"], pairs["last_close_d7"])
-    pairs["direction_w1"] = direction_correct(pairs["y_true_w1"], pairs["y_pred_w1"], pairs["last_close_w1"])
+    pairs["pi_width_daily"] = pairs["y_upper_daily"] - pairs["y_lower_daily"]
+    pairs["pi_width_weekly"] = pairs["y_upper_weekly"] - pairs["y_lower_weekly"]
+    pairs["direction_daily"] = direction_correct(pairs["y_true_daily"], pairs["y_pred_daily"], pairs["last_close_daily"])
+    pairs["direction_weekly"] = direction_correct(pairs["y_true_weekly"], pairs["y_pred_weekly"], pairs["last_close_weekly"])
 
     # skill sans échelle : 1 - score_modèle/scale_RW(asset). scale_RW est la
-    # MEDIANE (pas la valeur à cette origine précise) du score RW de l'actif,
-    # poolée sur les deux côtés (d7+w1) et toutes ses origines -- diviser par le
-    # score RW de l'origine elle-même est numériquement instable : la RW naïve
-    # (persistance) tombe occasionnellement quasi pile sur y_true à une origine
-    # donnée (rw_sqerror proche de 0), ce qui fait exploser le ratio à cette
-    # seule origine et domine toute moyenne poolée (observé : jusqu'à ~1e7 sur
-    # un skill_diff avant ce correctif). La médiane par actif reste "sans
-    # échelle entre actifs" (chaque actif normalisé par SA propre difficulté
-    # RW typique) tout en étant robuste aux origines où la RW a eu de la chance.
-    scale_sqerror = (pd.concat([pairs["rw_sqerror_d7"], pairs["rw_sqerror_w1"]])
-                     .groupby(pd.concat([pairs["asset"], pairs["asset"]]).values).median())
-    scale_winkler = (pd.concat([pairs["rw_winkler_d7"], pairs["rw_winkler_w1"]])
-                     .groupby(pd.concat([pairs["asset"], pairs["asset"]]).values).median())
+    # MEDIANE (pas la valeur à cette origine précise) du score RW de l'actif --
+    # diviser par le score RW de l'origine elle-même est numériquement instable :
+    # la RW naïve (persistance) tombe occasionnellement quasi pile sur y_true à
+    # une origine donnée (rw_sqerror proche de 0), ce qui fait exploser le ratio
+    # à cette seule origine et domine toute moyenne poolée. La médiane par actif
+    # reste "sans échelle entre actifs" tout en étant robuste à ces coups de chance.
+    scale_sqerror = pairs.groupby("asset")["rw_sqerror"].median()
+    scale_winkler = pairs.groupby("asset")["rw_winkler"].median()
     pairs["rw_scale_sqerror"] = pairs["asset"].map(scale_sqerror)
     pairs["rw_scale_winkler"] = pairs["asset"].map(scale_winkler)
 
-    pairs["skill_sqerror_d7"] = 1.0 - pairs["sq_error_d7"] / pairs["rw_scale_sqerror"]
-    pairs["skill_sqerror_w1"] = 1.0 - pairs["sq_error_w1"] / pairs["rw_scale_sqerror"]
-    pairs["skill_winkler_d7"] = 1.0 - pairs["winkler_d7"] / pairs["rw_scale_winkler"]
-    pairs["skill_winkler_w1"] = 1.0 - pairs["winkler_w1"] / pairs["rw_scale_winkler"]
-    pairs["skill_diff_sqerror"] = pairs["skill_sqerror_d7"] - pairs["skill_sqerror_w1"]   # >0 => D+7 relativement meilleur (skill sans échelle)
-    pairs["skill_diff_winkler"] = pairs["skill_winkler_d7"] - pairs["skill_winkler_w1"]
+    pairs["skill_sqerror_daily"] = 1.0 - pairs["sq_error_daily"] / pairs["rw_scale_sqerror"]
+    pairs["skill_sqerror_weekly"] = 1.0 - pairs["sq_error_weekly"] / pairs["rw_scale_sqerror"]
+    pairs["skill_winkler_daily"] = 1.0 - pairs["winkler_daily"] / pairs["rw_scale_winkler"]
+    pairs["skill_winkler_weekly"] = 1.0 - pairs["winkler_weekly"] / pairs["rw_scale_winkler"]
+    pairs["skill_diff_sqerror"] = pairs["skill_sqerror_daily"] - pairs["skill_sqerror_weekly"]   # >0 => daily relativement meilleur
+    pairs["skill_diff_winkler"] = pairs["skill_winkler_daily"] - pairs["skill_winkler_weekly"]
 
     pairs["asset_class"] = pairs["asset"].map(mpt.ASSET_CLASS)
     return pairs
@@ -245,23 +247,24 @@ def build_enriched_pairs(df: pd.DataFrame, price_cache: dict) -> pd.DataFrame:
 
 # ── Panneau 2 : verdict par cellule (model x asset) ──────────────────────────
 def build_cell_table(df: pd.DataFrame, pairs: pd.DataFrame) -> list:
-    cell_tests = {(r["model"], r["asset"]): r for r in mpt.comparison_4_d7_vs_w1(df)}
+    all_tests = mpt.comparison_3_daily_vs_weekly(df)
+    cell_tests = {(r["model"], r["asset"]): r for r in all_tests if r["horizon_unit"] == HORIZON_UNIT}
     rows = []
     for (model, asset), g in pairs.groupby(["model", "asset"]):
         test = cell_tests.get((model, asset), {"status": "insufficient_data", "n": int(len(g))})
         row = {
             "model": model, "asset": asset, "asset_class": mpt.ASSET_CLASS.get(asset, "?"),
             "n": int(len(g)),
-            "rmse_d7": float(np.sqrt(g["sq_error_d7"].mean())),
-            "rmse_w1": float(np.sqrt(g["sq_error_w1"].mean())),
-            "winkler_d7": float(g["winkler_d7"].mean()),
-            "winkler_w1": float(g["winkler_w1"].mean()),
-            "cov95_d7": float(g["in_interval_d7"].mean()),
-            "cov95_w1": float(g["in_interval_w1"].mean()),
-            "pi_width_d7": float(g["pi_width_d7"].mean()),
-            "pi_width_w1": float(g["pi_width_w1"].mean()),
-            "direction_d7": float(g["direction_d7"].mean()),
-            "direction_w1": float(g["direction_w1"].mean()),
+            "rmse_daily": float(np.sqrt(g["sq_error_daily"].mean())),
+            "rmse_weekly": float(np.sqrt(g["sq_error_weekly"].mean())),
+            "winkler_daily": float(g["winkler_daily"].mean()),
+            "winkler_weekly": float(g["winkler_weekly"].mean()),
+            "cov95_daily": float(g["in_interval_daily"].mean()),
+            "cov95_weekly": float(g["in_interval_weekly"].mean()),
+            "pi_width_daily": float(g["pi_width_daily"].mean()),
+            "pi_width_weekly": float(g["pi_width_weekly"].mean()),
+            "direction_daily": float(g["direction_daily"].mean()),
+            "direction_weekly": float(g["direction_weekly"].mean()),
             "status": test.get("status"),
             "verdict": test.get("verdict"),
             "p_value": test.get("p_value"),
@@ -285,9 +288,9 @@ def build_trajectories(pairs: pd.DataFrame) -> dict:
         traj[key] = [
             {
                 "cutoff_date": row["cutoff_date"],
-                "sq_error_diff": float(row["sq_error_d7"] - row["sq_error_w1"]),
-                "pi_width_d7": float(row["pi_width_d7"]),
-                "pi_width_w1": float(row["pi_width_w1"]),
+                "sq_error_diff": float(row["sq_error_daily"] - row["sq_error_weekly"]),
+                "pi_width_daily": float(row["pi_width_daily"]),
+                "pi_width_weekly": float(row["pi_width_weekly"]),
             }
             for _, row in g.iterrows()
         ]
@@ -298,7 +301,7 @@ def build_trajectories(pairs: pd.DataFrame) -> dict:
 def build_pooled_series(pairs: pd.DataFrame) -> pd.DataFrame:
     """Dédoublonne ZN=F & TLT (corrélées, obligations) en UNE contribution
     "taux" par (model, cutoff_date) -- moyenne des deux, pas deux voix
-    indépendantes -- avant tout pooling (brief §2.2 point 2)."""
+    indépendantes -- avant tout pooling."""
     cols = ["model", "asset", "asset_class", "cutoff_date", "skill_diff_sqerror", "skill_diff_winkler"]
     base = pairs[cols].copy()
     bonds = base[base["asset"].isin(BOND_ASSETS)]
@@ -315,8 +318,8 @@ def run_pooled_test(pooled: pd.DataFrame, asset_class: str | None, seed: int) ->
     diffs de skill de tous les (model, asset-ou-taux) contribuant à cette
     origine dans la classe visée (ou toutes classes si asset_class=None) --
     puis bootstrap par blocs (paired_test.py, réutilisé) sur cette série
-    chronologique. "Blocs = origines consécutives" (brief §2.2.3) : chaque
-    élément du vecteur passé au test EST une origine, jamais un mélange."""
+    chronologique. "Blocs = origines consécutives" : chaque élément du vecteur
+    passé au test EST une origine, jamais un mélange."""
     sub = pooled if asset_class is None else pooled[pooled["asset_class"] == asset_class]
     n_contributions = int(len(sub))
     if sub.empty:
@@ -335,8 +338,8 @@ def run_pooled_test(pooled: pd.DataFrame, asset_class: str | None, seed: int) ->
     def _verdict(test):
         if not test["significant_at_05"]:
             return "indistinguishable"
-        # mean_diff > 0 => skill_d7 > skill_w1 en moyenne => D+7 relativement meilleur
-        return "daily_D+7_significantly_better" if test["mean_diff"] > 0 else "weekly_native_significantly_better"
+        # mean_diff > 0 => skill_daily > skill_weekly en moyenne => daily relativement meilleur
+        return "daily_significantly_better" if test["mean_diff"] > 0 else "weekly_native_significantly_better"
 
     return {
         "status": "tested", "n_origins": int(n_origins), "n_contributions": n_contributions,
@@ -366,7 +369,7 @@ def main() -> None:
     p.add_argument("--out", default=str(EXPERIMENTS_DIR / "dashboard_d7_w1.html"))
     p.add_argument("--data-out", default=str(EXPERIMENTS_DIR / "dashboard_d7_w1_data.json"))
     p.add_argument("--seed", type=int, default=42, help="seed du test poolé (le test par cellule recoupe "
-                   "comparison_4_d7_vs_w1, dont le seed interne est fixé à 0, non paramétrable).")
+                   "comparison_3_daily_vs_weekly, dont le seed interne est fixé à 0, non paramétrable).")
     p.add_argument("--refresh-prices", action="store_true",
                    help="force le retéléchargement de l'historique de prix (yfinance) au lieu du cache local "
                         f"({PRICE_CACHE_DIR}) -- par défaut le cache est réutilisé s'il couvre la fenêtre requise.")
@@ -378,16 +381,15 @@ def main() -> None:
     df = mpt.load_predictions(args.db_path)
     print(f"  {len(df)} lignes OOS chargées.")
 
-    d7_check = mpt.verify_d7_definition(df)
-
     assets = sorted(df["asset"].unique())
     max_target = df["target_date"].max()
     print("Construction de la baseline random walk (yfinance, quantiles empiriques) ...")
     price_cache = load_price_history_cache(assets, max_target, refresh=args.refresh_prices)
 
-    print("Appariement D+7/W+1 (origines-vendredi, via matrice_paired_tests.build_d7_w1_pairs) ...")
+    print(f"Appariement daily/weekly à l'horizon natif {HORIZON_UNIT} "
+          "(via matrice_paired_tests.build_daily_weekly_pairs) ...")
     pairs = build_enriched_pairs(df, price_cache)
-    print(f"  {len(pairs)} paires (model, asset, origine-vendredi).")
+    print(f"  {len(pairs)} paires (model, asset, origine).")
 
     cells = build_cell_table(df, pairs)
     trajectories = build_trajectories(pairs)
@@ -399,6 +401,7 @@ def main() -> None:
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "db_path": args.db_path,
+        "horizon_unit": HORIZON_UNIT,
         "seed_pooled": args.seed,
         "seed_cell_tests": CELL_TEST_SEED,
         "block_length": BLOCK_LENGTH,
@@ -407,7 +410,6 @@ def main() -> None:
         "min_rw_quantile_samples": MIN_RW_QUANTILE_SAMPLES,
         "price_history_start": PRICE_HISTORY_START,
         "asset_class_label": ASSET_CLASS_LABEL,
-        "d7_definition_check": d7_check,
         "cells": cells,
         "trajectories": trajectories,
         "aggregate": aggregate,

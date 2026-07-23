@@ -163,22 +163,64 @@ def comparison_2_calibration(df: pd.DataFrame) -> list:
     return results
 
 
+def build_daily_weekly_pairs(df: pd.DataFrame, horizon_units=None) -> pd.DataFrame:
+    """Regime B (frequence=daily, daily-trained model evaluated at its native
+    weekly target) vs regime C (frequence=weekly, weekly-native model), paired
+    by (model, asset, horizon_unit, target_date) -- both sides already share the
+    exact same target_date and cutoff_date by construction (no origin-alignment
+    approximation needed, unlike the D+7/W+1 Friday-restricted join): same
+    protocol inside a model, the cleanest comparison (no cross-model asymmetry).
+    Factored out of comparison_3_daily_vs_weekly so downstream consumers needing
+    the per-origin merged rows share the exact same pairing -- see
+    experiments/dashboard_d7_w1.py."""
+    weekly = df[df["horizon_type"] == "weekly"]
+    if horizon_units is not None:
+        weekly = weekly[weekly["horizon_unit"].isin(horizon_units)]
+    daily_side = weekly[weekly["frequence"] == "daily"]
+    weekly_side = weekly[weekly["frequence"] == "weekly"]
+
+    frames = []
+    for (model, asset, h), g_daily in daily_side.groupby(["model", "asset", "horizon_unit"]):
+        g_weekly = weekly_side[(weekly_side["model"] == model) & (weekly_side["asset"] == asset)
+                               & (weekly_side["horizon_unit"] == h)]
+        merged = g_daily.merge(g_weekly, on="target_date", suffixes=("_daily", "_weekly"))
+        merged.insert(0, "model", model)
+        merged.insert(1, "asset", asset)
+        merged.insert(2, "horizon_unit", h)
+        frames.append(merged)
+    if not frames:
+        return pd.DataFrame(columns=["model", "asset", "horizon_unit", "target_date"])
+    return pd.concat(frames, ignore_index=True)
+
+
 def comparison_3_daily_vs_weekly(df: pd.DataFrame) -> list:
     """Per (model, asset, horizon_unit in W+1/2/3): regime B (frequence=daily)
     vs regime C (frequence=weekly), paired by target_date -- same protocol
     inside a model, the cleanest comparison (no cross-model asymmetry)."""
     results = []
+    pairs = build_daily_weekly_pairs(df)
+
+    # enumerate the same (model, asset, horizon_unit) keys as before the
+    # refactor: only combos present on BOTH sides (a combo missing one side
+    # entirely was silently skipped by the original pivot_table check, not
+    # reported as insufficient_data -- preserved here).
     weekly = df[df["horizon_type"] == "weekly"]
-    for (model, asset, h), g in weekly.groupby(["model", "asset", "horizon_unit"]):
-        piv = g.pivot_table(index="target_date", columns="frequence", values="sq_error").sort_index()
-        if "daily" not in piv.columns or "weekly" not in piv.columns:
-            continue
-        paired = piv[["daily", "weekly"]].dropna()
-        if len(paired) < MIN_PAIRED_POINTS:
+    daily_keys = set(map(tuple, weekly[weekly["frequence"] == "daily"][["model", "asset", "horizon_unit"]]
+                        .drop_duplicates().values))
+    weekly_keys = set(map(tuple, weekly[weekly["frequence"] == "weekly"][["model", "asset", "horizon_unit"]]
+                         .drop_duplicates().values))
+
+    for model, asset, h in sorted(daily_keys & weekly_keys):
+        if pairs.empty:
+            merged = pairs
+        else:
+            merged = pairs[(pairs["model"] == model) & (pairs["asset"] == asset)
+                          & (pairs["horizon_unit"] == h)].sort_values("target_date")
+        if len(merged) < MIN_PAIRED_POINTS:
             results.append({"model": model, "asset": asset, "horizon_unit": h,
-                            "status": "insufficient_data", "n": int(len(paired))})
+                            "status": "insufficient_data", "n": int(len(merged))})
             continue
-        diffs = (paired["daily"] - paired["weekly"]).values   # >0 => weekly-native has lower sq error
+        diffs = (merged["sq_error_daily"] - merged["sq_error_weekly"]).values   # >0 => weekly-native has lower sq error
         test = paired_block_bootstrap_test(diffs, block_length=min(BLOCK_LENGTH, len(diffs)))
         if test["significant_at_05"]:
             verdict = "weekly_native_significantly_better" if test["mean_diff"] > 0 \
