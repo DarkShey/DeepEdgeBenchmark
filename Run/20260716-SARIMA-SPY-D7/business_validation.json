@@ -24,6 +24,10 @@
   "evaluated_at": null,
   "source": "live",
   "daily_duplicate": 0,
+  "frequence": "daily",
+  "horizon_type": "daily",
+  "horizon_unit": "D+7",
+  "real_flag": "live",
   "horizon_trading_days": 7,
   "note": "horizon_trading_days=7 ici (test case business), à ne pas confondre avec les métriques Gate2 D7 de ce même dossier qui portent sur 5 jours de bourse (cf. PIPELINE_HORIZON_LABEL)."
 }
