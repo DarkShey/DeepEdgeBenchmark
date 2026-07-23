@@ -1,0 +1,3071 @@
+{
+  "generated_at": "2026-07-23T12:13:37.235129+00:00",
+  "db_path": "/Users/maeva/Developer/DeepEdgeBenchmark/validation/tracking.db",
+  "seed_pooled": 42,
+  "seed_cell_tests": 0,
+  "block_length": 3,
+  "min_paired_points": 5,
+  "alpha": 0.05,
+  "min_rw_quantile_samples": 20,
+  "price_history_start": "2015-01-01",
+  "asset_class_label": {
+    "crypto": "Crypto",
+    "index": "Actions",
+    "bond": "Obligations (taux)"
+  },
+  "d7_definition_check": {
+    "n_total": 2010,
+    "non_crypto_delta_distribution": {
+      "7": 858,
+      "8": 273,
+      "10": 69
+    },
+    "non_crypto_n_outside_5_10": 0,
+    "crypto_delta_distribution": {
+      "5": 810
+    },
+    "crypto_n_outside_5": 0
+  },
+  "cells": [
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 9,
+      "rmse_d7": 4419.62998087241,
+      "rmse_w1": 5764.191263039041,
+      "winkler_d7": 30001.453134146486,
+      "winkler_w1": 38119.457532509026,
+      "cov95_d7": 0.8888888888888888,
+      "cov95_w1": 0.8888888888888888,
+      "pi_width_d7": 15239.4283918964,
+      "pi_width_w1": 21784.28198559767,
+      "direction_d7": 0.4444444444444444,
+      "direction_w1": 0.3333333333333333,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.2644,
+      "mean_diff": -13692771.749069357,
+      "ci95_lo": -25846161.367523085,
+      "ci95_hi": 4327052.737353901,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 11,
+      "rmse_d7": 114.00542910383784,
+      "rmse_w1": 183.6302579660705,
+      "winkler_d7": 666.3642715984304,
+      "winkler_w1": 1186.8422101778908,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.9090909090909091,
+      "pi_width_d7": 666.3642715984304,
+      "pi_width_w1": 671.1987267703939,
+      "direction_d7": 0.45454545454545453,
+      "direction_w1": 0.36363636363636365,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0366,
+      "mean_diff": -20722.833775535397,
+      "ci95_lo": -44245.90402037494,
+      "ci95_hi": -492.5860653891465,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 13,
+      "rmse_d7": 11.90310077852255,
+      "rmse_w1": 11.503441797250556,
+      "winkler_d7": 54.62248577962892,
+      "winkler_w1": 54.13557242475483,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 54.62248577962892,
+      "pi_width_w1": 54.13557242475483,
+      "direction_d7": 0.6153846153846154,
+      "direction_w1": 0.46153846153846156,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 1.0,
+      "mean_diff": 9.354634960933065,
+      "ci95_lo": -30.010808590194408,
+      "ci95_hi": 42.44122421785949,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.2257638978169203,
+      "rmse_w1": 1.2433264371603452,
+      "winkler_d7": 5.348309071971655,
+      "winkler_w1": 5.279029848060105,
+      "cov95_d7": 0.8461538461538461,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 4.691372936090689,
+      "pi_width_w1": 5.279029848060105,
+      "direction_d7": 0.6923076923076923,
+      "direction_w1": 0.6923076923076923,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.1232,
+      "mean_diff": -0.04336349615050843,
+      "ci95_lo": -0.2300510498592672,
+      "ci95_hi": 0.025248685157315248,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 0.8084770833551004,
+      "rmse_w1": 0.8044824157788727,
+      "winkler_d7": 4.135277551088513,
+      "winkler_w1": 3.671160205148018,
+      "cov95_d7": 0.7692307692307693,
+      "cov95_w1": 0.8461538461538461,
+      "pi_width_d7": 2.5685449070410757,
+      "pi_width_w1": 2.6579292673674937,
+      "direction_d7": 0.6923076923076923,
+      "direction_w1": 0.5384615384615384,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.8984,
+      "mean_diff": 0.0064432370129589795,
+      "ci95_lo": -0.11079330077017763,
+      "ci95_hi": 0.10096284301015153,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "LSTM",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 14,
+      "rmse_d7": 5950.622073580903,
+      "rmse_w1": 11274.619929539498,
+      "winkler_d7": 38553.94350717404,
+      "winkler_w1": 60000.5182711322,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.6428571428571429,
+      "pi_width_d7": 38553.94350717404,
+      "pi_width_w1": 22775.539611818935,
+      "direction_d7": 0.5,
+      "direction_w1": 0.21428571428571427,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0,
+      "mean_diff": -91707151.49298096,
+      "ci95_lo": -152271384.88435343,
+      "ci95_hi": -36177163.99150957,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "LSTM",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 14,
+      "rmse_d7": 221.8317546444661,
+      "rmse_w1": 512.8057064454122,
+      "winkler_d7": 1323.4260392963527,
+      "winkler_w1": 2417.3701936926195,
+      "cov95_d7": 0.9285714285714286,
+      "cov95_w1": 0.7857142857142857,
+      "pi_width_d7": 1218.708882764944,
+      "pi_width_w1": 1329.5387217828404,
+      "direction_d7": 0.42857142857142855,
+      "direction_w1": 0.35714285714285715,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0,
+      "mean_diff": -213760.36519433558,
+      "ci95_lo": -451319.020032838,
+      "ci95_hi": -48629.12744520179,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "LSTM",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 13,
+      "rmse_d7": 16.13591301307757,
+      "rmse_w1": 32.46720456300528,
+      "winkler_d7": 87.40253585907638,
+      "winkler_w1": 321.38773768482594,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.5384615384615384,
+      "pi_width_d7": 87.40253585907638,
+      "pi_width_w1": 67.07144994917932,
+      "direction_d7": 0.3076923076923077,
+      "direction_w1": 0.3076923076923077,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0,
+      "mean_diff": -793.7516833704251,
+      "ci95_lo": -1369.847188479912,
+      "ci95_hi": -389.83510275359936,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "LSTM",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.245793095732643,
+      "rmse_w1": 1.7380540474837896,
+      "winkler_d7": 10.419460984382122,
+      "winkler_w1": 12.584593220306443,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 10.419460984382122,
+      "pi_width_w1": 12.584593220306443,
+      "direction_d7": 0.5384615384615384,
+      "direction_w1": 0.6153846153846154,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.1194,
+      "mean_diff": -1.4688314345996611,
+      "ci95_lo": -4.405389777675737,
+      "ci95_hi": 0.42352323152590543,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "LSTM",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 0.8607640310248706,
+      "rmse_w1": 1.1873679178750123,
+      "winkler_d7": 5.699078161783979,
+      "winkler_w1": 6.004464586456237,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 5.699078161783979,
+      "pi_width_w1": 6.004464586456237,
+      "direction_d7": 0.5384615384615384,
+      "direction_w1": 0.6923076923076923,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.0622,
+      "mean_diff": -0.6689278552926575,
+      "ci95_lo": -1.8591844327747822,
+      "ci95_hi": 0.02722396532772109,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Naive",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 9,
+      "rmse_d7": 4350.056714641781,
+      "rmse_w1": 5472.462756178944,
+      "winkler_d7": 21985.14839412305,
+      "winkler_w1": 43130.57264256225,
+      "cov95_d7": 0.8888888888888888,
+      "cov95_w1": 0.7777777777777778,
+      "pi_width_d7": 16274.153652181363,
+      "pi_width_w1": 11346.027196313551,
+      "direction_d7": 0.0,
+      "direction_w1": 0.0,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3616,
+      "mean_diff": -11024855.197165595,
+      "ci95_lo": -22305463.293568928,
+      "ci95_hi": 7262325.59217665,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "Naive",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 11,
+      "rmse_d7": 117.23784998434088,
+      "rmse_w1": 183.66380824636204,
+      "winkler_d7": 806.7738135920898,
+      "winkler_w1": 869.6836331687483,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.9090909090909091,
+      "pi_width_d7": 806.7738135920898,
+      "pi_width_w1": 862.8899003788549,
+      "direction_d7": 0.09090909090909091,
+      "direction_w1": 0.0,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0424,
+      "mean_diff": -19987.68099060563,
+      "ci95_lo": -44394.09888545626,
+      "ci95_hi": -205.8105885919239,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "Naive",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 13,
+      "rmse_d7": 11.502314279606704,
+      "rmse_w1": 10.772526383527858,
+      "winkler_d7": 46.38192890843026,
+      "winkler_w1": 40.23116215364158,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.9230769230769231,
+      "pi_width_d7": 46.38192890843026,
+      "pi_width_w1": 32.18162078777043,
+      "direction_d7": 0.0,
+      "direction_w1": 0.0,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.8812,
+      "mean_diff": 16.255909103040512,
+      "ci95_lo": -13.374763879925013,
+      "ci95_hi": 33.22763070722039,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Naive",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.2321235334496374,
+      "rmse_w1": 1.2705116382292723,
+      "winkler_d7": 6.55813018147956,
+      "winkler_w1": 7.89959011172046,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 6.55813018147956,
+      "pi_width_w1": 7.89959011172046,
+      "direction_d7": 0.07692307692307693,
+      "direction_w1": 0.0,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0352,
+      "mean_diff": -0.09607142119560964,
+      "ci95_lo": -0.2467060977337846,
+      "ci95_hi": -0.0017363337683491409,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Naive",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 0.8108919923869687,
+      "rmse_w1": 0.8170752285356218,
+      "winkler_d7": 3.479821488050981,
+      "winkler_w1": 3.496040121259059,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 3.479821488050981,
+      "pi_width_w1": 3.496040121259059,
+      "direction_d7": 0.0,
+      "direction_w1": 0.0,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3452,
+      "mean_diff": -0.01006610576923077,
+      "ci95_lo": -0.07256610576923077,
+      "ci95_hi": 0.015174278846153846,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Prophet",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 9,
+      "rmse_d7": 7804.852032902636,
+      "rmse_w1": 40877.09286649686,
+      "winkler_d7": 48072.34877791208,
+      "winkler_w1": 758059.8523003081,
+      "cov95_d7": 0.6666666666666666,
+      "cov95_w1": 0.0,
+      "pi_width_d7": 17770.984327976126,
+      "pi_width_w1": 44457.25933619359,
+      "direction_d7": 0.4444444444444444,
+      "direction_w1": 0.3333333333333333,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0,
+      "mean_diff": -1610021005.9607038,
+      "ci95_lo": -2001857377.452313,
+      "ci95_hi": -1171077733.4640896,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "Prophet",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 11,
+      "rmse_d7": 392.10274377327124,
+      "rmse_w1": 1174.6208847072385,
+      "winkler_d7": 2277.636303113402,
+      "winkler_w1": 3163.7855282937335,
+      "cov95_d7": 0.8181818181818182,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 1154.7401980058742,
+      "pi_width_w1": 3163.7855282937335,
+      "direction_d7": 0.36363636363636365,
+      "direction_w1": 0.2727272727272727,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0,
+      "mean_diff": -1225989.661115888,
+      "ci95_lo": -1614408.636465305,
+      "ci95_hi": -857430.0852371273,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "Prophet",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 13,
+      "rmse_d7": 20.35011182934213,
+      "rmse_w1": 28.15168614031772,
+      "winkler_d7": 238.08719877933825,
+      "winkler_w1": 231.69758918676283,
+      "cov95_d7": 0.5384615384615384,
+      "cov95_w1": 0.6153846153846154,
+      "pi_width_d7": 31.803608203977667,
+      "pi_width_w1": 56.25297021861315,
+      "direction_d7": 0.46153846153846156,
+      "direction_w1": 0.15384615384615385,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0356,
+      "mean_diff": -378.3903810762266,
+      "ci95_lo": -848.2808681617167,
+      "ci95_hi": -24.683847712001434,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Prophet",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.779722062655503,
+      "rmse_w1": 1.8249076772179302,
+      "winkler_d7": 9.842607320495413,
+      "winkler_w1": 17.040856009721026,
+      "cov95_d7": 0.8461538461538461,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 4.686856439027058,
+      "pi_width_w1": 17.040856009721026,
+      "direction_d7": 0.5384615384615384,
+      "direction_w1": 0.6923076923076923,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 1.0,
+      "mean_diff": -0.16287741006618267,
+      "ci95_lo": -3.1759535164576924,
+      "ci95_hi": 3.0010097280531594,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "Prophet",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.2446773188031655,
+      "rmse_w1": 1.8108326382217046,
+      "winkler_d7": 12.897668010143294,
+      "winkler_w1": 6.343715853140886,
+      "cov95_d7": 0.6153846153846154,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 2.20315483685653,
+      "pi_width_w1": 6.343715853140886,
+      "direction_d7": 0.5384615384615384,
+      "direction_w1": 0.38461538461538464,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.2312,
+      "mean_diff": -1.7298932157059423,
+      "ci95_lo": -4.0256514836584705,
+      "ci95_hi": 0.8790704704316138,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 9,
+      "rmse_d7": 4322.750356408312,
+      "rmse_w1": 5399.180875176721,
+      "winkler_d7": 22730.698968631914,
+      "winkler_w1": 42254.509979076516,
+      "cov95_d7": 0.8888888888888888,
+      "cov95_w1": 0.7777777777777778,
+      "pi_width_d7": 15557.641034665217,
+      "pi_width_w1": 11371.736508467864,
+      "direction_d7": 0.5555555555555556,
+      "direction_w1": 0.7777777777777778,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3616,
+      "mean_diff": -10464983.479045881,
+      "ci95_lo": -21532528.835497156,
+      "ci95_hi": 6849280.921801974,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 11,
+      "rmse_d7": 122.41865984300537,
+      "rmse_w1": 189.08081170853248,
+      "winkler_d7": 876.5669387779435,
+      "winkler_w1": 908.652188608141,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.9090909090909091,
+      "pi_width_d7": 876.5669387779435,
+      "pi_width_w1": 867.1398176184971,
+      "direction_d7": 0.36363636363636365,
+      "direction_w1": 0.2727272727272727,
+      "status": "tested",
+      "verdict": "daily_D+7_significantly_better",
+      "p_value": 0.0434,
+      "mean_diff": -20765.22507860006,
+      "ci95_lo": -43918.48880300587,
+      "ci95_hi": -136.4431969281997,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 13,
+      "rmse_d7": 11.580884558201861,
+      "rmse_w1": 10.883473827946347,
+      "winkler_d7": 45.32045528182004,
+      "winkler_w1": 38.64597342065879,
+      "cov95_d7": 0.9230769230769231,
+      "cov95_w1": 0.9230769230769231,
+      "pi_width_d7": 44.99198883380245,
+      "pi_width_w1": 32.323992886154706,
+      "direction_d7": 0.6153846153846154,
+      "direction_w1": 0.38461538461538464,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 1.0,
+      "mean_diff": 15.666884586805171,
+      "ci95_lo": -27.101160468805016,
+      "ci95_hi": 48.72062139467252,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 1.2393352204494363,
+      "rmse_w1": 1.2675927143225896,
+      "winkler_d7": 6.366511869726703,
+      "winkler_w1": 7.853909643704806,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 6.366511869726703,
+      "pi_width_w1": 7.853909643704806,
+      "direction_d7": 0.3076923076923077,
+      "direction_w1": 0.5384615384615384,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.4236,
+      "mean_diff": -0.07083950075725681,
+      "ci95_lo": -0.24772154228113308,
+      "ci95_hi": 0.04631690178920199,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 13,
+      "rmse_d7": 0.7952654818192688,
+      "rmse_w1": 0.8149470404604103,
+      "winkler_d7": 3.284394829293094,
+      "winkler_w1": 3.4730082954858754,
+      "cov95_d7": 1.0,
+      "cov95_w1": 1.0,
+      "pi_width_d7": 3.284394829293094,
+      "pi_width_w1": 3.4730082954858754,
+      "direction_d7": 0.38461538461538464,
+      "direction_w1": 0.46153846153846156,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.483,
+      "mean_diff": -0.031691492181947806,
+      "ci95_lo": -0.15665156688958234,
+      "ci95_hi": 0.0420462603057474,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "TSDiff",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 9,
+      "rmse_d7": 4052.4316832917057,
+      "rmse_w1": 5357.655912470894,
+      "winkler_d7": 22536.540147569456,
+      "winkler_w1": 33273.43567708332,
+      "cov95_d7": 0.8888888888888888,
+      "cov95_w1": 0.8888888888888888,
+      "pi_width_d7": 11945.193793402774,
+      "pi_width_w1": 22661.719531249997,
+      "direction_d7": 0.7777777777777778,
+      "direction_w1": 0.5555555555555556,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3616,
+      "mean_diff": -12282274.32868788,
+      "ci95_lo": -28702197.704783123,
+      "ci95_hi": 10733921.454708524,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "TSDiff",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 12,
+      "rmse_d7": 222.0167094766874,
+      "rmse_w1": 247.41952202307408,
+      "winkler_d7": 1059.2429011027023,
+      "winkler_w1": 1679.138241068522,
+      "cov95_d7": 0.9166666666666666,
+      "cov95_w1": 0.75,
+      "pi_width_d7": 506.75984853108713,
+      "pi_width_w1": 690.0357325236004,
+      "direction_d7": 0.5,
+      "direction_w1": 0.5833333333333334,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.745,
+      "mean_diff": -11925.000591270626,
+      "ci95_lo": -39175.07327650612,
+      "ci95_hi": 28361.909197915345,
+      "effective_n": 4,
+      "block_length": 3
+    },
+    {
+      "model": "TSDiff",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 11,
+      "rmse_d7": 24.341830526755803,
+      "rmse_w1": 12.203310612516988,
+      "winkler_d7": 137.4875317660247,
+      "winkler_w1": 80.7314702814273,
+      "cov95_d7": 0.8181818181818182,
+      "cov95_w1": 0.8181818181818182,
+      "pi_width_d7": 94.37464447021485,
+      "pi_width_w1": 26.22612138227983,
+      "direction_d7": 0.5454545454545454,
+      "direction_w1": 0.45454545454545453,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3264,
+      "mean_diff": 443.603923487731,
+      "ci95_lo": -64.36430229483679,
+      "ci95_hi": 863.663192149929,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "TSDiff",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 11,
+      "rmse_d7": 1.5533971147854784,
+      "rmse_w1": 1.4563997504246498,
+      "winkler_d7": 9.564417630975894,
+      "winkler_w1": 14.051788052645607,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.6363636363636364,
+      "pi_width_d7": 9.564417630975894,
+      "pi_width_w1": 2.9269995949485095,
+      "direction_d7": 0.8181818181818182,
+      "direction_w1": 0.18181818181818182,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.6948,
+      "mean_diff": 0.2919423631868664,
+      "ci95_lo": -1.58944136638787,
+      "ci95_hi": 3.0487951762889596,
+      "effective_n": 3,
+      "block_length": 3
+    },
+    {
+      "model": "TSDiff",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 12,
+      "rmse_d7": 0.8282461187752637,
+      "rmse_w1": 0.8146311288691834,
+      "winkler_d7": 5.662205791473391,
+      "winkler_w1": 8.437420606613122,
+      "cov95_d7": 1.0,
+      "cov95_w1": 0.5833333333333334,
+      "pi_width_d7": 5.662205791473391,
+      "pi_width_w1": 1.4002412954966228,
+      "direction_d7": 0.75,
+      "direction_w1": 0.5833333333333334,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 1.0,
+      "mean_diff": 0.022367757143607985,
+      "ci95_lo": -0.5761227546754526,
+      "ci95_hi": 0.4195762158778962,
+      "effective_n": 4,
+      "block_length": 3
+    }
+  ],
+  "trajectories": {
+    "ARIMA-GARCH||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -33855847.34497966,
+        "pi_width_d7": 17389.63718273156,
+        "pi_width_w1": 26199.16352392391
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 3444007.638556978,
+        "pi_width_d7": 19667.81446466856,
+        "pi_width_w1": 24091.26420579828
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 39704916.189209625,
+        "pi_width_d7": 16003.614587111391,
+        "pi_width_w1": 21060.59351464497
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -22791602.157155387,
+        "pi_width_d7": 14945.04655571861,
+        "pi_width_w1": 20644.507612370384
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -13964557.4550503,
+        "pi_width_d7": 13013.040826144039,
+        "pi_width_w1": 19327.54844982327
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 4315567.471091135,
+        "pi_width_d7": 15268.852106173174,
+        "pi_width_w1": 22194.824498987742
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -13288109.485286612,
+        "pi_width_d7": 14944.6804001977,
+        "pi_width_w1": 21273.37329087894
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -73359268.84860374,
+        "pi_width_d7": 13328.959629271558,
+        "pi_width_w1": 19833.066619440295
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -13440051.749406258,
+        "pi_width_d7": 12593.209775050986,
+        "pi_width_w1": 21434.19615451125
+      }
+    ],
+    "ARIMA-GARCH||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -59434.47133280963,
+        "pi_width_d7": 1019.8368014069983,
+        "pi_width_w1": 923.7051391287619
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 6978.675692517656,
+        "pi_width_d7": 650.6332894744824,
+        "pi_width_w1": 669.6670709825014
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 37871.386650517845,
+        "pi_width_d7": 706.8953289366707,
+        "pi_width_w1": 630.2143031911442
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -29849.05358715364,
+        "pi_width_d7": 650.440177200192,
+        "pi_width_w1": 693.9658841254429
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -18355.427332859996,
+        "pi_width_d7": 603.5676877077924,
+        "pi_width_w1": 652.3340003273327
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 2953.0136485740386,
+        "pi_width_d7": 668.7725812580068,
+        "pi_width_w1": 734.0940240865773
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -5364.785811241839,
+        "pi_width_d7": 651.3886284660325,
+        "pi_width_w1": 714.8504487480868
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -15696.922106363083,
+        "pi_width_d7": 754.4782695991073,
+        "pi_width_w1": 682.1388495811113
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -138075.34106939862,
+        "pi_width_d7": 563.8265991125743,
+        "pi_width_w1": 606.5907427169104
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 2812.500455788181,
+        "pi_width_d7": 487.5288920383307,
+        "pi_width_w1": 528.0797409077616
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -11790.7467384603,
+        "pi_width_d7": 572.6387323825461,
+        "pi_width_w1": 547.5457906787033
+      }
+    ],
+    "ARIMA-GARCH||SPY": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -2.2078988995022937,
+        "pi_width_d7": 53.24957813469166,
+        "pi_width_w1": 35.25404573932133
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -2.5396003303328882,
+        "pi_width_d7": 57.71760721439989,
+        "pi_width_w1": 31.032509179159774
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -24.036852891335393,
+        "pi_width_d7": 53.28753079263254,
+        "pi_width_w1": 39.57320750133886
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 5.90038318575165,
+        "pi_width_d7": 47.97401405664482,
+        "pi_width_w1": 35.175004797777774
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -52.44456681070031,
+        "pi_width_d7": 51.456953486010434,
+        "pi_width_w1": 53.99248303315983
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -60.21889007865133,
+        "pi_width_d7": 54.27846623848109,
+        "pi_width_w1": 58.798488553737116
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": -20.146988005689604,
+        "pi_width_d7": 59.723871422461116,
+        "pi_width_w1": 93.35067565936743
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -7.851675247118116,
+        "pi_width_d7": 53.33722482388896,
+        "pi_width_w1": 77.30692826461302
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -3.494752242972618,
+        "pi_width_d7": 53.80710633895501,
+        "pi_width_w1": 67.2736313191026
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -19.481465092185346,
+        "pi_width_d7": 50.65434528341302,
+        "pi_width_w1": 49.51062243444005
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 143.6332737286241,
+        "pi_width_d7": 48.108401922325584,
+        "pi_width_w1": 49.12980276277324
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -46.667060239624824,
+        "pi_width_d7": 66.67865156921732,
+        "pi_width_w1": 52.21285900120904
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 211.16634741586682,
+        "pi_width_d7": 59.81856385205447,
+        "pi_width_w1": 61.15218327581272
+      }
+    ],
+    "ARIMA-GARCH||TLT": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.15605061774594764,
+        "pi_width_d7": 4.3768514320724705,
+        "pi_width_w1": 4.60310534129809
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.012434997115993163,
+        "pi_width_d7": 4.147995495097831,
+        "pi_width_w1": 4.573820954066761
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.0011056356284378146,
+        "pi_width_d7": 4.841047375108062,
+        "pi_width_w1": 5.426720056710181
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -0.17132722344158058,
+        "pi_width_d7": 4.303128236285232,
+        "pi_width_w1": 5.456314079210287
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -0.34200308182539546,
+        "pi_width_d7": 4.747064794133436,
+        "pi_width_w1": 6.121350431860961
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.03479956793851616,
+        "pi_width_d7": 5.442231310923631,
+        "pi_width_w1": 5.8309486280556655
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": -0.102073770358065,
+        "pi_width_d7": 5.00651467214233,
+        "pi_width_w1": 5.348601514557529
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 0.038987235126536124,
+        "pi_width_d7": 4.63465362821249,
+        "pi_width_w1": 5.146155393626259
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -0.011818510782954483,
+        "pi_width_d7": 4.4836159169261975,
+        "pi_width_w1": 4.912914288601016
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.6331250329296568,
+        "pi_width_d7": 4.904085296636609,
+        "pi_width_w1": 5.4820889954336
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.09223025728078035,
+        "pi_width_d7": 4.661745347716604,
+        "pi_width_w1": 5.47234322985004
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -0.6199842360827351,
+        "pi_width_d7": 4.6978177413695335,
+        "pi_width_w1": 5.19065366998565
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 0.9809980946275667,
+        "pi_width_d7": 4.741096922554533,
+        "pi_width_w1": 5.062371441525329
+      }
+    ],
+    "ARIMA-GARCH||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.016188343975687594,
+        "pi_width_d7": 2.072010352340655,
+        "pi_width_w1": 2.117482756368986
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -0.07251818615410444,
+        "pi_width_d7": 2.0092128678756325,
+        "pi_width_w1": 2.0411340994209297
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.06552053518701195,
+        "pi_width_d7": 2.163807807810983,
+        "pi_width_w1": 2.396853026327932
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.2168550926257471,
+        "pi_width_d7": 2.130514020317648,
+        "pi_width_w1": 2.478298815791078
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.1071727860315595,
+        "pi_width_d7": 2.4673365554783118,
+        "pi_width_w1": 2.901821643176163
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.13090409507952827,
+        "pi_width_d7": 2.6634764895753165,
+        "pi_width_w1": 2.871477313075701
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.053026623163646425,
+        "pi_width_d7": 2.809686452562133,
+        "pi_width_w1": 2.8248234020660163
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.05565510577425237,
+        "pi_width_d7": 2.6691038806209377,
+        "pi_width_w1": 2.7443961558548864
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.027284526568431833,
+        "pi_width_d7": 2.6787070586600237,
+        "pi_width_w1": 2.6212290550898416
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.555772478681788,
+        "pi_width_d7": 3.00566351732418,
+        "pi_width_w1": 2.9070099331826924
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.0007259057297528404,
+        "pi_width_d7": 2.972184574565574,
+        "pi_width_w1": 3.0131506997758777
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 0.20135882487511214,
+        "pi_width_d7": 2.8286765577524733,
+        "pi_width_w1": 2.9030064337943458
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.01895219350649091,
+        "pi_width_d7": 2.9207036566501188,
+        "pi_width_w1": 2.732397141852971
+      }
+    ],
+    "LSTM||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -164006228.53070068,
+        "pi_width_d7": 37720.86330821703,
+        "pi_width_w1": 29162.22707109514
+      },
+      {
+        "cutoff_date": "2026-01-30",
+        "sq_error_diff": -231424210.71673584,
+        "pi_width_d7": 37502.75291638402,
+        "pi_width_w1": 31105.756861650065
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -139811240.8557129,
+        "pi_width_d7": 41742.61802871546,
+        "pi_width_w1": 20480.379508336337
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -283061622.6171875,
+        "pi_width_d7": 29335.922942992904,
+        "pi_width_w1": 30726.78281778787
+      },
+      {
+        "cutoff_date": "2026-03-06",
+        "sq_error_diff": -46476367.99609375,
+        "pi_width_d7": 42571.39723020897,
+        "pi_width_w1": 16278.308479104686
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -114300951.70385742,
+        "pi_width_d7": 42790.993176265154,
+        "pi_width_w1": 31780.006570620877
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -30698413.330810547,
+        "pi_width_d7": 25821.51168021426,
+        "pi_width_w1": 16452.81332899147
+      },
+      {
+        "cutoff_date": "2026-04-10",
+        "sq_error_diff": -117267797.41992188,
+        "pi_width_d7": 25796.890359018696,
+        "pi_width_w1": 21521.94901618435
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -46421826.435791016,
+        "pi_width_d7": 63930.199396199365,
+        "pi_width_w1": 19788.644357342477
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 3957402.975341797,
+        "pi_width_d7": 56166.458562566986,
+        "pi_width_w1": 16673.764093197824
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": 499374.2021484375,
+        "pi_width_d7": 55695.438540898554,
+        "pi_width_w1": 21620.879197187634
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -33531944.91304016,
+        "pi_width_d7": 30444.078779167357,
+        "pi_width_w1": 23285.529547022103
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -61665135.82305908,
+        "pi_width_d7": 25159.855854627298,
+        "pi_width_w1": 23113.66177193192
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -19691157.736312866,
+        "pi_width_d7": 25076.228324960422,
+        "pi_width_w1": 16866.851945012342
+      }
+    ],
+    "LSTM||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -213975.45804935694,
+        "pi_width_d7": 1135.8841712626454,
+        "pi_width_w1": 1757.9504191150481
+      },
+      {
+        "cutoff_date": "2026-01-30",
+        "sq_error_diff": -745876.4730448723,
+        "pi_width_d7": 1206.4699630842642,
+        "pi_width_w1": 1767.8077051602995
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -883129.9376340061,
+        "pi_width_d7": 1233.5540130739228,
+        "pi_width_w1": 1796.9664877032337
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -526448.5147485733,
+        "pi_width_d7": 1202.9628848851241,
+        "pi_width_w1": 1776.7993173053198
+      },
+      {
+        "cutoff_date": "2026-03-06",
+        "sq_error_diff": -23919.385885834694,
+        "pi_width_d7": 1164.6911075750177,
+        "pi_width_w1": 1131.913475452253
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 9670.103101730347,
+        "pi_width_d7": 1198.4234836681755,
+        "pi_width_w1": 1260.2661935209226
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -12419.337127685547,
+        "pi_width_d7": 1209.1246174908138,
+        "pi_width_w1": 1153.000364838088
+      },
+      {
+        "cutoff_date": "2026-04-10",
+        "sq_error_diff": -76443.05668503046,
+        "pi_width_d7": 1172.7793134549183,
+        "pi_width_w1": 1159.4286786441817
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -885.6353645324707,
+        "pi_width_d7": 1248.9867385881016,
+        "pi_width_w1": 1113.6939930980318
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 15460.335843801498,
+        "pi_width_d7": 1148.9257066716075,
+        "pi_width_w1": 1168.528105716443
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -91087.53800243139,
+        "pi_width_d7": 1098.1866053599624,
+        "pi_width_w1": 1117.7064266049174
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -409664.655637607,
+        "pi_width_d7": 1689.0900440936757,
+        "pi_width_w1": 1129.4027123464964
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -33276.777274116874,
+        "pi_width_d7": 1112.1289059090034,
+        "pi_width_w1": 1141.9641361075062
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -648.7822121828794,
+        "pi_width_d7": 1240.7168035919842,
+        "pi_width_w1": 1138.114089347021
+      }
+    ],
+    "LSTM||SPY": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -22.712515387684107,
+        "pi_width_d7": 87.94196759870033,
+        "pi_width_w1": 60.5323542001795
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -116.54670745134354,
+        "pi_width_d7": 87.53009491397097,
+        "pi_width_w1": 61.43476293396566
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 11.338370349258184,
+        "pi_width_d7": 88.0329435348242,
+        "pi_width_w1": 62.45221232173844
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -395.46802742406726,
+        "pi_width_d7": 85.71836563573447,
+        "pi_width_w1": 61.547846402156665
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -1423.6927494518459,
+        "pi_width_d7": 91.04069025024751,
+        "pi_width_w1": 62.37251947219033
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -1836.053175881505,
+        "pi_width_d7": 86.24927995208782,
+        "pi_width_w1": 62.54945892273372
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": -1213.111713051796,
+        "pi_width_d7": 91.82043516567478,
+        "pi_width_w1": 53.57929234346739
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -1174.8224623054266,
+        "pi_width_d7": 93.00259342073832,
+        "pi_width_w1": 59.403477184046096
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -1657.0221706815064,
+        "pi_width_d7": 82.41931236878304,
+        "pi_width_w1": 61.31830023932116
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -1721.2239973247051,
+        "pi_width_d7": 82.24523960534611,
+        "pi_width_w1": 60.36308844288351
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -5.0311999917030334,
+        "pi_width_d7": 93.49907496940295,
+        "pi_width_w1": 62.13882597568454
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -647.9687433242798,
+        "pi_width_d7": 83.7607626551594,
+        "pi_width_w1": 103.33838472762591
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -116.45679188892245,
+        "pi_width_d7": 82.97220609732312,
+        "pi_width_w1": 100.89832617333832
+      }
+    ],
+    "LSTM||TLT": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.06617014721268788,
+        "pi_width_d7": 12.87393217390786,
+        "pi_width_w1": 12.184422429691779
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 3.8658604687079787,
+        "pi_width_d7": 12.476476792059913,
+        "pi_width_w1": 13.647751508256732
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.8879793389351107,
+        "pi_width_d7": 12.517341968145018,
+        "pi_width_w1": 11.922692558486062
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.3222430129535496,
+        "pi_width_d7": 13.580103023201872,
+        "pi_width_w1": 11.392414890716537
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -8.221389925049152,
+        "pi_width_d7": 9.227634527419355,
+        "pi_width_w1": 11.870256470911727
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -10.077902454009745,
+        "pi_width_d7": 8.984534220653416,
+        "pi_width_w1": 13.52095256952316
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.06011582678183913,
+        "pi_width_d7": 8.865183705618563,
+        "pi_width_w1": 11.636748611048318
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -1.761639381700661,
+        "pi_width_d7": 9.00167463838099,
+        "pi_width_w1": 13.513920445598302
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -6.796935823105741,
+        "pi_width_d7": 9.02012862927424,
+        "pi_width_w1": 13.544210017072373
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": 1.6274159761960618,
+        "pi_width_d7": 9.205781980435603,
+        "pi_width_w1": 11.096172543706956
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -0.08787493477575481,
+        "pi_width_d7": 8.686126931853181,
+        "pi_width_w1": 12.314746217593125
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -0.1790581620298326,
+        "pi_width_d7": 12.318741467271508,
+        "pi_width_w1": 13.475810876929387
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 1.3325475545134395,
+        "pi_width_d7": 8.69533273874606,
+        "pi_width_w1": 13.47961272444931
+      }
+    ],
+    "LSTM||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.10871780145680532,
+        "pi_width_d7": 6.375295450119694,
+        "pi_width_w1": 6.202969323928613
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.7621447736746632,
+        "pi_width_d7": 7.018642546612057,
+        "pi_width_w1": 5.878918122779879
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.4638569189119153,
+        "pi_width_d7": 7.000463843562699,
+        "pi_width_w1": 6.144252419822578
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.09383393597090617,
+        "pi_width_d7": 7.048648575423442,
+        "pi_width_w1": 6.267877269627604
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -2.8015935169532895,
+        "pi_width_d7": 6.297231596283211,
+        "pi_width_w1": 6.290695439340823
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -5.195893289812375,
+        "pi_width_d7": 4.778683074980137,
+        "pi_width_w1": 6.208403277350897
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.07283095270395279,
+        "pi_width_d7": 4.699780639427871,
+        "pi_width_w1": 5.741474229652653
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.055252380669116974,
+        "pi_width_d7": 4.8406048919905516,
+        "pi_width_w1": 5.825468693914388
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -0.9859493400435895,
+        "pi_width_d7": 4.726537426995492,
+        "pi_width_w1": 5.710334217143469
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": 0.3538086600601673,
+        "pi_width_d7": 4.5999354018024405,
+        "pi_width_w1": 5.660155581148871
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -1.2653167517273687,
+        "pi_width_d7": 4.617782391484553,
+        "pi_width_w1": 5.934796452924445
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 0.025538875896018,
+        "pi_width_d7": 7.448947879377641,
+        "pi_width_w1": 6.166461290071993
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.055353155359625816,
+        "pi_width_d7": 4.6354623851319445,
+        "pi_width_w1": 6.026233306224867
+      }
+    ],
+    "Naive||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -28791021.12689209,
+        "pi_width_d7": 15943.88919272789,
+        "pi_width_w1": 11134.113799877057
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 5190547.221008301,
+        "pi_width_d7": 16476.82064361203,
+        "pi_width_w1": 11366.65272106522
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 41548602.40814209,
+        "pi_width_d7": 16405.14032729363,
+        "pi_width_w1": 11354.025792257424
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -16887784.800109863,
+        "pi_width_d7": 16422.34656086006,
+        "pi_width_w1": 11339.087054291245
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -19002616.936523438,
+        "pi_width_d7": 16356.279760072437,
+        "pi_width_w1": 11341.384196010542
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 2295920.8252563477,
+        "pi_width_d7": 16330.901467487362,
+        "pi_width_w1": 11371.487428449298
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -10212696.557617188,
+        "pi_width_d7": 16241.787038271461,
+        "pi_width_w1": 11348.898213399516
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -67423812.79335022,
+        "pi_width_d7": 16146.364866126241,
+        "pi_width_w1": 11351.17191567755
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -5940835.014404297,
+        "pi_width_d7": 16143.853013181157,
+        "pi_width_w1": 11507.4236457941
+      }
+    ],
+    "Naive||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -60094.990980923176,
+        "pi_width_d7": 893.640659553439,
+        "pi_width_w1": 862.9565700392604
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 2619.266113266349,
+        "pi_width_d7": 903.7114297924954,
+        "pi_width_w1": 869.8582591547593
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 36012.549062371254,
+        "pi_width_d7": 898.8190158031966,
+        "pi_width_w1": 868.0256469258384
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -23631.5305416584,
+        "pi_width_d7": 895.198572163351,
+        "pi_width_w1": 865.3699449910748
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -18017.856220304966,
+        "pi_width_d7": 889.6513041081607,
+        "pi_width_w1": 863.9759565985323
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 3453.8894895911217,
+        "pi_width_d7": 885.8494161901835,
+        "pi_width_w1": 862.5814448304563
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -3136.5522810418784,
+        "pi_width_d7": 515.8546589778189,
+        "pi_width_w1": 860.6459325795693
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -15900.669923007488,
+        "pi_width_d7": 878.2965019065105,
+        "pi_width_w1": 859.8323254754432
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -145763.90342067182,
+        "pi_width_d7": 872.8420927304685,
+        "pi_width_w1": 858.4987985280586
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 14358.151834666776,
+        "pi_width_d7": 372.33389690572244,
+        "pi_width_w1": 860.483192018165
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -9762.844028949738,
+        "pi_width_d7": 868.31440138164,
+        "pi_width_w1": 859.560833026246
+      }
+    ],
+    "Naive||SPY": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.000332709401845932,
+        "pi_width_d7": 45.79243327889708,
+        "pi_width_w1": 31.740481120010827
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 45.85742747113363,
+        "pi_width_w1": 31.689114397297544
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -57.95609751343727,
+        "pi_width_d7": 45.999355319654796,
+        "pi_width_w1": 31.701192109347176
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -0.001652594655752182,
+        "pi_width_d7": 45.75976555272223,
+        "pi_width_w1": 31.67344652589736
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 45.826469080380775,
+        "pi_width_w1": 31.754517479410197
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 46.08515472207591,
+        "pi_width_w1": 31.79418970145298
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 46.71482763087806,
+        "pi_width_w1": 32.52604503391922
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 46.814222382043226,
+        "pi_width_w1": 32.50177692563443
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 46.68754825888686,
+        "pi_width_w1": 32.562123285871394
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": 48.65285301208496,
+        "pi_width_d7": 46.545912749972786,
+        "pi_width_w1": 32.519394416547584
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 46.59165531515373,
+        "pi_width_w1": 32.530493424683755
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -26.88845966756344,
+        "pi_width_d7": 47.04840353156396,
+        "pi_width_w1": 32.63582335833166
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 247.5205078125,
+        "pi_width_d7": 47.24190051623032,
+        "pi_width_w1": 32.73247246261144
+      }
+    ],
+    "Naive||TLT": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.004819874477107078,
+        "pi_width_d7": 6.708392803127651,
+        "pi_width_w1": 7.946206493895829
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 6.645799293583451,
+        "pi_width_w1": 7.934379816661647
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -0.09220781922340393,
+        "pi_width_d7": 6.649609457499707,
+        "pi_width_w1": 7.935254363606845
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.03242819523438811,
+        "pi_width_d7": 6.631742444098165,
+        "pi_width_w1": 7.924979155446806
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 6.591677359000414,
+        "pi_width_w1": 7.924048575700908
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -8.56578117236495e-06,
+        "pi_width_d7": 6.603124738098728,
+        "pi_width_w1": 7.918053406539684
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 6.549689010887192,
+        "pi_width_w1": 7.895524765473738
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -1.1826574336737394e-05,
+        "pi_width_d7": 6.5326209600452785,
+        "pi_width_w1": 7.8890267289372105
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 6.497213097247283,
+        "pi_width_w1": 7.877026050983432
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.5292876530438662,
+        "pi_width_d7": 6.51028349356838,
+        "pi_width_w1": 7.874858318574184
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 6.473438573746563,
+        "pi_width_w1": 7.870171280890958
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -0.8517021511215717,
+        "pi_width_d7": 6.439758411420172,
+        "pi_width_w1": 7.858026863915256
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 0.18704147048993036,
+        "pi_width_d7": 6.422342716911288,
+        "pi_width_w1": 7.847115631739484
+      }
+    ],
+    "Naive||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.542053608996696,
+        "pi_width_w1": 3.505903634937198
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.5217700525893747,
+        "pi_width_w1": 3.5003286572908507
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -0.013671875,
+        "pi_width_d7": 3.499772984818918,
+        "pi_width_w1": 3.501786961356288
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.5021219831261305,
+        "pi_width_w1": 3.4993060718233835
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.497949313129368,
+        "pi_width_w1": 3.5029718499199305
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.4811647499147966,
+        "pi_width_w1": 3.5020213727363227
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.48445182072129,
+        "pi_width_w1": 3.496079184986826
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.4580117960794325,
+        "pi_width_w1": 3.4939504850670176
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.4478037921716975,
+        "pi_width_w1": 3.4892415797450838
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.314453125,
+        "pi_width_d7": 3.469496486976709,
+        "pi_width_w1": 3.4923054345073012
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.0,
+        "pi_width_d7": 3.4484213550233562,
+        "pi_width_w1": 3.4920898507224933
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 0.279296875,
+        "pi_width_d7": 3.435121065713872,
+        "pi_width_w1": 3.488874840667876
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.08203125,
+        "pi_width_d7": 3.4495403354011103,
+        "pi_width_w1": 3.4836616526071964
+      }
+    ],
+    "Prophet||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -1198720614.4407363,
+        "pi_width_d7": 16604.696867028164,
+        "pi_width_w1": 33404.04310672055
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -2422105591.6784315,
+        "pi_width_d7": 17605.160291073524,
+        "pi_width_w1": 36505.15763486635
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -2089291880.586353,
+        "pi_width_d7": 18020.121613083174,
+        "pi_width_w1": 41771.35405429057
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -2085082751.394988,
+        "pi_width_d7": 17083.073218042453,
+        "pi_width_w1": 44075.276007725246
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -1285115179.830206,
+        "pi_width_d7": 16617.450642107346,
+        "pi_width_w1": 46507.856692196234
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -887250184.9324318,
+        "pi_width_d7": 19452.68516400765,
+        "pi_width_w1": 46877.6554961192
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -949170494.5751795,
+        "pi_width_d7": 18120.983305194415,
+        "pi_width_w1": 50161.00792398845
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -1872661191.4118829,
+        "pi_width_d7": 17672.11352008884,
+        "pi_width_w1": 49172.93813771238
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -1700791164.7961237,
+        "pi_width_d7": 18762.57433115958,
+        "pi_width_w1": 51640.044972123316
+      }
+    ],
+    "Prophet||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -302971.8591365055,
+        "pi_width_d7": 1281.6079511656899,
+        "pi_width_w1": 3049.714565003299
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -1735058.7364879411,
+        "pi_width_d7": 1234.748451314611,
+        "pi_width_w1": 3066.7555861608325
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -1488425.2080534876,
+        "pi_width_d7": 1131.890586122841,
+        "pi_width_w1": 3189.3241033432205
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -1422763.6427452306,
+        "pi_width_d7": 1404.3378868554908,
+        "pi_width_w1": 3100.3912361829116
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -313052.9089346323,
+        "pi_width_d7": 970.2515844377413,
+        "pi_width_w1": 3010.4786446784756
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -638515.1586418044,
+        "pi_width_d7": 1013.3731429684526,
+        "pi_width_w1": 3191.2901108391598
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -1038128.7195916953,
+        "pi_width_d7": 1049.9030294200832,
+        "pi_width_w1": 3213.124833996757
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -1287366.4009523974,
+        "pi_width_d7": 1101.4433886948154,
+        "pi_width_w1": 3084.909760781461
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -2337322.9223159514,
+        "pi_width_d7": 1231.6599071174232,
+        "pi_width_w1": 3280.3821107547733
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -1375070.8520795682,
+        "pi_width_d7": 1236.6795170674322,
+        "pi_width_w1": 3305.402028334561
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -1547209.8633355529,
+        "pi_width_d7": 1046.2467329000337,
+        "pi_width_w1": 3309.8678311556164
+      }
+    ],
+    "Prophet||SPY": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -33.150735276955565,
+        "pi_width_d7": 29.62149792621858,
+        "pi_width_w1": 56.380413110615564
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 170.17989843624275,
+        "pi_width_d7": 29.24370360766784,
+        "pi_width_w1": 52.039508361583444
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 86.77819131889063,
+        "pi_width_d7": 29.394968661644498,
+        "pi_width_w1": 56.915298630626125
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -239.30743818036768,
+        "pi_width_d7": 28.517880462397443,
+        "pi_width_w1": 52.42594098696304
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -870.5298539111709,
+        "pi_width_d7": 28.884931945167978,
+        "pi_width_w1": 54.74787018228301
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -1781.4621407785962,
+        "pi_width_d7": 28.735135796482837,
+        "pi_width_w1": 54.13600986593099
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 1391.8110312006581,
+        "pi_width_d7": 33.12628507310012,
+        "pi_width_w1": 54.9694971122849
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 248.92158372449967,
+        "pi_width_d7": 34.7419613922217,
+        "pi_width_w1": 57.38373586271905
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -1246.6231958734359,
+        "pi_width_d7": 34.48826059693329,
+        "pi_width_w1": 56.4579017890519
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -1966.8994579283183,
+        "pi_width_d7": 32.84558954595627,
+        "pi_width_w1": 61.36012538003183
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 63.908594490079,
+        "pi_width_d7": 33.480796188290014,
+        "pi_width_w1": 57.49503712314299
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -590.4131314062472,
+        "pi_width_d7": 34.422980280359866,
+        "pi_width_w1": 56.40102872199441
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -152.28829980622382,
+        "pi_width_d7": 35.94291517526926,
+        "pi_width_w1": 60.57624571474366
+      }
+    ],
+    "Prophet||TLT": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.2637443099868127,
+        "pi_width_d7": 4.920772705196171,
+        "pi_width_w1": 17.075706872816824
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -7.400181856845886,
+        "pi_width_d7": 4.933649822300609,
+        "pi_width_w1": 17.639507507126723
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -10.051734826981848,
+        "pi_width_d7": 4.912702966329746,
+        "pi_width_w1": 16.469784454481186
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -2.2988713531898446,
+        "pi_width_d7": 4.7739429879371755,
+        "pi_width_w1": 17.417917422519054
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 12.847839273349347,
+        "pi_width_d7": 4.80069790388103,
+        "pi_width_w1": 16.633017344717345
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 2.6012521148014303,
+        "pi_width_d7": 4.729944807928391,
+        "pi_width_w1": 16.85231834868287
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 1.0279494954927815,
+        "pi_width_d7": 4.9503025853076394,
+        "pi_width_w1": 17.893649499195135
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -1.1257327740394114,
+        "pi_width_d7": 4.606855849685246,
+        "pi_width_w1": 17.13767410304915
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 1.6509490405178378,
+        "pi_width_d7": 4.714868348139589,
+        "pi_width_w1": 17.61422712581424
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": 1.8540437730418746,
+        "pi_width_d7": 4.467340743294997,
+        "pi_width_w1": 17.06313853209221
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.47764094041632793,
+        "pi_width_d7": 4.386752671416389,
+        "pi_width_w1": 17.372835340708008
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -1.2539039477546456,
+        "pi_width_d7": 4.364288861246763,
+        "pi_width_w1": 16.57312933392693
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.18291189968152602,
+        "pi_width_d7": 4.367013454688006,
+        "pi_width_w1": 15.788222241243645
+      }
+    ],
+    "Prophet||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.004351020314160267,
+        "pi_width_d7": 2.272006376842583,
+        "pi_width_w1": 6.40897525351015
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.9291669502867306,
+        "pi_width_d7": 2.136713196917327,
+        "pi_width_w1": 6.542580703689978
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -0.0800371545921541,
+        "pi_width_d7": 2.1254097065782105,
+        "pi_width_w1": 6.357704269769613
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 1.120228188836041,
+        "pi_width_d7": 2.206438154939832,
+        "pi_width_w1": 6.193009649847113
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 3.3430797681851785,
+        "pi_width_d7": 2.1912463886714733,
+        "pi_width_w1": 6.387661486152112
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -0.21110039790307766,
+        "pi_width_d7": 2.134641447154621,
+        "pi_width_w1": 6.589358231773701
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.056933426770297946,
+        "pi_width_d7": 2.2921964095754674,
+        "pi_width_w1": 6.334527133632946
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -1.3791033714706553,
+        "pi_width_d7": 2.2250197047387417,
+        "pi_width_w1": 6.170622781844585
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -6.9392134992460095,
+        "pi_width_d7": 2.2334617243833605,
+        "pi_width_w1": 6.131720982213864
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -1.9867041023188696,
+        "pi_width_d7": 2.2922756971826033,
+        "pi_width_w1": 6.06775564496084
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -6.904473688577702,
+        "pi_width_d7": 2.14832456951018,
+        "pi_width_w1": 6.252222334813297
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -3.998284631653378,
+        "pi_width_d7": 2.188885185418698,
+        "pi_width_w1": 6.411551784930708
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -6.4434543128078134,
+        "pi_width_d7": 2.194394317221793,
+        "pi_width_w1": 6.620615833692611
+      }
+    ],
+    "SARIMA||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -25804081.34412922,
+        "pi_width_d7": 15312.965862561396,
+        "pi_width_w1": 11177.307251351885
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 4465007.534285926,
+        "pi_width_d7": 15808.382623170757,
+        "pi_width_w1": 11392.950760173699
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 40129068.99081439,
+        "pi_width_d7": 15665.053232553262,
+        "pi_width_w1": 11379.023870874771
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -16440469.65679312,
+        "pi_width_d7": 15702.324189771694,
+        "pi_width_w1": 11365.037453260127
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -18352284.774417907,
+        "pi_width_d7": 15640.25758433505,
+        "pi_width_w1": 11366.207739572303
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 2635820.965917347,
+        "pi_width_d7": 15576.308622448123,
+        "pi_width_w1": 11394.362805594516
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -9322362.09413949,
+        "pi_width_d7": 15426.738265954104,
+        "pi_width_w1": 11372.132272690971
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -65384388.24005766,
+        "pi_width_d7": 15390.4893338283,
+        "pi_width_w1": 11370.728671590012
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -6111162.692893209,
+        "pi_width_d7": 15496.249597364273,
+        "pi_width_w1": 11527.877751102482
+      }
+    ],
+    "SARIMA||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -66731.06767748887,
+        "pi_width_d7": 882.4276999659705,
+        "pi_width_w1": 866.9707189121846
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 3645.2766011468893,
+        "pi_width_d7": 893.5749275823728,
+        "pi_width_w1": 872.605202324296
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 34214.31921326993,
+        "pi_width_d7": 893.9198128413939,
+        "pi_width_w1": 871.5102473250668
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -27873.142204531086,
+        "pi_width_d7": 883.79885559384,
+        "pi_width_w1": 868.857582812697
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -13486.391719478925,
+        "pi_width_d7": 892.5569370258509,
+        "pi_width_w1": 867.4302252978603
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 6867.026751733478,
+        "pi_width_d7": 872.9990253790547,
+        "pi_width_w1": 866.051551304834
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -2018.7790802882728,
+        "pi_width_d7": 867.2983147273235,
+        "pi_width_w1": 863.27400297658
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -14038.609408246266,
+        "pi_width_d7": 866.9397871680701,
+        "pi_width_w1": 863.2390553753594
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -141786.6401084174,
+        "pi_width_d7": 861.1378557804537,
+        "pi_width_w1": 861.8066637174059
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 4467.31836603751,
+        "pi_width_d7": 865.2978321028213,
+        "pi_width_w1": 876.6993226976047
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -11676.786598337634,
+        "pi_width_d7": 862.2852783902279,
+        "pi_width_w1": 860.0934210595797
+      }
+    ],
+    "SARIMA||SPY": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 2.280033130042546,
+        "pi_width_d7": 44.253177163097234,
+        "pi_width_w1": 31.825552068349452
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -20.09854394611952,
+        "pi_width_d7": 44.24536514075771,
+        "pi_width_w1": 31.77358473102231
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -44.99573706993336,
+        "pi_width_d7": 44.54642930472869,
+        "pi_width_w1": 31.78001142552762
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -12.73296623557934,
+        "pi_width_d7": 44.12728169676984,
+        "pi_width_w1": 31.74721589052183
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -28.803266208444143,
+        "pi_width_d7": 44.199682081754645,
+        "pi_width_w1": 31.826698210123595
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -38.03720548899685,
+        "pi_width_d7": 44.5894625468236,
+        "pi_width_w1": 31.865255520953042
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": -26.5845251769419,
+        "pi_width_d7": 45.48734876548633,
+        "pi_width_w1": 32.702069242254765
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -11.667951538071254,
+        "pi_width_d7": 45.51592720595295,
+        "pi_width_w1": 32.68546690556832
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -5.533731878168166,
+        "pi_width_d7": 45.460136761298145,
+        "pi_width_w1": 32.768243666146645
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": 27.534095168781334,
+        "pi_width_d7": 45.33870340371186,
+        "pi_width_w1": 32.7299228108252
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 81.36732584698655,
+        "pi_width_d7": 45.348240418744126,
+        "pi_width_w1": 32.75221916235637
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -39.063043999866586,
+        "pi_width_d7": 45.769871003338494,
+        "pi_width_w1": 32.834254148804575
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 320.00501702477794,
+        "pi_width_d7": 46.01422934696825,
+        "pi_width_w1": 32.92141373755749
+      }
+    ],
+    "SARIMA||TLT": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.04724447826172318,
+        "pi_width_d7": 6.580125931924869,
+        "pi_width_w1": 7.899792801424553
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -0.10271185240787606,
+        "pi_width_d7": 6.510348718685634,
+        "pi_width_w1": 7.887795344651522
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.0454433014600097,
+        "pi_width_d7": 6.377931225721113,
+        "pi_width_w1": 7.889213910321814
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 0.21468472228380087,
+        "pi_width_d7": 6.501455177130595,
+        "pi_width_w1": 7.878743519788117
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -0.1399764912934205,
+        "pi_width_d7": 6.473232924733054,
+        "pi_width_w1": 7.8785065625828565
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.08347511204141266,
+        "pi_width_d7": 6.329045323985014,
+        "pi_width_w1": 7.873126731869263
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.00232194965847754,
+        "pi_width_d7": 6.352526971565027,
+        "pi_width_w1": 7.850431704128312
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.042019443098864184,
+        "pi_width_d7": 6.211663235097234,
+        "pi_width_w1": 7.84390288645838
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.2403938667674046,
+        "pi_width_d7": 6.404465724404702,
+        "pi_width_w1": 7.831930331420892
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.6150228335329129,
+        "pi_width_d7": 6.308297480731909,
+        "pi_width_w1": 7.828881828304787
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.025897582085919427,
+        "pi_width_d7": 6.164756774573988,
+        "pi_width_w1": 7.824515294852631
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -0.9757987328667898,
+        "pi_width_d7": 6.334290478563503,
+        "pi_width_w1": 7.812211943236207
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 0.29515483079677685,
+        "pi_width_d7": 6.216514339330502,
+        "pi_width_w1": 7.80177250912314
+      }
+    ],
+    "SARIMA||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -0.013091692085496306,
+        "pi_width_d7": 3.3585056677386547,
+        "pi_width_w1": 3.4822616136565046
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 0.011460940020199484,
+        "pi_width_d7": 3.3390060512615207,
+        "pi_width_w1": 3.4766036202291843
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.09545843028365386,
+        "pi_width_d7": 3.3296033222258075,
+        "pi_width_w1": 3.4780785081491103
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -0.18159784345087582,
+        "pi_width_d7": 3.329390844029035,
+        "pi_width_w1": 3.475082067493304
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.13821803754009665,
+        "pi_width_d7": 3.313222671424569,
+        "pi_width_w1": 3.4796236862068497
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.03816483980834551,
+        "pi_width_d7": 3.303735436510067,
+        "pi_width_w1": 3.4785960878554647
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.06866777076459046,
+        "pi_width_d7": 3.295870559833702,
+        "pi_width_w1": 3.4729770524445485
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.05564510301585329,
+        "pi_width_d7": 3.2774359366038084,
+        "pi_width_w1": 3.470758039505455
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -0.0010793130914792393,
+        "pi_width_d7": 3.230476923651679,
+        "pi_width_w1": 3.466522083811924
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.6726652292618835,
+        "pi_width_d7": 3.2904415376069664,
+        "pi_width_w1": 3.4700301380449616
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -0.02376240006763497,
+        "pi_width_d7": 3.2139785036600585,
+        "pi_width_w1": 3.470132803704388
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 0.25817406181254926,
+        "pi_width_d7": 3.2164757693710158,
+        "pi_width_w1": 3.466870627919832
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.07429189762153354,
+        "pi_width_d7": 3.1989895568933377,
+        "pi_width_w1": 3.461571512294853
+      }
+    ],
+    "TSDiff||BTC-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": -15419973.083496094,
+        "pi_width_d7": 15600.332812499997,
+        "pi_width_w1": 25296.308398437497
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 7694547.527053833,
+        "pi_width_d7": 16409.357617187496,
+        "pi_width_w1": 20328.238281249985
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 35902683.88153076,
+        "pi_width_d7": 16874.580175781244,
+        "pi_width_w1": 37976.41796875
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -2545199.703063965,
+        "pi_width_d7": 11835.048144531254,
+        "pi_width_w1": 16202.283398437503
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -18856254.497131348,
+        "pi_width_d7": 11422.461425781243,
+        "pi_width_w1": 17672.21787109375
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -23870942.1640625,
+        "pi_width_d7": 11559.869726562494,
+        "pi_width_w1": 25534.625585937494
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -7097891.410705566,
+        "pi_width_d7": 7506.345507812497,
+        "pi_width_w1": 22551.325781249994
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -73278512.06080627,
+        "pi_width_d7": 9156.662304687503,
+        "pi_width_w1": 19150.422070312496
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -13068927.447509766,
+        "pi_width_d7": 7142.086425781243,
+        "pi_width_w1": 19243.636425781246
+      }
+    ],
+    "TSDiff||ETH-USD": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 4574.985218048096,
+        "pi_width_d7": 570.8536865234378,
+        "pi_width_w1": 872.6848999023437
+      },
+      {
+        "cutoff_date": "2026-01-30",
+        "sq_error_diff": -44852.08817958832,
+        "pi_width_d7": 576.6234863281247,
+        "pi_width_w1": 845.2868408203126
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 35581.904402300715,
+        "pi_width_d7": 723.8979858398434,
+        "pi_width_w1": 525.4884368896485
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": 95324.51992188394,
+        "pi_width_d7": 694.3965148925779,
+        "pi_width_w1": 970.5450500488282
+      },
+      {
+        "cutoff_date": "2026-03-06",
+        "sq_error_diff": 22599.706356838346,
+        "pi_width_d7": 599.0903656005858,
+        "pi_width_w1": 777.4933319091795
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -4818.128998696804,
+        "pi_width_d7": 450.40559692382817,
+        "pi_width_w1": 467.44954833984366
+      },
+      {
+        "cutoff_date": "2026-04-03",
+        "sq_error_diff": -28840.231295898557,
+        "pi_width_d7": 506.0333099365232,
+        "pi_width_w1": 579.2431823730469
+      },
+      {
+        "cutoff_date": "2026-04-10",
+        "sq_error_diff": -19065.326837062836,
+        "pi_width_d7": 488.3353576660156,
+        "pi_width_w1": 828.4288696289063
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -19414.714190244675,
+        "pi_width_d7": 485.15155029296875,
+        "pi_width_w1": 781.5504638671875
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": -5676.056241750717,
+        "pi_width_d7": 312.75863037109366,
+        "pi_width_w1": 595.7356597900391
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": -149343.1058009863,
+        "pi_width_d7": 393.97240295410165,
+        "pi_width_w1": 590.4010284423825
+      },
+      {
+        "cutoff_date": "2026-06-19",
+        "sq_error_diff": -29171.47145009041,
+        "pi_width_d7": 279.5992950439454,
+        "pi_width_w1": 446.1214782714844
+      }
+    ],
+    "TSDiff||SPY": [
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -5.117735233157873,
+        "pi_width_d7": 109.20977630615232,
+        "pi_width_w1": 28.131604003906205
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": -19.33134800195694,
+        "pi_width_d7": 96.88270111083989,
+        "pi_width_w1": 23.216252136230537
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -110.18299060687423,
+        "pi_width_d7": 80.96316680908205,
+        "pi_width_w1": 34.48834991455078
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -99.44362783059478,
+        "pi_width_d7": 106.2710189819336,
+        "pi_width_w1": 27.679917907714753
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": -204.58245903253555,
+        "pi_width_d7": 107.58262481689451,
+        "pi_width_w1": 34.10702972412105
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 510.0537273325026,
+        "pi_width_d7": 125.81387329101562,
+        "pi_width_w1": 21.5117996215821
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -32.865939896553755,
+        "pi_width_d7": 89.4948440551758,
+        "pi_width_w1": 30.056050109863236
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 14.43393588066101,
+        "pi_width_d7": 49.5743469238281,
+        "pi_width_w1": 18.802514648437523
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 231.67509147524834,
+        "pi_width_d7": 35.83212738037105,
+        "pi_width_w1": 19.61072845458989
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 359.74679189920425,
+        "pi_width_d7": 108.58707275390634,
+        "pi_width_w1": 23.03895721435549
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": 4235.257712379098,
+        "pi_width_d7": 127.90953674316404,
+        "pi_width_w1": 27.844131469726562
+      }
+    ],
+    "TSDiff||TLT": [
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 1.5257724607363343,
+        "pi_width_d7": 11.512791824340809,
+        "pi_width_w1": 3.23621063232423
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.472774252993986,
+        "pi_width_d7": 13.442091560363764,
+        "pi_width_w1": 2.7523017883300724
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -4.683262955688406,
+        "pi_width_d7": 7.883847236633301,
+        "pi_width_w1": 3.6870950698852454
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 8.552354008425027,
+        "pi_width_d7": 9.739066696166987,
+        "pi_width_w1": 2.998483467102048
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 5.651723301038146,
+        "pi_width_d7": 10.773933792114263,
+        "pi_width_w1": 2.727593231201169
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.18976230471162125,
+        "pi_width_d7": 8.815484237670887,
+        "pi_width_w1": 2.705106163024908
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.0884836872573942,
+        "pi_width_d7": 10.199778938293449,
+        "pi_width_w1": 3.214620780944827
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -4.675322706985753,
+        "pi_width_d7": 7.920061683654794,
+        "pi_width_w1": 2.267177200317377
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.1354656144976616,
+        "pi_width_d7": 9.064009094238287,
+        "pi_width_w1": 2.710152816772464
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -0.921431212045718,
+        "pi_width_d7": 9.944872283935553,
+        "pi_width_w1": 3.1068828582763786
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -2.947985385369975,
+        "pi_width_d7": 5.912656593322751,
+        "pi_width_w1": 2.7913715362548857
+      }
+    ],
+    "TSDiff||ZN=F": [
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 1.9034246462979354,
+        "pi_width_d7": 7.219970703125,
+        "pi_width_w1": 1.2635911941528235
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": 1.1614651008858345,
+        "pi_width_d7": 6.628441619873058,
+        "pi_width_w1": 1.402944564819336
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.0010630127508193254,
+        "pi_width_d7": 6.996414756774911,
+        "pi_width_w1": 1.2372106552123938
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -1.5736837779986672,
+        "pi_width_d7": 4.905192565917972,
+        "pi_width_w1": 1.6674537658691406
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": -0.5916955847642384,
+        "pi_width_d7": 6.228635406494135,
+        "pi_width_w1": 1.457493782043457
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.5823271273984574,
+        "pi_width_d7": 6.789322471618647,
+        "pi_width_w1": 1.1404512405395621
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": -0.23703204514458776,
+        "pi_width_d7": 4.960013389587402,
+        "pi_width_w1": 1.4085069656372013
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": -0.1994483548332937,
+        "pi_width_d7": 5.676673126220706,
+        "pi_width_w1": 1.7733985900878935
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": -1.8453324595466256,
+        "pi_width_d7": 4.795008277893061,
+        "pi_width_w1": 1.1072734832763729
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 1.132469245174434,
+        "pi_width_d7": 4.814388847351083,
+        "pi_width_w1": 1.2680421829223576
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": 0.038173648761585355,
+        "pi_width_d7": 4.516746902465826,
+        "pi_width_w1": 1.7875402450561637
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.1033174732583575,
+        "pi_width_d7": 4.415661430358895,
+        "pi_width_w1": 1.2889888763427706
+      }
+    ]
+  },
+  "aggregate": {
+    "global": {
+      "status": "tested",
+      "n_origins": 19,
+      "n_contributions": 282,
+      "skill_sqerror": {
+        "n": 19,
+        "block_length": 3,
+        "effective_n": 6,
+        "mean_diff": 15.041337607493741,
+        "ci95_lo": 10.706628268674033,
+        "ci95_hi": 19.173469390893697,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      },
+      "skill_winkler": {
+        "n": 19,
+        "block_length": 3,
+        "effective_n": 6,
+        "mean_diff": 1.1850917248178328,
+        "ci95_lo": 0.6121207060141112,
+        "ci95_hi": 1.6535222612791387,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      }
+    },
+    "crypto": {
+      "status": "tested",
+      "n_origins": 14,
+      "n_contributions": 129,
+      "skill_sqerror": {
+        "n": 14,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 30.643546259604882,
+        "ci95_lo": 21.465865100994527,
+        "ci95_hi": 39.60298456950805,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      },
+      "skill_winkler": {
+        "n": 14,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 2.167431938862926,
+        "ci95_lo": 1.0759270903525096,
+        "ci95_hi": 3.3250223461838764,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      }
+    },
+    "index": {
+      "status": "tested",
+      "n_origins": 13,
+      "n_contributions": 76,
+      "skill_sqerror": {
+        "n": 13,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 1.7389432433562357,
+        "ci95_lo": 0.08832011475388628,
+        "ci95_hi": 4.668679408899233,
+        "p_value": 0.044,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      },
+      "skill_winkler": {
+        "n": 13,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 0.4815101697073431,
+        "ci95_lo": -0.08931420519571913,
+        "ci95_hi": 1.3264191662478315,
+        "p_value": 0.0854,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      }
+    },
+    "bond": {
+      "status": "tested",
+      "n_origins": 13,
+      "n_contributions": 77,
+      "skill_sqerror": {
+        "n": 13,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 0.6878724122666207,
+        "ci95_lo": 0.10739079004144561,
+        "ci95_hi": 1.3407546322042287,
+        "p_value": 0.0188,
+        "significant_at_05": true,
+        "verdict": "daily_D+7_significantly_better"
+      },
+      "skill_winkler": {
+        "n": 13,
+        "block_length": 3,
+        "effective_n": 4,
+        "mean_diff": 0.09482023465659867,
+        "ci95_lo": -0.4683209426797823,
+        "ci95_hi": 0.5922663492854169,
+        "p_value": 0.7898,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      }
+    }
+  }
+}

@@ -192,25 +192,55 @@ def comparison_3_daily_vs_weekly(df: pd.DataFrame) -> list:
     return results
 
 
-def comparison_4_d7_vs_w1(df: pd.DataFrame) -> list:
-    """Per (model, asset): D+7 (regime A) rows whose cutoff_date is a Friday,
-    paired with the W+1 (regime C, weekly-native) row sharing that same origin
-    Friday -- "pour 1 semaine, daily ou weekly natif ?", tested."""
-    results = []
+def build_d7_w1_pairs(df: pd.DataFrame) -> pd.DataFrame:
+    """Friday-aligned D+7 (regime A) / W+1 (regime C, weekly-native) join, one row
+    per (model, asset, origin-Friday) -- factored out of comparison_4_d7_vs_w1 so
+    downstream consumers needing the per-origin merged rows (not just the
+    aggregated test verdict) share the exact same pairing instead of recomputing
+    it (see experiments/dashboard_d7_w1.py, which imports this rather than
+    reimplementing the join)."""
     d7 = df[df["horizon_unit"] == "D+7"].copy()
     d7["cutoff_dt"] = pd.to_datetime(d7["cutoff_date"])
     d7_fridays = d7[d7["cutoff_dt"].dt.weekday == 4]   # Monday=0 ... Friday=4
 
     w1 = df[(df["horizon_unit"] == "W+1") & (df["frequence"] == "weekly")].copy()
 
+    frames = []
     for (model, asset), g_d7 in d7_fridays.groupby(["model", "asset"]):
         g_w1 = w1[(w1["model"] == model) & (w1["asset"] == asset)]
         merged = g_d7.merge(g_w1, on="cutoff_date", suffixes=("_d7", "_w1"))
+        merged.insert(0, "model", model)
+        merged.insert(1, "asset", asset)
+        frames.append(merged)
+    if not frames:
+        return pd.DataFrame(columns=["model", "asset", "cutoff_date"])
+    return pd.concat(frames, ignore_index=True)
+
+
+def comparison_4_d7_vs_w1(df: pd.DataFrame) -> list:
+    """Per (model, asset): D+7 (regime A) rows whose cutoff_date is a Friday,
+    paired with the W+1 (regime C, weekly-native) row sharing that same origin
+    Friday -- "pour 1 semaine, daily ou weekly natif ?", tested."""
+    results = []
+    pairs = build_d7_w1_pairs(df)
+
+    # enumerate the same (model, asset) keys as before the refactor, so a Friday
+    # D+7 group with zero matching W+1 rows still reports insufficient_data(n=0)
+    # instead of silently vanishing from a 0-row pandas groupby.
+    d7 = df[df["horizon_unit"] == "D+7"].copy()
+    d7["cutoff_dt"] = pd.to_datetime(d7["cutoff_date"])
+    all_keys = d7[d7["cutoff_dt"].dt.weekday == 4][["model", "asset"]].drop_duplicates()
+
+    for _, key_row in all_keys.iterrows():
+        model, asset = key_row["model"], key_row["asset"]
+        if pairs.empty:
+            merged = pairs
+        else:
+            merged = pairs[(pairs["model"] == model) & (pairs["asset"] == asset)].sort_values("cutoff_date")
         if len(merged) < MIN_PAIRED_POINTS:
             results.append({"model": model, "asset": asset, "status": "insufficient_data",
                             "n": int(len(merged))})
             continue
-        merged = merged.sort_values("cutoff_date")
         diffs = (merged["sq_error_d7"] - merged["sq_error_w1"]).values   # >0 => W+1 better
         test = paired_block_bootstrap_test(diffs, block_length=min(BLOCK_LENGTH, len(diffs)))
         if test["significant_at_05"]:
