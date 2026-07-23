@@ -60,12 +60,16 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python -m validation.evaluate_daily
 
+      - name: Regenerate taux d'utilisation matrix
+        if: steps.gate.outputs.run == 'true'
+        run: python -m model_artifacts.generate_taux_utilisation
+
       - name: Commit and push results
         if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add validation/tracking.db Run/*/business_validation.json
+          git add validation/tracking.db Run/*/business_validation.json taux_utilisation.html
           if git diff --cached --quiet; then
             echo "Rien à committer."
           else
