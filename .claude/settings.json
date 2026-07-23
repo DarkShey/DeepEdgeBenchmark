@@ -131,7 +131,24 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(git config *)",
       "Bash(git --version)",
-      "Bash(GIT_TRACE=1 git rebase --continue)"
+      "Bash(GIT_TRACE=1 git rebase --continue)",
+      "Bash(python -c \"import scipy; print\\(scipy.__version__\\)\")",
+      "Bash(python -c \"import properscoring\")",
+      "Bash(python -c \"import scoringrules\")",
+      "Bash(node scripts/validate_palette.js \"#2a78d6,#d64550\" --mode light)",
+      "Bash(node scripts/validate_palette.js \"#3987e5,#e5606b\" --mode dark)",
+      "Bash(python3)",
+      "Bash(python -m model_artifacts.generate_distributions_dashboard)",
+      "Bash(where.exe chromium-cli *)",
+      "Read(//c/Program Files/Google/Chrome/**)",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; Get-Command npx -ErrorAction SilentlyContinue; Test-Path \"$env:ProgramFiles\\\\nodejs\\\\node.exe\"; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name; where.exe msedge 2>$null; Test-Path \"$env:ProgramFiles\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"; Test-Path \"${env:ProgramFiles\\(x86\\)}\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\")",
+      "Bash(ls -la \"/c/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/0e4ad7aa-dea3-48ce-911c-c20e1ca2cab3/scratchpad/\" 2>&1)",
+      "Read(//c/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/0e4ad7aa-dea3-48ce-911c-c20e1ca2cab3/scratchpad//**)",
+      "Bash(sleep 5; cat \"/c/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/0e4ad7aa-dea3-48ce-911c-c20e1ca2cab3/tasks/bt2uauxl0.output\" 2>&1 | head -50)",
+      "Read(//c/Users/huche/AppData/Local/Temp/claude/c--Users-huche-Documents-Cours-2025-2026-Stage-DeepEdgeBenchmark/0e4ad7aa-dea3-48ce-911c-c20e1ca2cab3/tasks/**)",
+      "Bash(taskkill //F //IM opera.exe)",
+      "Bash(pkill -f \"http.server 8791\")",
+      "Bash(powershell -NoProfile -Command 'Get-NetTCPConnection -LocalPort 8791 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; '\\\\''done'\\\\''')"
     ],
     "additionalDirectories": [
       "C:\\Users\\huche\\.claude\\plans"
