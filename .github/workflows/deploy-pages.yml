@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install minimal deps
-        run: pip install pandas pyarrow numpy
+        run: pip install pandas pyarrow numpy scipy
       - name: Generate dashboard
         run: |
           mkdir -p _site
