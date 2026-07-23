@@ -397,7 +397,8 @@ def write_date_series_files(run_data: dict, data_dir: Path) -> None:
         (data_dir / f"{run_date}.json").write_text(series_json, encoding="utf-8")
 
 
-HTML_TEMPLATE = r"""<title>Dashboard KPI — Modèles de prévision</title>
+HTML_TEMPLATE = r"""<meta charset="utf-8">
+<title>Dashboard KPI — Modèles de prévision</title>
 <style>
 :root {
   --surface-1:      #fcfcfb;
@@ -696,7 +697,7 @@ const KPI_DEFINITIONS = {
   weeklycov5080: "Couverture 50%/80% (gaussienne) — recalculée en tirant un nuage gaussien depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. APPROXIMATION pour TSDiff (nuage réel non gaussien, non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
   weeklycrps: "CRPS (gaussien) — score de la distribution complète (précision + incertitude), calculé sur un nuage gaussien recalculé depuis (prédit, IC95). APPROXIMATION pour TSDiff (nuage réel non gaussien) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
-  crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant) ou Naive (hors scope). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
+  crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, bande gaussienne (même hypothèse que son IC95) pour Naive, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
   mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   mape: "MAPE — erreur absolue moyenne en % du prix réel. Comparable entre actifs de prix différents.",
   diracc: "Exactitude directionnelle — % de fois où le modèle a prédit le bon sens (hausse/baisse) par rapport à la veille.",

@@ -115,12 +115,20 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
 
 
 # ── Naive walk-forward backtest ──────────────────────────────────────────────
-def run_naive(train: pd.Series, test: pd.Series) -> dict:
+def run_naive(train: pd.Series, test: pd.Series,
+              n_ensemble: int = 0, ensemble_seed=None) -> dict:
     """Rolling 1-step-ahead persistence forecast: pred_t = actual_{t-1}, exactly.
 
     Walk-forward: uses the realised previous price at every step (train's last price
     for the first test point, then test's own realised prices), never its own prediction.
     95% PI: prev ± 1.96·σ, σ = std of the train-set 1-day changes.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` samples from the same Gaussian random-walk band
+    already used for the 95% PI (prev ± 1.96σ) -- not a new distributional assumption,
+    just materializing the existing one as a cloud. Populates result["ensemble"] (list
+    of length n_test, one [n_ensemble] price array per step) for empirical CRPS
+    (cf. model_artifacts/crps_kpis.py).
     """
     t0 = time.time()
     prev_prices = np.concatenate([[train.iloc[-1]], test.values[:-1].astype(float)])
@@ -130,11 +138,20 @@ def run_naive(train: pd.Series, test: pd.Series) -> dict:
     lower = prev_prices - Z_95 * sigma
     upper = prev_prices + Z_95 * sigma
 
+    ensemble = None
+    if n_ensemble > 0:
+        rng = np.random.default_rng(ensemble_seed)
+        noise = rng.normal(0.0, sigma, size=(len(prev_prices), n_ensemble))
+        ensemble = [prev_prices[t] + noise[t] for t in range(len(prev_prices))]
+
     train_time = time.time() - t0
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test.values}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test.values}
+    if ensemble is not None:
+        result["ensemble"] = ensemble
+    return result
 
 
 def next_step_naive(series: pd.Series):

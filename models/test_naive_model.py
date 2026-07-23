@@ -9,6 +9,7 @@ pipeline model_artifacts via MODEL_TEST_FILTER["Naive"] = "naive_model".
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from conftest import make_train_test, synthetic_series
 
@@ -51,6 +52,36 @@ def test_run_naive_interval_is_gaussian_rw_band():
     np.testing.assert_allclose(result["lower"], prev - naive_model.Z_95 * sigma)
     np.testing.assert_allclose(result["upper"], prev + naive_model.Z_95 * sigma)
     assert sigma > 0
+
+
+def test_run_naive_n_ensemble_zero_omits_ensemble_key():
+    """Non-régression : n_ensemble=0 (défaut) reste le comportement actuel exact pour
+    tous les appelants existants (CLI standalone, pipeline avant ce changement)."""
+    train, test = make_train_test()
+
+    result = naive_model.run_naive(train, test)
+
+    assert "ensemble" not in result
+
+
+def test_run_naive_n_ensemble_populates_gaussian_rw_clouds():
+    """n_ensemble>0 matérialise la bande gaussienne déjà utilisée pour l'IC95
+    (prev ± 1.96σ) en nuage de tirages par pas, pour le CRPS empirique (cf.
+    model_artifacts/crps_kpis.py) -- pas une nouvelle hypothèse de distribution."""
+    train, test = make_train_test()
+    n_ensemble = 500
+
+    result = naive_model.run_naive(train, test, n_ensemble=n_ensemble, ensemble_seed=0)
+
+    assert "ensemble" in result
+    assert len(result["ensemble"]) == len(test)
+    prev = np.asarray(result["predictions"], dtype=float)
+    sigma = float(np.std(np.diff(train.values.astype(float))))
+    for t, cloud in enumerate(result["ensemble"]):
+        cloud = np.asarray(cloud, dtype=float)
+        assert cloud.shape == (n_ensemble,)
+        assert np.all(np.isfinite(cloud))
+        assert cloud.mean() == pytest.approx(prev[t], abs=5 * sigma / np.sqrt(n_ensemble))
 
 
 def test_next_step_naive_returns_last_price():

@@ -27,8 +27,8 @@
   "forecast": {
     "last_date": "2026-07-22",
     "last_price": 83.440002,
-    "predicted": 83.409843,
-    "pi_lower": 81.361161,
-    "pi_upper": 85.510111
+    "predicted": 83.409842,
+    "pi_lower": 81.361151,
+    "pi_upper": 85.51012
   }
 }

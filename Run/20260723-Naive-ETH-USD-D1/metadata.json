@@ -6,7 +6,7 @@
   "window_end": "2026-07-22",
   "train_end": "2026-02-07",
   "run_date": "2026-07-23",
-  "git_commit": "bc5a7c1162fa13dbc2126e430377f2ac418ec023",
+  "git_commit": "f7cd6de2331bf894725c5446bba04d95667820af",
   "seed": 42,
   "lib_versions": {
     "numpy": "2.2.6",
@@ -19,5 +19,5 @@
     "prophet": "1.3.0"
   },
   "gate1_reused_from": null,
-  "gate2_reused_from": "20260722"
+  "gate2_reused_from": null
 }

@@ -34,10 +34,12 @@ EXPECTED_METRICS_KEYS = {
     "dir_acc_p_vs_coin", "dm_stat", "dm_p", "dm_lag", "skill_vs_naive",
 }
 
-# CRPS n'est calculé que pour D1 (Gate2 walk-forward existant, cf. crps_kpis.py) et
-# jamais pour Naive (hors scope -- baseline triviale, non demandé) : les autres
-# combinaisons doivent avoir crps=None, jamais un nombre halluciné.
-MODELS_WITH_D1_CRPS = {"ARIMA-GARCH", "SARIMA", "Prophet"}
+# CRPS n'est calculé que pour D1 (Gate2 walk-forward existant, cf. crps_kpis.py) --
+# D7 (backtest rolling-origin, pas encore supporté) doit avoir crps=None, jamais un
+# nombre halluciné. LSTM est aussi exclu ici : ce test appelle evaluate_gate2
+# directement (pas le pipeline réel), qui pour LSTM bascule sur lstm_worker_result
+# -- son CRPS est calculé côté worker, cf. model_artifacts/lstm_worker.py.
+MODELS_WITH_D1_CRPS = {"ARIMA-GARCH", "SARIMA", "Prophet", "Naive"}
 
 
 def synthetic_series(n=160, seed=0):
@@ -90,9 +92,9 @@ def test_gate2_passes_and_metrics_have_expected_keys(model_key, horizon_label, s
                "pi_width_min", "pi_width_mean", "pi_width_max"))
     assert payload["pi_width_min"] <= payload["pi_width_mean"] <= payload["pi_width_max"]
 
-    # CRPS (bootstrap des résidus, cf. crps_kpis.py) : seulement pour D1 sur
-    # ARIMA-GARCH/SARIMA/Prophet -- D7, LSTM (calculé côté worker en pipeline réel,
-    # pas ici) et Naive (hors scope) doivent rester à None, jamais halluciné.
+    # CRPS (bootstrap des résidus, bande gaussienne pour Naive, cf. crps_kpis.py) :
+    # seulement pour D1 sur MODELS_WITH_D1_CRPS -- D7 et LSTM (calculé côté worker en
+    # pipeline réel, pas ici) doivent rester à None, jamais halluciné.
     if horizon_label == "D1" and model_key in MODELS_WITH_D1_CRPS:
         assert payload["crps"] is not None and np.isfinite(payload["crps"])
         assert payload["crps"] >= 0
@@ -275,6 +277,47 @@ def test_full_retrain_false_reuses_previous_run_without_recomputing(tmp_path, mo
     metadata1 = json.loads((Path(logs1[0]["dir"]) / "metadata.json").read_text())
     assert metadata1["gate1_reused_from"] is None
     assert metadata1["gate2_reused_from"] is None
+
+
+def test_gate2_reuse_recomputes_when_prior_d1_run_predates_crps(tmp_path, monkeypatch, synthetic_split):
+    """Bug réel constaté en prod (run du 23/07) : --full-retrain=False réutilisait
+    indéfiniment un run D1 antérieur au déploiement du CRPS (metrics.json sans la clé
+    "crps"), sans jamais le recalculer -- _gate2_metrics_ok ne vérifiait pas sa présence.
+    Un tel run doit être traité comme non exploitable et déclencher un recalcul complet,
+    qui doit alors produire un CRPS non-None (auto-guérison, sans --full-retrain manuel)."""
+    train, validation = synthetic_split
+    monkeypatch.setattr(mp, "RUN_ROOT", tmp_path)
+    model_key = "SARIMA"
+
+    # Simule un run antérieur "légitime" mais écrit avant l'existence du CRPS : metrics.json
+    # a toutes les clés attendues par _gate2_metrics_ok, juste pas "crps".
+    prev_dir = tmp_path / "20260101-SARIMA-SYN-D1"
+    prev_dir.mkdir()
+    legacy_payload = {
+        "RMSE": 1.0, "MAE": 1.0, "MAPE": 1.0, "directional_accuracy": 50.0,
+        "pi_coverage_95": 95.0, "horizon": "D1", "asset": "SYN", "model": model_key,
+        "n_val": len(validation),
+    }
+    (prev_dir / "metrics.json").write_text(json.dumps(legacy_payload))
+    (prev_dir / "predictions.parquet").write_bytes(b"stub-parquet")
+    (prev_dir / "hyperparams.json").write_text("{}")
+    for filename in mp.SERIALIZED_FILES[model_key]:
+        (prev_dir / filename).write_bytes(b"stub")
+
+    logs = mp.process_asset_model(
+        model_key=model_key, ticker="SYN", asset_class="test", train=train, validation=validation,
+        window_start=str(train.index[0].date()), window_end=str(validation.index[-1].date()),
+        seed=0, epochs=None, max_d7_origins=2, horizons=["D1"],
+        regime_tag="unknown", db_path=str(tmp_path / "tracking.db"),
+        run_date_str="20260102", run_date_iso="2026-01-02", run_id="run-2", full_retrain=False,
+    )
+
+    assert all(log["gate1"] and log["gate2"] for log in logs)
+    out_dir = Path(logs[0]["dir"])
+    metrics = json.loads((out_dir / "metrics.json").read_text())
+    assert metrics["crps"] is not None and np.isfinite(metrics["crps"])
+    metadata = json.loads((out_dir / "metadata.json").read_text())
+    assert metadata["gate2_reused_from"] is None, "aurait dû recalculer, pas réutiliser le run sans CRPS"
 
 
 def test_full_retrain_true_ignores_previous_run(tmp_path, monkeypatch, synthetic_split):

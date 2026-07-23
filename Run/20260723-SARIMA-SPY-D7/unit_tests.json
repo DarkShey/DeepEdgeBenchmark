@@ -3,7 +3,7 @@
   "pytest_filter": "[sarima_model]",
   "status": "pass",
   "exit_code": 0,
-  "summary": "11 passed, 53 deselected, 2 warnings in 1.88s",
+  "summary": "11 passed, 55 deselected, 2 warnings in 1.89s",
   "tests": [
     {
       "name": "models/test_metrics.py::test_compute_metrics_perfect_prediction_gives_zero_error[sarima_model]",

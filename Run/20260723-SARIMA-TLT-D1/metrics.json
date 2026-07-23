@@ -1,34 +1,35 @@
 {
-  "RMSE": 0.5252,
-  "MAE": 0.4101,
+  "RMSE": 0.5231,
+  "MAE": 0.4066,
   "MAPE": 0.48,
-  "directional_accuracy": 45.54,
+  "directional_accuracy": 47.32,
   "pi_coverage_95": 99.12,
-  "pi_width_min": 2.830116,
-  "pi_width_mean": 2.88839,
-  "pi_width_max": 2.945466,
+  "pi_width_min": 2.822038,
+  "pi_width_mean": 2.879356,
+  "pi_width_max": 2.924103,
+  "crps": 0.302468,
   "n_val": 113,
   "horizon": "D1",
   "asset": "TLT",
   "model": "SARIMA",
-  "theil_u": 1.0082,
-  "MASE": 1.0099,
-  "change_corr": -0.0489,
-  "dir_acc_change": 47.79,
+  "theil_u": 1.0143,
+  "MASE": 1.0134,
+  "change_corr": -0.0886,
+  "dir_acc_change": 49.56,
   "dir_acc_ci95": [
-    38.8,
-    56.92
+    40.51,
+    58.64
   ],
-  "dir_acc_p_vs_coin": 0.7069,
-  "dm_stat": 1.329,
-  "dm_p": 0.1864,
+  "dir_acc_p_vs_coin": 1.0,
+  "dm_stat": 1.569,
+  "dm_p": 0.1196,
   "dm_lag": 4,
   "skill_vs_naive": "no better than naive",
   "forecast": {
     "last_date": "2026-07-22",
     "last_price": 83.440002,
-    "predicted": 83.446602,
-    "pi_lower": 82.036409,
-    "pi_upper": 84.856794
+    "predicted": 83.446601,
+    "pi_lower": 82.036402,
+    "pi_upper": 84.8568
   }
 }

@@ -3,7 +3,7 @@
   "pytest_filter": "naive_model",
   "status": "pass",
   "exit_code": 0,
-  "summary": "5 passed, 59 deselected in 1.00s",
+  "summary": "7 passed, 59 deselected in 1.06s",
   "tests": [
     {
       "name": "models/test_naive_model.py::test_run_naive_predicts_previous_close_exactly",
@@ -15,6 +15,14 @@
     },
     {
       "name": "models/test_naive_model.py::test_run_naive_interval_is_gaussian_rw_band",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_n_ensemble_zero_omits_ensemble_key",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_naive_model.py::test_run_naive_n_ensemble_populates_gaussian_rw_clouds",
       "outcome": "passed"
     },
     {
