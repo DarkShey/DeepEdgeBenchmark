@@ -32,6 +32,8 @@ experiments/epoch_sweep_results_d_extend.json
 experiments/epoch_sweep_results_ethzntlt_d.json
 experiments/lstm_weekly_sweep.json
 experiments/weekly_multimodel_lstm_c_retuned.json
+experiments/weekly_multimodel_n90.json
+experiments/weekly_headtohead_v2_n90.json
 
 # Rapports de synthèse : seule la dernière version (v4) est gardée
 documentation/Synthese_matrice_17juillet.pdf

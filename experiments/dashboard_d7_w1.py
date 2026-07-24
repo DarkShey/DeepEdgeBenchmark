@@ -245,6 +245,389 @@ def build_enriched_pairs(df: pd.DataFrame, price_cache: dict) -> pd.DataFrame:
     return pairs
 
 
+# ── Mini-rapport développé par verdict (§6bis BRIEF_extension_fenetre_validation.md) ──
+# Fonctions PURES : n'utilisent que les champs déjà calculés (row de build_cell_table /
+# agg de build_aggregate), aucun accès DB/prix supplémentaire, aucun texte figé
+# indépendant des chiffres -- le rapport se régénère automatiquement (mêmes fonctions,
+# nouveaux chiffres) après un backfill ou un retraining.
+REL_GAP_TIE_THRESHOLD = 0.01   # écart relatif en-dessous duquel on affiche "quasi identique" plutôt qu'un camp
+
+
+def _leaning(value_daily: float, value_weekly: float, mode: str, target: float | None = None):
+    """mode: 'lower_better' | 'higher_better' | 'closer_to_target'. Retourne
+    (leaning in {'daily','weekly','tie'}, rel_gap >= 0)."""
+    if mode == "lower_better":
+        daily_better = value_daily < value_weekly
+    elif mode == "higher_better":
+        daily_better = value_daily > value_weekly
+    elif mode == "closer_to_target":
+        daily_better = abs(value_daily - target) < abs(value_weekly - target)
+    else:
+        raise ValueError(mode)
+    denom = max(abs(value_daily), abs(value_weekly), 1e-9)
+    rel_gap = abs(value_daily - value_weekly) / denom
+    if rel_gap < REL_GAP_TIE_THRESHOLD:
+        return "tie", rel_gap
+    return ("daily" if daily_better else "weekly"), rel_gap
+
+
+def _verdict_basis_report(status: str, n, effective_n, block_length, p_value,
+                          mean_diff, ci95_lo, ci95_hi, metric_label: str) -> dict:
+    """Base statistique du verdict, en clair : n/effective_n, IC95, et ce que
+    « significatif » veut dire ici (bootstrap par blocs, IC95 excluant 0)."""
+    if status != "tested":
+        return {
+            "text": (f"Base insuffisante pour tester ({metric_label}) : n={n} paire(s) -- "
+                     f"minimum requis={MIN_PAIRED_POINTS} -- aucun verdict statistique rendu, "
+                     "lecture ci-dessous purement descriptive."),
+            "p_value": None, "ci95_lo": None, "ci95_hi": None,
+            "n": n, "effective_n": None, "block_length": None,
+        }
+    sig = p_value < 0.05
+    text = (
+        f"Test bootstrap par blocs sur {metric_label} : {n} origines appariées "
+        f"(blocs de {block_length} origines consécutives -> {effective_n} blocs quasi "
+        f"indépendants, c'est la puissance statistique réelle, pas n={n}). "
+        f"Différence moyenne (daily − weekly) = {mean_diff:+.4f}, IC95% bootstrap = "
+        f"[{ci95_lo:+.4f}, {ci95_hi:+.4f}] : cet intervalle {'exclut' if sig else 'inclut'} 0 "
+        f"(p={p_value:.4f}) -> résultat {'significatif' if sig else 'non significatif'}. "
+        "« Significatif » signifie ici que l'intervalle de confiance à 95% (obtenu par "
+        f"rééchantillonnage par blocs de {block_length} origines, pour respecter l'autocorrélation "
+        "entre origines hebdomadaires qui se chevauchent) de la différence d'erreur appariée "
+        "exclut zéro."
+    )
+    return {
+        "text": text, "p_value": p_value, "ci95_lo": ci95_lo, "ci95_hi": ci95_hi,
+        "n": n, "effective_n": effective_n, "block_length": block_length,
+    }
+
+
+CELL_KPI_SPECS = [
+    {"key": "rmse", "label": "RMSE (précision du point -- décide le verdict)", "mode": "lower_better", "fmt": "{:.3f}"},
+    {"key": "winkler", "label": "Winkler / Interval Score (fiabilité probabiliste)", "mode": "lower_better", "fmt": "{:.3f}"},
+    {"key": "cov95", "label": "Cov95 (calibration, cible 95%)", "mode": "closer_to_target", "target": 0.95, "fmt": "{:.1%}"},
+    {"key": "pi_width", "label": "Largeur PI 95% (finesse, à couverture comparable)", "mode": "lower_better", "fmt": "{:.3f}"},
+    {"key": "direction", "label": "Direction correcte (diagnostic, bruité à n≈30)", "mode": "higher_better", "fmt": "{:.1%}"},
+]
+
+
+def _lean_phrase(leaning: str, side_word: str, comparative: str, gap_txt: str) -> str:
+    """'{daily/weekly} plus {bas/haut/étroit} ({gap})' ou 'quasi identique entre les deux côtés
+    ({gap})' si tie -- évite l'accord bancal 'quasi identiques plus bas' d'un gabarit unique."""
+    if leaning == "tie":
+        return f"quasi identique entre les deux côtés ({gap_txt})"
+    return f"{side_word} {comparative} ({gap_txt})"
+
+
+def _kpi_note(key: str, leaning: str, rel_gap: float, value_daily: float, value_weekly: float, row: dict) -> str:
+    side_word = {"daily": "daily", "weekly": "weekly natif"}.get(leaning)
+    gap_txt = f"écart relatif {rel_gap*100:.1f}%"
+    if key == "rmse":
+        phrase = _lean_phrase(leaning, side_word, "plus bas", gap_txt)
+        if row["status"] == "tested":
+            agree = ("cohérent avec le verdict testé ci-dessus" if row.get("verdict") != "indistinguishable"
+                     else "mais le verdict reste indistinguable (l'écart n'est pas significatif)")
+            return f"RMSE {phrase} -- {agree}."
+        return f"RMSE {phrase} -- lecture descriptive, non testée (n insuffisant)."
+    if key == "winkler":
+        phrase = _lean_phrase(leaning, side_word, "plus bas", gap_txt)
+        return (f"Winkler {phrase} -- lecture descriptive, "
+                "non testée à ce niveau de cellule (seul le RMSE est testé statistiquement par cellule).")
+    if key == "cov95":
+        gap_pt = abs(value_daily - value_weekly) * 100
+        lean_txt = ("quasi identiques, toutes deux" if leaning == "tie" else f"{side_word}")
+        return (f"Cov95 daily={value_daily*100:.1f}% / weekly={value_weekly*100:.1f}% (cible 95%) -- "
+                f"{lean_txt} plus proche de la cible (écart entre les deux : {gap_pt:.1f} pt).")
+    if key == "pi_width":
+        phrase = _lean_phrase(leaning, side_word, "plus étroit", gap_txt)
+        cov_gap = abs(row["cov95_daily"] - row["cov95_weekly"])
+        caveat = (" ATTENTION : couverture (Cov95) sensiblement différente entre les deux côtés -> comparer "
+                  "la largeur seule n'est pas informatif ici." if cov_gap > 0.05 else
+                  " Couverture comparable des deux côtés -> comparaison de largeur informative.")
+        return f"PI {phrase}.{caveat}"
+    if key == "direction":
+        phrase = _lean_phrase(leaning, side_word, "plus haut", gap_txt)
+        return (f"Direction correcte daily={value_daily*100:.1f}% / weekly={value_weekly*100:.1f}% "
+                f"({phrase}) -- diagnostic à lire avec prudence, proche du hasard (50%) à n≈{row['n']}.")
+    raise ValueError(key)
+
+
+def build_cell_report(row: dict) -> dict:
+    basis = _verdict_basis_report(row["status"], row["n"], row.get("effective_n"), row.get("block_length"),
+                                  row.get("p_value"), row.get("mean_diff"), row.get("ci95_lo"), row.get("ci95_hi"),
+                                  "erreur quadratique (RMSE)")
+    kpi_readings = []
+    for spec in CELL_KPI_SPECS:
+        vd, vw = row[f"{spec['key']}_daily"], row[f"{spec['key']}_weekly"]
+        leaning, rel_gap = _leaning(vd, vw, spec["mode"], spec.get("target"))
+        kpi_readings.append({
+            "key": spec["key"], "label": spec["label"],
+            "value_daily_display": spec["fmt"].format(vd), "value_weekly_display": spec["fmt"].format(vw),
+            "leaning": leaning,
+            "note": _kpi_note(spec["key"], leaning, rel_gap, vd, vw, row),
+        })
+
+    descriptive = [k for k in kpi_readings if k["key"] != "rmse"]
+    n_daily = sum(1 for k in descriptive if k["leaning"] == "daily")
+    n_weekly = sum(1 for k in descriptive if k["leaning"] == "weekly")
+    n_tie = sum(1 for k in descriptive if k["leaning"] == "tie")
+    rmse_leaning = kpi_readings[0]["leaning"]
+    winkler_leaning = kpi_readings[1]["leaning"]
+
+    if row["status"] != "tested" or row.get("verdict") in (None, "indistinguishable"):
+        conflict = False
+        arbitrage_text = ("Pas de gagnant : verdict indistinguable (ou non testé) au niveau de la cellule, "
+                          "même si certains KPI penchent d'un côté ci-dessus -- ces écarts descriptifs ne "
+                          "sont pas garantis significatifs à cette échelle.")
+    elif rmse_leaning != "tie" and winkler_leaning != "tie" and rmse_leaning != winkler_leaning:
+        conflict = True
+        arbitrage_text = (f"Arbitrage point/incertitude : le point (RMSE) favorise {rmse_leaning} tandis que "
+                          f"l'incertitude (Winkler) favorise {winkler_leaning} -- un modèle peut être plus "
+                          "précis en moyenne mais moins fiable dans son intervalle, ou l'inverse.")
+    elif rmse_leaning == winkler_leaning and rmse_leaning != "tie":
+        conflict = False
+        arbitrage_text = (f"Concordant : le point (RMSE) et l'incertitude (Winkler) favorisent tous deux {rmse_leaning}.")
+    else:
+        conflict = False
+        arbitrage_text = "Winkler quasi identique entre les deux côtés -- pas d'arbitrage à signaler."
+
+    return {
+        "verdict_basis": basis,
+        "kpi_readings": kpi_readings,
+        "arbitrage": {"n_daily": n_daily, "n_weekly": n_weekly, "n_tie": n_tie,
+                     "conflict": conflict, "text": arbitrage_text},
+    }
+
+
+def build_aggregate_report(agg: dict) -> dict:
+    sq_report = _verdict_basis_report("tested", agg["skill_sqerror"]["n"], agg["skill_sqerror"]["effective_n"],
+                                      agg["skill_sqerror"]["block_length"], agg["skill_sqerror"]["p_value"],
+                                      agg["skill_sqerror"]["mean_diff"], agg["skill_sqerror"]["ci95_lo"],
+                                      agg["skill_sqerror"]["ci95_hi"], "skill RMSE (précision du point, sans échelle vs RW)")
+    wk_report = _verdict_basis_report("tested", agg["skill_winkler"]["n"], agg["skill_winkler"]["effective_n"],
+                                      agg["skill_winkler"]["block_length"], agg["skill_winkler"]["p_value"],
+                                      agg["skill_winkler"]["mean_diff"], agg["skill_winkler"]["ci95_lo"],
+                                      agg["skill_winkler"]["ci95_hi"], "skill Winkler (fiabilité de l'incertitude, sans échelle vs RW)")
+    sq_v, wk_v = agg["skill_sqerror"]["verdict"], agg["skill_winkler"]["verdict"]
+    if sq_v == wk_v:
+        synth = ("Concordant : les deux axes sont indistinguables, pas de gagnant." if sq_v == "indistinguishable"
+                 else f"Concordant : précision et incertitude désignent toutes deux « {sq_v} ».")
+    elif sq_v == "indistinguishable" or wk_v == "indistinguishable":
+        winner = sq_v if sq_v != "indistinguishable" else wk_v
+        axis_name = "précision (RMSE)" if sq_v != "indistinguishable" else "incertitude (Winkler)"
+        synth = (f"Partiel : seul l'axe {axis_name} est significatif (« {winner} »), l'autre axe reste "
+                "indistinguable -- pas de synthèse unique, lire les deux verdicts séparément.")
+    else:
+        synth = (f"Arbitrage : la précision (RMSE) désigne « {sq_v} » tandis que la fiabilité de "
+                f"l'incertitude (Winkler) désigne « {wk_v} » -- les deux axes ne s'accordent pas.")
+    return {"skill_sqerror": sq_report, "skill_winkler": wk_report, "synthesis": synth}
+
+
+# ── Traduction en langage clair (BRIEF_dashboard_clarte.md) ──────────────────
+# Même règle que §6bis : fonctions PURES des métriques déjà calculées (aucun
+# recalcul, aucun accès DB/prix supplémentaire, aucun texte figé indépendant des
+# chiffres) -- seule la PRÉSENTATION change, calculs/verdicts/chiffres identiques.
+# Un "match nul" reste un "match nul" même si un KPI penche légèrement (§3, §6bis).
+RELIABILITY_LOW, RELIABILITY_MID = 15, 40   # seuils effective_n (brief §4)
+
+
+def reliability_gauge(effective_n) -> dict:
+    if effective_n is None:
+        return {"level": "inconnue", "emoji": "⚪",
+                "label": "Pas assez de recul pour évaluer la fiabilité du verdict"}
+    if effective_n < RELIABILITY_LOW:
+        return {"level": "faible", "emoji": "🔴",
+                "label": "Fiabilité faible -- peu de recul, à prendre avec prudence"}
+    if effective_n < RELIABILITY_MID:
+        return {"level": "moyenne", "emoji": "🟠", "label": "Fiabilité moyenne"}
+    return {"level": "forte", "emoji": "🟢", "label": "Fiabilité forte -- on peut s'appuyer dessus"}
+
+
+def _axis_outcome(status: str, verdict) -> str:
+    """'daily' | 'weekly' | 'tie' | 'insufficient' à partir d'un statut+verdict de
+    test (peu importe la variante de nommage -- daily_multistep_* inclus, cf. le
+    commentaire équivalent dans le template pour le badge technique)."""
+    if status != "tested" or verdict is None:
+        return "insufficient"
+    if verdict in ("daily_significantly_better", "daily_multistep_significantly_better"):
+        return "daily"
+    if verdict == "weekly_native_significantly_better":
+        return "weekly"
+    return "tie"
+
+
+def _decapitalize(s: str) -> str:
+    return s[0].lower() + s[1:] if s else s
+
+
+def _join_fr(items: list) -> str:
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} et {items[1]}"
+    return f"{', '.join(items[:-1])} et {items[-1]}"
+
+
+CANONICAL_HEADLINE = {
+    "daily": "Le modèle quotidien est meilleur",
+    "weekly": "Le modèle hebdomadaire est meilleur",
+    "tie": "Match nul — aucune différence fiable",
+    "insufficient": "Pas assez de recul pour trancher",
+}
+# KPI 1 -- "le prix prévu est-il proche de la réalité ?" (précision, ex-RMSE)
+PRECISION_PHRASE = {
+    "daily": "le quotidien est un peu plus précis",
+    "weekly": "l'hebdomadaire est un peu plus précis",
+    "tie": "prévision aussi précise des deux côtés",
+    "insufficient": "pas assez de recul pour comparer la précision",
+}
+# KPI 2 -- "la fourchette de prix est-elle fiable ?" (ex-Winkler + ex-Cov95, fusionnés)
+RELIABILITY_PHRASE = {
+    "daily": "fourchette de prix plus fiable côté quotidien",
+    "weekly": "fourchette de prix plus fiable côté hebdomadaire",
+    "tie": "fourchette de prix tout aussi fiable des deux côtés",
+    "insufficient": "pas assez de recul pour juger la fourchette de prix",
+}
+PRECISION_QUESTION_ANSWER = {
+    "daily": "Le modèle quotidien prévoit un prix un peu plus proche de la réalité.",
+    "weekly": "Le modèle hebdomadaire prévoit un prix un peu plus proche de la réalité.",
+    "tie": "Les deux modèles prévoient le prix avec une précision comparable.",
+    "insufficient": "On n'a pas encore assez de recul pour comparer la précision.",
+}
+RELIABILITY_QUESTION_ANSWER = {
+    "daily": ("La fourchette de prix est plus fiable côté quotidien (le vrai prix tombe dedans "
+             "plus souvent, sans qu'elle soit trop large)."),
+    "weekly": ("La fourchette de prix est plus fiable côté hebdomadaire (le vrai prix tombe dedans "
+              "plus souvent, sans qu'elle soit trop large)."),
+    "tie": "La fourchette de prix est tout aussi fiable des deux côtés.",
+    "insufficient": "On n'a pas encore assez de recul pour juger la fiabilité de la fourchette.",
+}
+
+
+def _headline(precision: str, reliability: str) -> str:
+    """Verdict en gros (§2). Concordant -> phrase unique (§3). Sinon, composé à
+    partir des 2 questions KPI (§5), comme l'exemple du brief ("aussi précis des
+    deux côtés, mais fourchette plus fiable côté hebdo")."""
+    if precision == reliability:
+        return CANONICAL_HEADLINE[precision]
+    phrase = PRECISION_PHRASE[precision]
+    return f"{phrase[0].upper()}{phrase[1:]}, mais {RELIABILITY_PHRASE[reliability]}."
+
+
+def _one_liner(precision: str, reliability: str) -> str:
+    """Phrase de « pourquoi » courte affichée par défaut sous le verdict (niveau 2, §2)."""
+    if precision == reliability:
+        if precision == "tie":
+            return "Précision comparable et fourchette tout aussi fiable des deux côtés."
+        if precision == "insufficient":
+            return "Pas encore assez de semaines de recul pour comparer."
+        side = "quotidien" if precision == "daily" else "hebdomadaire"
+        return f"Plus précis, et fourchette plus fiable, côté {side}."
+    return f"{PRECISION_PHRASE[precision][0].upper()}{PRECISION_PHRASE[precision][1:]}, {RELIABILITY_PHRASE[reliability]}."
+
+
+def _certainty_sentence(effective_n) -> str:
+    """Traduit la jauge 🔴🟠🟢 en phrase, sans chiffre de p/IC (§6bis point 3)."""
+    gauge = reliability_gauge(effective_n)
+    if gauge["level"] == "inconnue":
+        return "On n'a pas encore assez de semaines de recul pour juger la fiabilité de ce verdict."
+    qualifier = {"faible": "à prendre avec prudence", "moyenne": "raisonnablement fiable",
+                "forte": "solide"}[gauge["level"]]
+    return f"On a {effective_n} semaines de recul réellement exploitables pour ce verdict : {qualifier}."
+
+
+def build_plain_explanation(group_label: str, precision: str, reliability: str, effective_n) -> list:
+    """3 phrases en clair (§6bis) : 1) ce que dit le verdict, 2) pourquoi (les 2
+    questions KPI), 3) à quel point on est sûr. Gabarit de phrases + valeurs
+    injectées -- rien écrit à la main indépendamment des chiffres."""
+    if precision == reliability:
+        verdict_sentence = f"Sur {group_label}, {_decapitalize(CANONICAL_HEADLINE[precision])}."
+    else:
+        verdict_sentence = (f"Sur {group_label}, {PRECISION_PHRASE[precision]}, mais "
+                            f"{RELIABILITY_PHRASE[reliability]}.")
+    return [
+        verdict_sentence,
+        PRECISION_QUESTION_ANSWER[precision] + " " + RELIABILITY_QUESTION_ANSWER[reliability],
+        _certainty_sentence(effective_n),
+    ]
+
+
+GROUP_SENTENCE_LABEL = {"crypto": "la crypto", "index": "les actions", "bond": "les obligations"}
+GROUP_CARD_TITLE = {"crypto": "Crypto (BTC-USD, ETH-USD)", "index": "Actions (SPY)",
+                    "bond": "Obligations (ZN=F + TLT)"}
+
+
+def build_global_answer(aggregate: dict) -> str:
+    """Réponse courte de l'en-tête (§2) : regroupe les classes qui partagent le
+    même verdict (précision, fiabilité) plutôt que de répéter 3 fois la même
+    phrase -- cf. l'exemple du brief ("sur les actions et les obligations, le
+    quotidien est meilleur ; sur la crypto, ...")."""
+    order = [("crypto", GROUP_SENTENCE_LABEL["crypto"]), ("index", GROUP_SENTENCE_LABEL["index"]),
+             ("bond", GROUP_SENTENCE_LABEL["bond"])]
+    groups_by_outcome: dict = {}
+    for cls, label in order:
+        agg = aggregate[cls]
+        if agg["status"] != "tested":
+            key = ("insufficient", "insufficient")
+        else:
+            key = (_axis_outcome("tested", agg["skill_sqerror"]["verdict"]),
+                   _axis_outcome("tested", agg["skill_winkler"]["verdict"]))
+        groups_by_outcome.setdefault(key, []).append(label)
+
+    sentences = []
+    for (precision, reliability), labels in groups_by_outcome.items():
+        group_label = _join_fr(labels)
+        if precision == reliability:
+            sentences.append(f"Sur {group_label}, {_decapitalize(CANONICAL_HEADLINE[precision])}.")
+        else:
+            sentences.append(f"Sur {group_label}, {PRECISION_PHRASE[precision]}, mais "
+                             f"{RELIABILITY_PHRASE[reliability]}.")
+    return " ".join(sentences)
+
+
+def build_aggregate_plain(agg: dict, group_key: str) -> dict:
+    label = GROUP_SENTENCE_LABEL[group_key]
+    if agg["status"] != "tested":
+        precision = reliability = "insufficient"
+        effective_n = None
+    else:
+        precision = _axis_outcome("tested", agg["skill_sqerror"]["verdict"])
+        reliability = _axis_outcome("tested", agg["skill_winkler"]["verdict"])
+        effective_n = agg["skill_sqerror"]["effective_n"]
+    return {
+        "title": GROUP_CARD_TITLE[group_key],
+        "headline": _headline(precision, reliability),
+        "one_liner": _one_liner(precision, reliability),
+        "gauge": reliability_gauge(effective_n),
+        "explanation": build_plain_explanation(label, precision, reliability, effective_n),
+    }
+
+
+def build_cell_plain(row: dict) -> dict:
+    """Cellule = un seul axe testé (précision/RMSE) -- la fiabilité de la
+    fourchette (Winkler) y reste purement descriptive (pas de p-value à ce
+    niveau, cf. build_cell_report), donc l'explication le dit explicitement au
+    lieu de prétendre à un test qui n'existe pas à cette granularité."""
+    precision = _axis_outcome(row["status"], row.get("verdict"))
+    winkler_leaning, _ = _leaning(row["winkler_daily"], row["winkler_weekly"], "lower_better")
+    effective_n = row.get("effective_n")
+    headline = CANONICAL_HEADLINE[precision]
+    subject = f"{row['model']} sur {row['asset']}"
+    verdict_sentence = f"Pour {subject}, {_decapitalize(headline)}."
+    reliability_clause = {
+        "daily": "elle penche plutôt du côté quotidien",
+        "weekly": "elle penche plutôt du côté hebdomadaire",
+        "tie": "les deux se valent",
+    }[winkler_leaning]
+    why_sentence = (f"{PRECISION_QUESTION_ANSWER[precision]} Côté fourchette de prix (lecture "
+                    f"indicative, pas testée statistiquement à ce niveau détaillé), {reliability_clause}.")
+    return {
+        "headline": headline,
+        "gauge": reliability_gauge(effective_n),
+        "explanation": [verdict_sentence, why_sentence, _certainty_sentence(effective_n)],
+    }
+
+
 # ── Panneau 2 : verdict par cellule (model x asset) ──────────────────────────
 def build_cell_table(df: pd.DataFrame, pairs: pd.DataFrame) -> list:
     all_tests = mpt.comparison_3_daily_vs_weekly(df)
@@ -274,6 +657,8 @@ def build_cell_table(df: pd.DataFrame, pairs: pd.DataFrame) -> list:
             "effective_n": test.get("effective_n"),
             "block_length": test.get("block_length"),
         }
+        row["report"] = build_cell_report(row)
+        row["plain"] = build_cell_plain(row)
         rows.append(row)
     rows.sort(key=lambda r: (r["model"], r["asset"]))
     return rows
@@ -353,6 +738,11 @@ def build_aggregate(pairs: pd.DataFrame, seed: int) -> dict:
     result = {"global": run_pooled_test(pooled, None, seed)}
     for cls in ("crypto", "index", "bond"):
         result[cls] = run_pooled_test(pooled, cls, seed)
+    for key, agg in result.items():
+        if agg["status"] == "tested":
+            agg["report"] = build_aggregate_report(agg)
+        if key in ("crypto", "index", "bond"):
+            agg["plain"] = build_aggregate_plain(agg, key)
     return result
 
 
@@ -413,6 +803,11 @@ def main() -> None:
         "cells": cells,
         "trajectories": trajectories,
         "aggregate": aggregate,
+        "plain": {
+            "question": "Pour prévoir un prix à 1 semaine, vaut-il mieux un modèle hebdomadaire ou quotidien ?",
+            "answer": build_global_answer(aggregate),
+            "reliability_thresholds": {"low": RELIABILITY_LOW, "mid": RELIABILITY_MID},
+        },
     }
 
     Path(args.data_out).write_text(json.dumps(payload, indent=2, default=str))
