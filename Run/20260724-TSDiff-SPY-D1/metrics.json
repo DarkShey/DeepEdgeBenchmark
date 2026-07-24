@@ -1,0 +1,35 @@
+{
+  "RMSE": 7.6991,
+  "MAE": 5.8565,
+  "MAPE": 0.83,
+  "directional_accuracy": 52.68,
+  "pi_coverage_95": 99.12,
+  "pi_width_min": 30.563782,
+  "pi_width_mean": 58.474328,
+  "pi_width_max": 106.126343,
+  "crps": 4.443503,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "SPY",
+  "model": "TSDiff",
+  "theil_u": 1.2415,
+  "MASE": 1.2144,
+  "change_corr": -0.0427,
+  "dir_acc_change": 51.33,
+  "dir_acc_ci95": [
+    42.22,
+    60.35
+  ],
+  "dir_acc_p_vs_coin": 0.8509,
+  "dm_stat": 4.507,
+  "dm_p": 0.0,
+  "dm_lag": 4,
+  "skill_vs_naive": "worse than naive",
+  "forecast": {
+    "last_date": "2026-07-23",
+    "last_price": 738.179993,
+    "predicted": 737.547607,
+    "pi_lower": 717.394287,
+    "pi_upper": 755.875244
+  }
+}

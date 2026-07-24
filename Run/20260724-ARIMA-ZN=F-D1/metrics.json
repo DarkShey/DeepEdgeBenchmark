@@ -1,0 +1,35 @@
+{
+  "RMSE": 0.3364,
+  "MAE": 0.2609,
+  "MAPE": 0.24,
+  "directional_accuracy": 41.59,
+  "pi_coverage_95": 91.23,
+  "pi_width_min": 0.904374,
+  "pi_width_mean": 1.177933,
+  "pi_width_max": 1.340113,
+  "crps": 0.191576,
+  "n_val": 114,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "ARIMA-GARCH",
+  "theil_u": 1.0489,
+  "MASE": 1.0274,
+  "change_corr": 0.052,
+  "dir_acc_change": 51.35,
+  "dir_acc_ci95": [
+    42.16,
+    60.45
+  ],
+  "dir_acc_p_vs_coin": 0.8496,
+  "dm_stat": 1.894,
+  "dm_p": 0.0608,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-23",
+    "last_price": 108.09375,
+    "predicted": 108.121549,
+    "pi_lower": 107.525998,
+    "pi_upper": 108.7204
+  }
+}
