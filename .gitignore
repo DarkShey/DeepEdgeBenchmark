@@ -10,3 +10,6 @@ tracking_demo_export.csv
 tracking_export.csv
 .DS_Store
 **/.DS_Store
+
+# sortie live du prototype weekly (artefact réécrit à chaque run ; snapshots nommés committés à la place)
+experiments/weekly_headtohead_results.json

@@ -1,0 +1,99 @@
+{
+  "config": {
+    "assets": "SPY,BTC-USD",
+    "start": "2016-01-01",
+    "end": "2026-07-16",
+    "origins": 6,
+    "epochs": 40,
+    "n_samples": 80,
+    "k_denoise": 20,
+    "seed": 42,
+    "out": "experiments/weekly_headtohead_results.json"
+  },
+  "results": {
+    "SPY": {
+      "TSDiff-W": {
+        "W1": {
+          "rmse": 17.1907,
+          "coverage_95": 1.0,
+          "crps": 8.9975,
+          "n": 6
+        },
+        "W2": {
+          "rmse": 16.1991,
+          "coverage_95": 1.0,
+          "crps": 10.153,
+          "n": 6
+        },
+        "W3": {
+          "rmse": 20.1447,
+          "coverage_95": 1.0,
+          "crps": 11.7667,
+          "n": 6
+        }
+      },
+      "TSDiff-D": {
+        "W1": {
+          "rmse": 14.0799,
+          "coverage_95": 0.167,
+          "crps": 11.4934,
+          "n": 6
+        },
+        "W2": {
+          "rmse": 14.8597,
+          "coverage_95": 0.0,
+          "crps": 12.9409,
+          "n": 6
+        },
+        "W3": {
+          "rmse": 12.1636,
+          "coverage_95": 0.333,
+          "crps": 9.2332,
+          "n": 6
+        }
+      }
+    },
+    "BTC-USD": {
+      "TSDiff-W": {
+        "W1": {
+          "rmse": 7901.0847,
+          "coverage_95": 0.833,
+          "crps": 4448.1322,
+          "n": 6
+        },
+        "W2": {
+          "rmse": 12218.9752,
+          "coverage_95": 1.0,
+          "crps": 6121.4817,
+          "n": 6
+        },
+        "W3": {
+          "rmse": 16817.5351,
+          "coverage_95": 1.0,
+          "crps": 7048.1573,
+          "n": 6
+        }
+      },
+      "TSDiff-D": {
+        "W1": {
+          "rmse": 5865.9477,
+          "coverage_95": 0.0,
+          "crps": 4068.6534,
+          "n": 6
+        },
+        "W2": {
+          "rmse": 8378.1277,
+          "coverage_95": 0.0,
+          "crps": 6360.2326,
+          "n": 6
+        },
+        "W3": {
+          "rmse": 7532.3221,
+          "coverage_95": 0.0,
+          "crps": 5560.0249,
+          "n": 6
+        }
+      }
+    }
+  }
+}
