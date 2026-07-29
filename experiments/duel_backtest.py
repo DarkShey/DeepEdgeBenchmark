@@ -14,12 +14,14 @@ Protocol, enforced by construction (not by convention):
     declared choice, preserved here) -- every adapter's `fit_*_state` is
     called exactly once per asset, on data <= T0; every test origin only
     advances each model's conditioning state with realised data.
-  - Hyperparameters (TSDiff-W's epoch count only -- the 5 classics have no
-    tunable dimension in this repo): selected on the VALIDATION block ONLY
-    (verrou E1), by reusing epoch_sweep.py's own incremental-checkpoint sweep
-    (`_sweep_one_model`/`select_epochs`) unchanged, restricted to MY origins
-    (which already embed the embargo). The TEST block (test_pos) is never
-    touched until final scoring below.
+  - Hyperparameters: TSDiff-W's epoch count AND the ARIMA-GARCH innovation
+    spec (normal/t/gjr-t, BRIEF_baselines_fortes.md §2.1-2.4) are BOTH
+    selected on the VALIDATION block ONLY (verrou E1) -- TSDiff-W by reusing
+    epoch_sweep.py's own incremental-checkpoint sweep (`_sweep_one_model`/
+    `select_epochs`) unchanged, GARCH by `select_garch_spec` below (argmin
+    mean fair CRPS over val_pos, same pattern) -- both restricted to MY
+    origins (which already embed the embargo). The TEST block (test_pos) is
+    never touched until final scoring below.
   - Sampling: every model draws `m` (default 500) trajectories per origin via
     duel_sampling_adapters' 5 classic adapters + tsdiff_model.forecast_from_fitted
     for TSDiff -- never a Gaussian/log-normal reconstruction (audit reserve N1).
@@ -94,6 +96,36 @@ BENCHMARK_FOR_SPA = "ARIMA-GARCH"
 PAIRS = tuple((("TSDiff", c) for c in CLASSICS))
 
 
+def select_garch_spec(asset_code: str, train_daily: pd.Series, daily: pd.Series,
+                      weekly: pd.Series, weekly_dates: pd.Series, val_pos: list,
+                      T0_daily_pos: int, args) -> tuple:
+    """GARCH innovation-law/asymmetry spec selection, VALIDATION BLOCK ONLY
+    (BRIEF_baselines_fortes.md §2.4, verrou E1) -- mirrors the TSDiff-W epoch
+    sweep just above: each candidate spec is fit ONCE on data <= T0, scored by
+    mean fair CRPS over `val_pos` (never `test_pos`), argmin wins. Returns
+    (best_spec, {spec: mean_crps_val}) so the choice is auditable, not just
+    asserted."""
+    scores = {}
+    for spec in args.garch_spec_candidates:
+        state = dsa.fit_garch_state(train_daily, spec=spec)
+        crps_vals = []
+        for k, m_pos in enumerate(val_pos):
+            _, daily_pos, target_dates, daily_horizons = es.week_targets(weekly_dates, daily, m_pos)
+            last_price = float(weekly.iloc[m_pos])
+            actuals = [float(weekly.iloc[m_pos + h]) for h in (1, 2, 3)]
+            new_daily_prices = daily.iloc[T0_daily_pos:daily_pos + 1].values.astype(float)
+            realized_returns_pct = np.diff(np.log(new_daily_prices)) * 100.0
+            samples_g = dsa.garch_trajectory_samples(state, realized_returns_pct, last_price,
+                                                     horizons=daily_horizons, m=args.m_samples,
+                                                     seed=args.seed + k)
+            for wi in range(3):
+                crps_vals.append(crps_fair(samples_g[daily_horizons[wi]], actuals[wi]))
+        scores[spec] = float(np.mean(crps_vals))
+    best_spec = min(scores, key=scores.get)
+    print(f"[{asset_code}] GARCH spec*={best_spec} (val-selected, candidates={scores})")
+    return best_spec, scores
+
+
 def run_asset_duel(asset_code: str, ticker: str, args) -> tuple:
     print(f"[{asset_code}] downloading {ticker} ({args.start} -> {args.end}) ...")
     daily = td.fetch_data(ticker, args.start, args.end)
@@ -126,9 +158,12 @@ def run_asset_duel(asset_code: str, ticker: str, args) -> tuple:
     weekly_r_raw = td._log_returns(weekly.values.astype(float))
     print(f"[{asset_code}] TSDiff-W fit in {time.time() - t0:.0f}s")
 
+    T0_daily_pos = int(daily.index.get_loc(T0_date))
     t0 = time.time()
-    garch_state = dsa.fit_garch_state(train_daily)
-    print(f"[{asset_code}] ARIMA-GARCH fit in {time.time() - t0:.0f}s")
+    garch_spec, garch_spec_scores = select_garch_spec(
+        asset_code, train_daily, daily, weekly, weekly_dates, val_pos, T0_daily_pos, args)
+    garch_state = dsa.fit_garch_state(train_daily, spec=garch_spec)
+    print(f"[{asset_code}] ARIMA-GARCH ({garch_spec}) fit in {time.time() - t0:.0f}s")
 
     t0 = time.time()
     sarima_state = dsa.fit_sarima_state(train_daily)
@@ -142,7 +177,6 @@ def run_asset_duel(asset_code: str, ticker: str, args) -> tuple:
     lstm_state = dsa.fit_lstm_state(train_daily, seed=args.seed)
     print(f"[{asset_code}] LSTM fit in {time.time() - t0:.0f}s")
 
-    T0_daily_pos = int(daily.index.get_loc(T0_date))
     seq_len = lstm_state["seq_len"]
 
     records = []
@@ -197,6 +231,7 @@ def run_asset_duel(asset_code: str, ticker: str, args) -> tuple:
 
     meta = {
         "train_end": str(T0_date.date()), "epochs_tsdiff_w": epochs_w,
+        "garch_spec": garch_spec, "garch_spec_val_scores": garch_spec_scores,
         "val_origins": [str(weekly_dates.iloc[m].date()) for m in val_pos],
         "test_origins": [str(weekly_dates.iloc[m].date()) for m in test_pos],
     }
@@ -300,6 +335,9 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--tsdiff-epoch-candidates", nargs="+", type=int, default=[40, 60, 80])
     p.add_argument("--tsdiff-hp-samples", type=int, default=100, help="sample count for epoch selection only (val block), separate from --m-samples")
+    p.add_argument("--garch-spec-candidates", nargs="+", default=["normal", "t", "gjr-t"],
+                   choices=list(dsa.GARCH_SPECS), help="GARCH innovation/asymmetry specs "
+                   "selected on the validation block only (BRIEF_baselines_fortes.md §2.4)")
     p.add_argument("--k-denoise", type=int, default=td.K_DENOISE)
     p.add_argument("--n-boot", type=int, default=2000, help="bootstrap replicates for MCS/SPA")
     p.add_argument("--start", default="2015-01-01")
@@ -327,6 +365,10 @@ def main() -> None:
             "m_samples": args.m_samples, "seed": args.seed, "k_denoise": args.k_denoise,
             "n_boot": args.n_boot, "start": args.start, "end": args.end,
             "elapsed_s": round(elapsed, 1),
+            "garch_spec_candidates": args.garch_spec_candidates,
+            "garch_spec_selection": "BRIEF_baselines_fortes.md §2.4: selected per asset on the "
+                                    "validation block only (verrou E1), argmin mean fair CRPS "
+                                    "over val_pos -- see meta_by_asset[asset].garch_spec(_val_scores).",
             "reestimation_rule": "frozen at T0 for all 6 models (declared, duel_origins.py) -- "
                                  "no residual asymmetry: every adapter is fit exactly once on "
                                  "data <= T0, only conditioning state advances at later origins.",
