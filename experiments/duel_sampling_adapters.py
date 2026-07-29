@@ -10,11 +10,17 @@ bounds. That destroys the distributional information a CRPS duel is supposed
 to measure (audit reserve N1) for 5 of 6 models. This module draws genuine
 `m`-path trajectories from each model's OWN predictive law instead:
 
-  - ARIMA-GARCH : simulate the GARCH(1,1) variance process forward with its
-    OWN fixed (frozen) recursion, fed the realised residual path up to the
-    origin — not a bootstrap of stored residuals, an actual multi-step
-    simulation of the volatility process, added to ARIMA's own deterministic
-    multi-step mean forecast.
+  - ARIMA-GARCH : simulate the GARCH(1,1)/GJR-GARCH(1,1) variance process
+    forward with its OWN fixed (frozen) recursion, fed the realised residual
+    path up to the origin — not a bootstrap of stored residuals, an actual
+    multi-step simulation of the volatility process, added to ARIMA's own
+    deterministic multi-step mean forecast. Innovation law and asymmetry are
+    a declared spec (BRIEF_baselines_fortes.md §2.1-2.2, resolves écart É4):
+    "normal" (gaussian, the pre-existing weak baseline), "t" (Student
+    innovations, `nu` estimated -- heavy tails), or "gjr-t" (Student +
+    leverage/asymmetric variance term) -- GARCH_SPECS below. Never a
+    1.96*sigma analytic bound or a Gaussian reconstruction: every spec draws
+    genuine simulated shocks from its OWN fitted innovation law.
   - SARIMA       : `SARIMAXResults.simulate(..., anchor="end")` — the
     state-space model's own conditional simulation, frozen parameters.
   - Prophet      : `Prophet.predictive_samples()` — Prophet's own generative
@@ -64,38 +70,81 @@ from weekly_headtohead_v2 import random_walk_samples            # noqa: E402 (re
 
 
 # ══════════════════════════════════════════════════════════════════════════
-#  ARIMA-GARCH — GARCH(1,1) variance process, simulated forward
+#  ARIMA-GARCH — GARCH(1,1)/GJR-GARCH(1,1) variance process, simulated forward
 # ══════════════════════════════════════════════════════════════════════════
 
-def fit_garch_state(train_prices: pd.Series, order=arima_model.ARIMA_ORDER) -> dict:
-    """Fit ARIMA(order) on log-returns + GARCH(1,1) on its residuals, once,
-    on `train_prices` — frozen forever after this call."""
+# BRIEF_baselines_fortes.md §2.1-2.2 (resolves ecart E4 -- "does anything beat
+# a GARCH(1,1)?" only holds against a WELL-SPECIFIED GARCH, not a gaussian-only
+# one): three declared specs, `o` = arch_model's asymmetric/leverage order (0 =
+# symmetric GARCH, 1 = GJR-GARCH), `dist` = innovation law. "gjr-t" nests both
+# heavy tails (Student, nu estimated) and the up/down volatility asymmetry
+# standard on equities/indices (Glosten-Jagannathan-Runkle); "t" isolates the
+# heavy-tail effect alone; "normal" is the pre-existing weak baseline, kept
+# only as the reference point for the avant/apres comparison, never used for
+# the duel's own scored ARIMA-GARCH once a stronger spec is selected/declared.
+GARCH_SPECS = {
+    "normal": {"o": 0, "dist": "normal"},
+    "t": {"o": 0, "dist": "t"},
+    "gjr-t": {"o": 1, "dist": "t"},
+}
+
+
+def fit_garch_state(train_prices: pd.Series, order=arima_model.ARIMA_ORDER, spec: str = "t") -> dict:
+    """Fit ARIMA(order) on log-returns + GARCH(1,1)/GJR-GARCH(1,1) on its
+    residuals, once, on `train_prices` — frozen forever after this call.
+    `spec` in GARCH_SPECS ("normal"/"t"/"gjr-t", brief §2.1-2.2); `nu`
+    (Student degrees of freedom) and `gamma` (leverage term) are ESTIMATED by
+    the fit, never fixed by hand -- both are `None`/`0.0` for specs that don't
+    have them (dist="normal" -> no nu; o=0 -> no gamma)."""
+    if spec not in GARCH_SPECS:
+        raise ValueError(f"unknown GARCH spec {spec!r}, expected one of {list(GARCH_SPECS)}")
+    cfg = GARCH_SPECS[spec]
     prices = train_prices.astype(float).values
     returns = np.diff(np.log(prices)) * 100.0   # percent log-returns, matches arima_model.py
     arima_res = ARIMA(returns, order=order, enforce_stationarity=False,
                       enforce_invertibility=False).fit()
     resid = np.asarray(arima_res.resid, dtype=float)
     from arch import arch_model
-    garch_res = arch_model(resid, vol="Garch", p=1, q=1, dist="normal", rescale=False).fit(disp="off")
+    garch_res = arch_model(resid, vol="Garch", p=1, o=cfg["o"], q=1, dist=cfg["dist"],
+                           rescale=False).fit(disp="off")
     p = garch_res.params
     return {
-        "arima_res": arima_res, "garch_res": garch_res,
+        "arima_res": arima_res, "garch_res": garch_res, "spec": spec,
         "omega": float(p["omega"]), "alpha": float(p["alpha[1]"]), "beta": float(p["beta[1]"]),
+        "gamma": float(p["gamma[1]"]) if cfg["o"] else 0.0,
+        "nu": float(p["nu"]) if cfg["dist"] == "t" else None,
         "h_last": float(garch_res.conditional_volatility[-1]) ** 2,
         "n_fit_resid": len(resid),
     }
 
 
-def _garch_variance_after(omega: float, alpha: float, beta: float, eps: np.ndarray, h0: float) -> float:
-    """Roll the FIXED GARCH(1,1) recursion h_t = omega + alpha*eps_{t-1}^2 +
-    beta*h_{t-1} forward through the REALISED shocks `eps` (never
-    re-estimating omega/alpha/beta), starting from variance state `h0`.
+def _garch_variance_after(omega: float, alpha: float, gamma: float, beta: float,
+                          eps: np.ndarray, h0: float) -> float:
+    """Roll the FIXED GJR-GARCH(1,1) recursion h_t = omega + alpha*eps_{t-1}^2
+    + gamma*eps_{t-1}^2*1{eps_{t-1}<0} + beta*h_{t-1} forward through the
+    REALISED shocks `eps` (never re-estimating omega/alpha/gamma/beta),
+    starting from variance state `h0`. `gamma=0` reduces exactly to the plain
+    symmetric GARCH(1,1) recursion (same code path, no branching by spec).
     Returns the variance state right after the last element of `eps` — the
     one-step-ahead variance to start simulating from."""
     h = h0
     for e in eps:
-        h = omega + alpha * e * e + beta * h
+        h = omega + alpha * e * e + gamma * e * e * (e < 0) + beta * h
     return h
+
+
+def _sample_innovations(dist: str, nu, size: tuple, rng: np.random.Generator) -> np.ndarray:
+    """Unit-variance innovations z (mean 0, var 1) so h (the GARCH conditional
+    variance) alone determines each shock's scale: e = sqrt(h) * z. Student-t
+    is standardized by sqrt(nu/(nu-2)) -- the exact convention `arch`'s own
+    StudentsT.simulate() uses (verified against arch.univariate.distribution),
+    so simulated paths draw from the SAME standardized law the fit assumed."""
+    if dist == "normal":
+        return rng.standard_normal(size)
+    if dist == "t":
+        std_dev = np.sqrt(nu / (nu - 2.0))
+        return rng.standard_t(nu, size=size) / std_dev
+    raise ValueError(f"unknown innovation distribution {dist!r}")
 
 
 def garch_trajectory_samples(state: dict, realized_returns_pct_since_fit: np.ndarray,
@@ -104,6 +153,12 @@ def garch_trajectory_samples(state: dict, realized_returns_pct_since_fit: np.nda
     between the fit's T0 and the current origin (possibly empty at the very
     first origin). Returns {h: price_samples[m]} for h in `horizons` (steps
     in the SAME unit as `realized_returns_pct_since_fit`, i.e. trading days).
+
+    Draws genuine simulated shocks from `state`'s OWN fitted innovation law
+    (`_sample_innovations`) and propagates the OWN fitted (possibly
+    asymmetric) variance recursion (`_garch_variance_after`) -- never a
+    1.96*sigma analytic bound or a gaussian reconstruction, for any spec
+    (BRIEF_baselines_fortes.md §2.3, "interdit").
 
     Simplification declared (not hidden, brief §5): the GARCH model's own
     small constant-mean term ("mu" in `garch_res.params`) is ignored in the
@@ -119,16 +174,18 @@ def garch_trajectory_samples(state: dict, realized_returns_pct_since_fit: np.nda
 
     full_resid = np.asarray(arima_ext.resid, dtype=float)
     new_eps = full_resid[state["n_fit_resid"]:]                          # residuals realised since fit
-    h_state = _garch_variance_after(state["omega"], state["alpha"], state["beta"], new_eps, state["h_last"])
+    h_state = _garch_variance_after(state["omega"], state["alpha"], state["gamma"],
+                                    state["beta"], new_eps, state["h_last"])
 
+    cfg = GARCH_SPECS[state["spec"]]
     rng = np.random.default_rng(seed)
-    z = rng.standard_normal((m, h_max))
+    z = _sample_innovations(cfg["dist"], state["nu"], (m, h_max), rng)
     shocks = np.empty((m, h_max))
     h = np.full(m, h_state)
     for s in range(h_max):
         e = np.sqrt(np.maximum(h, 1e-12)) * z[:, s]
         shocks[:, s] = e
-        h = state["omega"] + state["alpha"] * e * e + state["beta"] * h
+        h = state["omega"] + state["alpha"] * e * e + state["gamma"] * e * e * (e < 0) + state["beta"] * h
 
     cum_pct = np.cumsum(mean_fc[None, :] + shocks, axis=1)               # [m, h_max], percent
     return {h: last_price * np.exp(cum_pct[:, h - 1] / 100.0) for h in horizons}

@@ -59,6 +59,77 @@ def test_garch_same_seed_reproducible():
     assert np.array_equal(s1[5], s2[5])
 
 
+# ── ARIMA-GARCH: strong specs (BRIEF_baselines_fortes.md §2.1-2.2) ─────────
+
+@pytest.mark.parametrize("spec", ["normal", "t", "gjr-t"])
+def test_garch_spec_trajectory_samples_shape_and_finiteness(spec):
+    train = _synthetic_prices(250, seed=1)
+    state = dsa.fit_garch_state(train, order=(1, 0, 1), spec=spec)
+    samples = dsa.garch_trajectory_samples(state, np.array([]), last_price=float(train.iloc[-1]),
+                                           horizons=[1, 5, 10], m=64, seed=0)
+    for arr in samples.values():
+        assert arr.shape == (64,)
+        assert np.all(np.isfinite(arr))
+        assert np.all(arr > 0)
+
+
+def test_garch_spec_normal_has_no_nu_or_gamma():
+    train = _synthetic_prices(250, seed=1)
+    state = dsa.fit_garch_state(train, order=(1, 0, 1), spec="normal")
+    assert state["nu"] is None
+    assert state["gamma"] == 0.0
+
+
+def test_garch_spec_t_estimates_nu_no_gamma():
+    train = _synthetic_prices(250, seed=1)
+    state = dsa.fit_garch_state(train, order=(1, 0, 1), spec="t")
+    assert state["nu"] is not None and state["nu"] > 2.0
+    assert state["gamma"] == 0.0
+
+
+def test_garch_spec_gjr_t_estimates_nu_and_gamma():
+    train = _synthetic_prices(250, seed=1)
+    state = dsa.fit_garch_state(train, order=(1, 0, 1), spec="gjr-t")
+    assert state["nu"] is not None and state["nu"] > 2.0
+    assert isinstance(state["gamma"], float)
+
+
+def test_garch_unknown_spec_raises():
+    train = _synthetic_prices(250, seed=1)
+    with pytest.raises(ValueError):
+        dsa.fit_garch_state(train, order=(1, 0, 1), spec="bogus")
+
+
+def test_garch_variance_recursion_gamma_zero_matches_symmetric_case():
+    """gamma=0 (spec 'normal'/'t') must fold back to the plain symmetric
+    GARCH(1,1) recursion exactly -- same code path, no branch by spec."""
+    eps = np.array([-2.0, 1.5, -0.5, 3.0])
+    h_sym = eps[0]  # arbitrary h0
+    h_asym = dsa._garch_variance_after(0.1, 0.2, 0.0, 0.7, eps, h0=1.0)
+    h_ref = 1.0
+    for e in eps:
+        h_ref = 0.1 + 0.2 * e * e + 0.7 * h_ref
+    assert h_asym == pytest.approx(h_ref)
+
+
+def test_garch_variance_recursion_leverage_asymmetry():
+    """A negative shock must raise the NEXT variance state strictly more than
+    a positive shock of the same magnitude when gamma > 0 (GJR leverage
+    effect) -- the whole point of the asymmetric variant."""
+    h_after_negative = dsa._garch_variance_after(0.1, 0.2, 0.3, 0.7, np.array([-1.0]), h0=1.0)
+    h_after_positive = dsa._garch_variance_after(0.1, 0.2, 0.3, 0.7, np.array([1.0]), h0=1.0)
+    assert h_after_negative > h_after_positive
+
+
+def test_garch_gjr_t_paths_diverge_and_are_not_degenerate():
+    train = _synthetic_prices(250, seed=1)
+    state = dsa.fit_garch_state(train, order=(1, 0, 1), spec="gjr-t")
+    samples = dsa.garch_trajectory_samples(state, np.array([]), last_price=float(train.iloc[-1]),
+                                           horizons=[1, 10], m=200, seed=0)
+    assert np.std(samples[1]) > 0
+    assert np.std(samples[10]) > 0
+
+
 # ── SARIMA ────────────────────────────────────────────────────────────────
 
 def test_sarima_trajectory_samples_shape_and_finiteness():
