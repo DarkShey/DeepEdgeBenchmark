@@ -43,3 +43,8 @@ documentation/Synthese_matrice_v3_17juillet.pdf
 # Cache local de prix (yfinance) pour experiments/dashboard_d7_w1.py -- régénérable,
 # sert uniquement à la reproductibilité d'un run à l'autre (évite le bruit réseau)
 experiments/.price_cache_d7_w1/
+
+# Rapport HTML régénérable (experiments/generate_dist_options_report.py) -- embarque
+# Cambria/Consolas (polices sous licence Microsoft) en base64 pour un rendu autonome ;
+# jamais versionné pour ne pas redistribuer ces polices, régénérer localement à la place.
+experiments/dist_options_report.html
