@@ -1,0 +1,105 @@
+{
+  "config": {
+    "tickers": [
+      "BTC-USD",
+      "SPY"
+    ],
+    "start": "2020-01-01",
+    "end": "2024-12-31",
+    "test_ratio": 0.15,
+    "dists": [
+      "normal",
+      "ged",
+      "skewt"
+    ],
+    "n_crps_samples": 200,
+    "seed": 42,
+    "out": "C:\\Users\\huche\\Documents\\Cours\\2025-2026\\Stage\\DeepEdgeBenchmark\\experiments\\dist_comparison_results.json"
+  },
+  "rows": [
+    {
+      "Ticker": "BTC-USD",
+      "Dist": "normal",
+      "CRPS": 1015.1144,
+      "RMSE": 1863.9244,
+      "MAE": 1357.1836,
+      "Train Time (s)": 5.51,
+      "PI Cov 50% (%)": 62.77,
+      "PI Width 50% (%)": 4.04,
+      "PI Cov 80% (%)": 86.13,
+      "PI Width 80% (%)": 7.69,
+      "PI Cov 95% (%)": 95.26,
+      "PI Width 95% (%)": 11.76
+    },
+    {
+      "Ticker": "BTC-USD",
+      "Dist": "ged",
+      "CRPS": 996.5188,
+      "RMSE": 1863.9244,
+      "MAE": 1357.1836,
+      "Train Time (s)": 7.3,
+      "PI Cov 50% (%)": 48.54,
+      "PI Width 50% (%)": 2.78,
+      "PI Cov 80% (%)": 81.02,
+      "PI Width 80% (%)": 6.44,
+      "PI Cov 95% (%)": 95.99,
+      "PI Width 95% (%)": 11.96
+    },
+    {
+      "Ticker": "BTC-USD",
+      "Dist": "skewt",
+      "CRPS": 996.1652,
+      "RMSE": 1863.9244,
+      "MAE": 1357.1836,
+      "Train Time (s)": 6.59,
+      "PI Cov 50% (%)": 48.18,
+      "PI Width 50% (%)": 2.77,
+      "PI Cov 80% (%)": 77.74,
+      "PI Width 80% (%)": 5.92,
+      "PI Cov 95% (%)": 95.62,
+      "PI Width 95% (%)": 11.44
+    },
+    {
+      "Ticker": "SPY",
+      "Dist": "normal",
+      "CRPS": 2.5734,
+      "RMSE": 4.6214,
+      "MAE": 3.4247,
+      "Train Time (s)": 3.59,
+      "PI Cov 50% (%)": 56.61,
+      "PI Width 50% (%)": 1.15,
+      "PI Cov 80% (%)": 80.95,
+      "PI Width 80% (%)": 2.19,
+      "PI Cov 95% (%)": 94.71,
+      "PI Width 95% (%)": 3.35
+    },
+    {
+      "Ticker": "SPY",
+      "Dist": "ged",
+      "CRPS": 2.5628,
+      "RMSE": 4.6214,
+      "MAE": 3.4247,
+      "Train Time (s)": 4.29,
+      "PI Cov 50% (%)": 53.97,
+      "PI Width 50% (%)": 1.04,
+      "PI Cov 80% (%)": 78.31,
+      "PI Width 80% (%)": 2.11,
+      "PI Cov 95% (%)": 95.24,
+      "PI Width 95% (%)": 3.45
+    },
+    {
+      "Ticker": "SPY",
+      "Dist": "skewt",
+      "CRPS": 2.5572,
+      "RMSE": 4.6214,
+      "MAE": 3.4247,
+      "Train Time (s)": 4.28,
+      "PI Cov 50% (%)": 54.5,
+      "PI Width 50% (%)": 1.07,
+      "PI Cov 80% (%)": 75.66,
+      "PI Width 80% (%)": 2.06,
+      "PI Cov 95% (%)": 93.65,
+      "PI Width 95% (%)": 3.29
+    }
+  ]
+}
