@@ -1,0 +1,216 @@
+{
+  "per_asset": {
+    "ZN=F|W+1|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.005586208223633147,
+      "ci95_lo": -0.032615595838467806,
+      "ci95_hi": 0.022455166743692783,
+      "p_value": 0.7042,
+      "significant_at_05": false
+    },
+    "ZN=F|W+1|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.008202455222033845,
+      "ci95_lo": -0.03683013056639595,
+      "ci95_hi": 0.024658153187692895,
+      "p_value": 0.6866,
+      "significant_at_05": false
+    },
+    "ZN=F|W+1|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.36159294319332386,
+      "ci95_lo": -0.488931381295104,
+      "ci95_hi": -0.21633477751933344,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "ZN=F|W+1|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.00694363840304248,
+      "ci95_lo": -0.03655711282416155,
+      "ci95_hi": 0.02635578388401611,
+      "p_value": 0.7214,
+      "significant_at_05": false
+    },
+    "ZN=F|W+1|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.2473511814959832,
+      "ci95_lo": -0.38212159732469747,
+      "ci95_hi": -0.09239143684004793,
+      "p_value": 0.001,
+      "significant_at_05": true
+    },
+    "ZN=F|W+2|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.034129113375627684,
+      "ci95_lo": -0.010614194261378575,
+      "ci95_hi": 0.08494829499434342,
+      "p_value": 0.1332,
+      "significant_at_05": false
+    },
+    "ZN=F|W+2|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.035377313193069276,
+      "ci95_lo": -0.013642187559313517,
+      "ci95_hi": 0.0933345114024091,
+      "p_value": 0.1502,
+      "significant_at_05": false
+    },
+    "ZN=F|W+2|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.24079477268811017,
+      "ci95_lo": -0.40644648889048024,
+      "ci95_hi": -0.05125521931234141,
+      "p_value": 0.0108,
+      "significant_at_05": true
+    },
+    "ZN=F|W+2|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.024460934231610793,
+      "ci95_lo": -0.02548559799862504,
+      "ci95_hi": 0.08263361620124829,
+      "p_value": 0.316,
+      "significant_at_05": false
+    },
+    "ZN=F|W+2|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.19064790320844027,
+      "ci95_lo": -0.31346264909525956,
+      "ci95_hi": -0.03483570817740025,
+      "p_value": 0.0148,
+      "significant_at_05": true
+    },
+    "ZN=F|W+3|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.02231922747621573,
+      "ci95_lo": -0.03381305139922917,
+      "ci95_hi": 0.0803977040968458,
+      "p_value": 0.4384,
+      "significant_at_05": false
+    },
+    "ZN=F|W+3|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.03603432288192154,
+      "ci95_lo": -0.01999405666408557,
+      "ci95_hi": 0.10140230801791073,
+      "p_value": 0.1972,
+      "significant_at_05": false
+    },
+    "ZN=F|W+3|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.21110790906739352,
+      "ci95_lo": -0.4062651163353767,
+      "ci95_hi": 0.011963016246550441,
+      "p_value": 0.0686,
+      "significant_at_05": false
+    },
+    "ZN=F|W+3|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 0.026709403930289283,
+      "ci95_lo": -0.02988271414217137,
+      "ci95_hi": 0.0901868962634196,
+      "p_value": 0.3576,
+      "significant_at_05": false
+    },
+    "ZN=F|W+3|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -0.16990903422794681,
+      "ci95_lo": -0.2739112470242984,
+      "ci95_hi": -0.03999810233434127,
+      "p_value": 0.0054,
+      "significant_at_05": true
+    }
+  },
+  "pooled": {
+    "W+1|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    }
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "per_asset": {
+    "BTC-USD|W+1|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 48.126609228902346,
+      "ci95_lo": -169.73903397233414,
+      "ci95_hi": 273.483034031445,
+      "p_value": 0.6902,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+1|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 180.22995853198847,
+      "ci95_lo": -149.51663050419717,
+      "ci95_hi": 495.93296172655863,
+      "p_value": 0.2838,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+1|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -15496.819402024803,
+      "ci95_lo": -20500.46494455158,
+      "ci95_hi": -10745.064471789528,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+1|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 217.04590535950751,
+      "ci95_lo": -139.7120464211547,
+      "ci95_hi": 544.4618246427059,
+      "p_value": 0.2226,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+1|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -2433.171266329427,
+      "ci95_lo": -3926.3715451905705,
+      "ci95_hi": -1232.0207166151204,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+2|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 492.75225574462223,
+      "ci95_lo": 53.485945201546706,
+      "ci95_hi": 967.6611341904837,
+      "p_value": 0.0316,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+2|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 697.048332280848,
+      "ci95_lo": -44.93575418973336,
+      "ci95_hi": 1423.7611381097458,
+      "p_value": 0.0642,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+2|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -14917.8648562446,
+      "ci95_lo": -20140.615386890564,
+      "ci95_hi": -9774.033485814733,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+2|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 669.0151668983435,
+      "ci95_lo": -131.84501873930657,
+      "ci95_hi": 1446.732261773183,
+      "p_value": 0.0928,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+2|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -1108.1215144891562,
+      "ci95_lo": -2800.900198160574,
+      "ci95_hi": 415.10807101017383,
+      "p_value": 0.1596,
+      "significant_at_05": false
+    },
+    "BTC-USD|W+3|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 986.5033812469852,
+      "ci95_lo": 357.392805435159,
+      "ci95_hi": 1634.5475737814686,
+      "p_value": 0.002,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+3|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 1293.9778271495882,
+      "ci95_lo": 221.11662613534085,
+      "ci95_hi": 2389.1991951976097,
+      "p_value": 0.0224,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+3|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -14079.559975195016,
+      "ci95_lo": -19454.796378305695,
+      "ci95_hi": -8578.811867050441,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+3|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 1287.5528534206112,
+      "ci95_lo": 155.36204260072162,
+      "ci95_hi": 2443.5100469060226,
+      "p_value": 0.0272,
+      "significant_at_05": true
+    },
+    "BTC-USD|W+3|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -10.457740555425271,
+      "ci95_lo": -1870.714774522964,
+      "ci95_hi": 1941.678493110812,
+      "p_value": 1.0,
+      "significant_at_05": false
+    }
+  },
+  "pooled": {
+    "W+1|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    }
+  }
+}
