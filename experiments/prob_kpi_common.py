@@ -90,29 +90,54 @@ def horizon_label(row) -> str:
 
 # ── parametric sampling (models 1-5) ──────────────────────────────────────────
 
+def _two_piece_normal(mu: float, sigma_lo: float, sigma_hi: float,
+                      n_samples: int, rng: np.random.Generator) -> np.ndarray:
+    """Two-piece (split) normal draws: N(mu, sigma_lo) below the mode, N(mu,
+    sigma_hi) above, side probability sigma_lo/(sigma_lo+sigma_hi) (John 1982).
+    With sigma_lo == sigma_hi this IS an exact N(mu, sigma) -- so symmetric
+    stored bounds reproduce the historical Gaussian reconstruction bit-for-bit
+    in distribution, while asymmetric bounds (skew-t ARIMA-GARCH innovations,
+    any future asymmetric PI) are no longer forcibly symmetrized. The sigmas
+    are backed out per side from the stored 95% bounds; for a genuinely
+    skewed law this is a first-order reconstruction (exact at the two stored
+    quantiles), which is the best available without persisting shape
+    parameters -- documented approximation, cf. Loi_Gaussienne_vs_Empirique.pdf
+    §3.4."""
+    sigma_lo = max(sigma_lo, 1e-10)
+    sigma_hi = max(sigma_hi, 1e-10)
+    below = rng.random(n_samples) < sigma_lo / (sigma_lo + sigma_hi)
+    mag = np.abs(rng.standard_normal(n_samples))
+    return np.where(below, mu - sigma_lo * mag, mu + sigma_hi * mag)
+
+
 def sample_parametric(model: str, y_pred: float, y_lower: float, y_upper: float,
                        last_close: float, n_samples: int, rng: np.random.Generator) -> np.ndarray:
     """N samples from the model's own predictive distribution, as implied by
     its stored (y_pred, y_lower, y_upper) 95% PI -- see models/*.py for each
     model's construction (checked directly, not assumed):
-      - ARIMA-GARCH: pred = last*exp(mu), lower/upper = last*exp(mu -/+ z*sigma)
-        -> lognormal in price space, sigma recovered in LOG space.
-      - SARIMA / Prophet / Naive / LSTM: pred +/- z*sigma directly in price
-        space -> Gaussian, sigma recovered in PRICE space.
+      - ARIMA-GARCH: pred = last*exp(mu), lower/upper = last*exp(mu + z_lo/hi*sigma)
+        -> reconstructed in LOG space. z_lo/z_hi may be asymmetric since the
+        skew-t innovation adoption (dist='skewt'), hence the two-piece draw.
+      - Prophet: fitted in log space since the log_space adoption -> lognormal
+        in price space, reconstructed in LOG space (two-piece, same reason).
+      - SARIMA / Naive / LSTM: pred +/- z*sigma directly in price space ->
+        Gaussian (two-piece reduces to it exactly for symmetric bounds).
     """
-    if model == "ARIMA-GARCH":
+    if model in ("ARIMA-GARCH", "Prophet"):
         log_pred = np.log(y_pred / last_close)
         log_upper = np.log(y_upper / last_close)
         log_lower = np.log(y_lower / last_close)
-        sigma_log = (log_upper - log_lower) / (2.0 * Z95)
-        sigma_log = max(sigma_log, 1e-10)
-        draws = rng.normal(loc=log_pred, scale=sigma_log, size=n_samples)
+        draws = _two_piece_normal(log_pred,
+                                  (log_pred - log_lower) / Z95,
+                                  (log_upper - log_pred) / Z95,
+                                  n_samples, rng)
         return last_close * np.exp(draws)
 
-    if model in ("SARIMA", "Prophet", "Naive", "LSTM"):
-        sigma = (y_upper - y_lower) / (2.0 * Z95)
-        sigma = max(sigma, 1e-10)
-        return rng.normal(loc=y_pred, scale=sigma, size=n_samples)
+    if model in ("SARIMA", "Naive", "LSTM"):
+        return _two_piece_normal(y_pred,
+                                 (y_pred - y_lower) / Z95,
+                                 (y_upper - y_pred) / Z95,
+                                 n_samples, rng)
 
     raise ValueError(f"sample_parametric: not a parametric model here: {model!r}")
 

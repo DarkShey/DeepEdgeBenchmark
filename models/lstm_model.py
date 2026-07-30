@@ -57,6 +57,19 @@ DROPOUT_RATE = 0.2    # Dropout(rate) between LSTM and Dense -- also enables Mon
 DEFAULT_SEED = 42     # --seed default: TF training isn't bit-exact across machines,
                       # but fixing this makes a given run reproducible on the same machine.
 
+# EWMA sigma ADOPTED 2026-07-30 (sigma_mode="ewma" default): the historical PI
+# used ONE constant sigma (std of train residuals) for the whole test window --
+# the known "sigma figé" defect. The MDN rewrite (option 3) failed (worse
+# calibration, unstable across seeds, +23% cost: experiments/lstm_mdn_*), but a
+# causal RiskMetrics EWMA of the walk-forward residuals fixes it OUTSIDE the
+# network, with the production network and point forecast untouched:
+# experiments/lstm_sigma_variants.py measures, on the same runs, MACE
+# frozen->ewma of 10.3->3.9 (W1 2020-2024), 15.6->6.1 (W2 2018-2022),
+# 10.3->3.1 (W3 2022-2026) -- best sigma family in all three windows.
+# Set sigma_mode="frozen" to reproduce the historical behaviour.
+EWMA_LAMBDA  = 0.94   # RiskMetrics daily decay
+SIGMA_MODE   = "ewma"
+
 
 def set_seed(seed: int = DEFAULT_SEED) -> None:
     """Seed numpy/tensorflow (and Python's hash-based RNG) for a reproducible run."""
@@ -110,6 +123,23 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
     }
 
 
+def ewma_sigma_path(warm_resid: np.ndarray, test_resid: np.ndarray,
+                    lam: float = EWMA_LAMBDA) -> np.ndarray:
+    """Causal EWMA sigma path: sigma_t^2 = lam*s2 + (1-lam)*resid_{t-1}^2,
+    seeded on the warm (train) residual variance, then updated with the test
+    residuals OBSERVED so far -- sigma_t never uses resid_t or anything later
+    (validated in experiments/lstm_sigma_variants.py)."""
+    warm_resid = np.asarray(warm_resid, float)
+    s2 = float(np.var(warm_resid))
+    for e in warm_resid[-250:]:
+        s2 = lam * s2 + (1 - lam) * e * e
+    out = np.empty(len(test_resid))
+    for t, e in enumerate(np.asarray(test_resid, float)):
+        out[t] = np.sqrt(s2)
+        s2 = lam * s2 + (1 - lam) * e * e
+    return out
+
+
 def make_sequences(data: np.ndarray, seq_len: int):
     X, y = [], []
     for i in range(seq_len, len(data)):
@@ -131,8 +161,12 @@ def build_lstm(seq_len: int = SEQ_LEN, units: int = UNITS,
 # ── LSTM walk-forward backtest ───────────────────────────────────────────────
 def run_lstm(train: pd.Series, test: pd.Series,
              seq_len=SEQ_LEN, epochs=EPOCHS, batch_size=BATCH_SIZE,
-             n_ensemble: int = 0) -> dict:
+             n_ensemble: int = 0, sigma_mode: str = SIGMA_MODE) -> dict:
     """Train on the scaled train window, roll 1-step-ahead over the test window.
+
+    `sigma_mode` : "ewma" (default, adopted 2026-07-30 -- see EWMA_LAMBDA note)
+    gives each step its own causal EWMA sigma from the residuals observed so
+    far; "frozen" reproduces the historical single train-residual std.
 
     `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
     additionally draws `n_ensemble` Monte Carlo Dropout samples of the next-step
@@ -182,9 +216,16 @@ def run_lstm(train: pd.Series, test: pd.Series,
 
     train_preds = scaler.inverse_transform(
         model.predict(X_train, verbose=0).reshape(-1, 1)).flatten()
-    std   = np.std(train.values[seq_len:] - train_preds)
-    lower = preds - 1.96 * std
-    upper = preds + 1.96 * std
+    train_resid = train.values[seq_len:] - train_preds
+    if sigma_mode == "ewma":
+        # causal: sigma_t only uses train residuals + test residuals < t
+        sigma = ewma_sigma_path(train_resid, test.values - preds)
+    elif sigma_mode == "frozen":
+        sigma = np.std(train_resid)
+    else:
+        raise ValueError(f"unknown sigma_mode {sigma_mode!r}")
+    lower = preds - 1.96 * sigma
+    upper = preds + 1.96 * sigma
 
     train_time = time.time() - t0
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
@@ -197,7 +238,7 @@ def run_lstm(train: pd.Series, test: pd.Series,
 
 
 def next_step_lstm(series: pd.Series, seq_len=SEQ_LEN, epochs=EPOCHS,
-                   batch_size=BATCH_SIZE):
+                   batch_size=BATCH_SIZE, sigma_mode: str = SIGMA_MODE):
     """Single 1-step forecast beyond the last observation. Returns (pred, lo, hi)."""
     if len(series) <= seq_len:
         raise ValueError(
@@ -220,7 +261,13 @@ def next_step_lstm(series: pd.Series, seq_len=SEQ_LEN, epochs=EPOCHS,
 
     train_preds = scaler.inverse_transform(
         model.predict(X, verbose=0).reshape(-1, 1)).flatten()
-    std = np.std(series.values[seq_len:] - train_preds)
+    resid = series.values[seq_len:] - train_preds
+    if sigma_mode == "ewma":
+        # EWMA over the full in-sample residual history (most recent last):
+        # the next step's sigma reflects the CURRENT volatility regime.
+        std = float(ewma_sigma_path(resid, np.zeros(1))[0])
+    else:
+        std = np.std(resid)
     return pred, pred - 1.96 * std, pred + 1.96 * std
 
 

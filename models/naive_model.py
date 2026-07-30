@@ -55,6 +55,17 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 Z_95          = 1.96   # 95% prediction interval z-score (Gaussian random walk)
 DEFAULT_SEED  = 42     # kept for interface compatibility (model is deterministic)
 
+# EWMA sigma ADOPTED 2026-07-30 (sigma_mode="ewma" default): the frozen
+# train-window sigma cannot follow volatility regimes, which the three-window
+# comparison (experiments/dynamic_sigma_variants.py: W1 2020-2024, W2
+# 2018-2022, W3 2022-2026) shows is the dominant miscalibration -- a causal
+# RiskMetrics EWMA of the observed 1-day changes beats EVERY static option
+# tested (normal/student-t/GED shape swaps, CQR) in every window: cross-window
+# MACE 4.27 (ewma+normal) vs 10.88 (frozen+normal), 8.85 (frozen+GED), 7.54
+# (frozen+CQR). Set sigma_mode="frozen" to reproduce the historical behaviour.
+EWMA_LAMBDA   = 0.94   # RiskMetrics daily decay
+SIGMA_MODE    = "ewma"
+
 
 def set_seed(seed: int = DEFAULT_SEED) -> None:
     """No-op kept for interface compatibility: the persistence baseline is
@@ -65,8 +76,38 @@ def set_seed(seed: int = DEFAULT_SEED) -> None:
 
 def train_sigma(train: pd.Series) -> float:
     """Std of the 1-step price changes of the training window — the Gaussian
-    random-walk scale used for the 95% PI."""
+    random-walk scale used for the 95% PI (sigma_mode="frozen")."""
     return float(np.std(np.diff(np.asarray(train, dtype=float))))
+
+
+def ewma_sigma_path(train: pd.Series, test: pd.Series,
+                    lam: float = EWMA_LAMBDA) -> np.ndarray:
+    """Causal EWMA sigma path over the test window: sigma_t^2 =
+    lam*sigma_{t-1}^2 + (1-lam)*change_{t-1}^2, seeded on the train-window
+    variance and warmed on its last 250 1-day changes. sigma_t only ever uses
+    changes observed strictly BEFORE step t (persistence residual = 1-day
+    change, so this is exactly the walk-forward residual EWMA validated in
+    experiments/dynamic_sigma_variants.py)."""
+    changes = np.diff(np.asarray(train, dtype=float))
+    s2 = float(np.var(changes))
+    for c in changes[-250:]:
+        s2 = lam * s2 + (1 - lam) * c * c
+    prev = np.concatenate([[float(train.iloc[-1])], np.asarray(test, float)[:-1]])
+    test_changes = np.asarray(test, float) - prev   # observed at END of step t
+    out = np.empty(len(test_changes))
+    for t, c in enumerate(test_changes):
+        out[t] = np.sqrt(s2)
+        s2 = lam * s2 + (1 - lam) * c * c
+    return out
+
+
+def ewma_sigma_next(series: pd.Series, lam: float = EWMA_LAMBDA) -> float:
+    """EWMA sigma for the single next step, from the full observed history."""
+    changes = np.diff(np.asarray(series, dtype=float))
+    s2 = float(np.var(changes))
+    for c in changes[-250:]:
+        s2 = lam * s2 + (1 - lam) * c * c
+    return float(np.sqrt(s2))
 
 
 # ── Data ─────────────────────────────────────────────────────────────────────
@@ -116,16 +157,21 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
 
 # ── Naive walk-forward backtest ──────────────────────────────────────────────
 def run_naive(train: pd.Series, test: pd.Series,
-              n_ensemble: int = 0, ensemble_seed=None) -> dict:
+              n_ensemble: int = 0, ensemble_seed=None,
+              sigma_mode: str = SIGMA_MODE) -> dict:
     """Rolling 1-step-ahead persistence forecast: pred_t = actual_{t-1}, exactly.
 
     Walk-forward: uses the realised previous price at every step (train's last price
     for the first test point, then test's own realised prices), never its own prediction.
-    95% PI: prev ± 1.96·σ, σ = std of the train-set 1-day changes.
+    95% PI: prev ± 1.96·σ_t. `sigma_mode`:
+      "ewma"   (default, adopted 2026-07-30 -- see EWMA_LAMBDA note): causal
+               RiskMetrics EWMA of the observed 1-day changes, so the band
+               widens/narrows with the volatility regime.
+      "frozen" (historical): one constant σ = std of the train-set 1-day changes.
 
     `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
     additionally draws `n_ensemble` samples from the same Gaussian random-walk band
-    already used for the 95% PI (prev ± 1.96σ) -- not a new distributional assumption,
+    already used for the 95% PI (prev ± 1.96σ_t) -- not a new distributional assumption,
     just materializing the existing one as a cloud. Populates result["ensemble"] (list
     of length n_test, one [n_ensemble] price array per step) for empirical CRPS
     (cf. model_artifacts/crps_kpis.py).
@@ -134,15 +180,22 @@ def run_naive(train: pd.Series, test: pd.Series,
     prev_prices = np.concatenate([[train.iloc[-1]], test.values[:-1].astype(float)])
 
     preds = prev_prices.copy()               # persistence: no drift, no noise
-    sigma = train_sigma(train)
+    if sigma_mode == "ewma":
+        sigma = ewma_sigma_path(train, test)     # array, one sigma per step
+    elif sigma_mode == "frozen":
+        sigma = train_sigma(train)               # scalar, historical behaviour
+    else:
+        raise ValueError(f"unknown sigma_mode {sigma_mode!r}")
     lower = prev_prices - Z_95 * sigma
     upper = prev_prices + Z_95 * sigma
 
     ensemble = None
     if n_ensemble > 0:
         rng = np.random.default_rng(ensemble_seed)
-        noise = rng.normal(0.0, sigma, size=(len(prev_prices), n_ensemble))
-        ensemble = [prev_prices[t] + noise[t] for t in range(len(prev_prices))]
+        sigma_arr = np.broadcast_to(np.asarray(sigma, float), prev_prices.shape)
+        noise = rng.normal(0.0, 1.0, size=(len(prev_prices), n_ensemble))
+        ensemble = [prev_prices[t] + sigma_arr[t] * noise[t]
+                    for t in range(len(prev_prices))]
 
     train_time = time.time() - t0
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
@@ -154,10 +207,13 @@ def run_naive(train: pd.Series, test: pd.Series,
     return result
 
 
-def next_step_naive(series: pd.Series):
+def next_step_naive(series: pd.Series, sigma_mode: str = SIGMA_MODE):
     """Single 1-step forecast beyond the last observation. Returns (pred, lo, hi)."""
     last_price = float(series.iloc[-1])
-    sigma = train_sigma(series)
+    if sigma_mode == "ewma":
+        sigma = ewma_sigma_next(series)
+    else:
+        sigma = train_sigma(series)
     return last_price, last_price - Z_95 * sigma, last_price + Z_95 * sigma
 
 

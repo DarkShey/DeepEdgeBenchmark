@@ -322,3 +322,113 @@ def skill_verdict(theil, dm_p, alpha=0.05):
     if dm_p < alpha and theil > 1:
         return "worse than naive"
     return "no better than naive"
+
+
+# ── distribution-aware CRPS / PIT (calibration follow-up, 2026-07) ───────────
+# The historical convention throughout the repo (crps_gaussian callers,
+# prob_kpi_common.sample_parametric) reconstructs every predictive law as a
+# SYMMETRIC Gaussian from the stored 95% PI width. Since the sigma-calibration
+# adoption (skew-t ARIMA-GARCH innovations, log-space Prophet), stored bounds
+# can be asymmetric, and scoring them with a symmetric closed form is exactly
+# the incoherence flagged in HANDOFF_dist_options_comparison.md. These helpers
+# score the law the model actually used. crps_gaussian/pit_values above are
+# kept unchanged for backward compatibility.
+
+def crps_student_t(mu, scale, actual, dof):
+    """Closed-form CRPS for a Student-t predictive law (Gneiting & Raftery
+    2007, table 1). `scale` is the t scale parameter (NOT the std)."""
+    from scipy.special import beta as beta_fn
+    mu = np.asarray(mu, float).ravel()
+    scale = np.maximum(np.asarray(scale, float).ravel(), 1e-12)
+    y = np.asarray(actual, float).ravel()
+    z = (y - mu) / scale
+    Fz = stats.t.cdf(z, dof)
+    fz = stats.t.pdf(z, dof)
+    term = (z * (2 * Fz - 1) + 2 * fz * (dof + z ** 2) / (dof - 1)
+            - (2 * np.sqrt(dof) / (dof - 1))
+            * beta_fn(0.5, dof - 0.5) / beta_fn(0.5, dof / 2.0) ** 2)
+    return float(np.mean(scale * term))
+
+
+def crps_lognormal(mu_log, sigma_log, actual):
+    """Closed-form CRPS for a lognormal predictive law: Y = exp(X),
+    X ~ N(mu_log, sigma_log) (Baran & Lerch 2015, eq. 5). This is the exact
+    score for ARIMA-GARCH (normal innovations) and log-space Prophet prices."""
+    mu = np.asarray(mu_log, float).ravel()
+    s = np.maximum(np.asarray(sigma_log, float).ravel(), 1e-12)
+    y = np.maximum(np.asarray(actual, float).ravel(), 1e-300)
+    w = (np.log(y) - mu) / s
+    ex = np.exp(mu + s * s / 2.0)
+    return float(np.mean(
+        y * (2 * stats.norm.cdf(w) - 1)
+        - 2 * ex * (stats.norm.cdf(w - s) + stats.norm.cdf(s / np.sqrt(2)) - 1)
+    ))
+
+
+def _crps_empirical_sorted(samples, y):
+    """O(n log n) empirical CRPS (Gneiting & Raftery 2007, eq. 20) for one
+    observation -- local, to keep honest_eval dependency-free."""
+    x = np.sort(np.asarray(samples, float).ravel())
+    n = len(x)
+    mean_abs = float(np.mean(np.abs(x - y)))
+    # E|X - X'| via the sorted-sample identity
+    coef = 2.0 * np.arange(1, n + 1) - n - 1
+    mean_pair = 2.0 * float(np.sum(coef * x)) / (n * n)
+    return mean_abs - 0.5 * mean_pair
+
+
+def crps_parametric(mu, sigma, actual, dist="normal", shape=None,
+                    ppf_fn=None, n_samples=512, seed=0):
+    """CRPS under the predictive law the model ACTUALLY used.
+
+    mu/sigma: location and scale path (arrays or scalars); for dist='lognormal'
+    they are the LOG-space mean and std. dist: 'normal' | 'student_t' (shape =
+    dof) | 'ged' (shape = beta, unit-variance convention as in
+    experiments/dist_options_common.fit_ged) | 'lognormal' | 'custom'
+    (provide ppf_fn(p) -> unit-variance standardized quantiles, e.g. an arch
+    skew-t ppf closure -- scored by inverse-transform sampling)."""
+    if dist == "normal":
+        return crps_gaussian(mu, sigma, actual)
+    if dist == "lognormal":
+        return crps_lognormal(mu, sigma, actual)
+    if dist == "student_t":
+        dof = float(shape)
+        scale = np.asarray(sigma, float) * np.sqrt((dof - 2.0) / dof)
+        return crps_student_t(mu, scale, actual, dof)
+    if dist == "ged":
+        beta = float(shape)
+        uv_scale = 1.0 / np.sqrt(stats.gennorm(beta).var())
+        ppf_fn = lambda p: stats.gennorm.ppf(p, beta) * uv_scale  # noqa: E731
+    if ppf_fn is None:
+        raise ValueError(f"crps_parametric: unsupported dist {dist!r} without ppf_fn")
+    mu = np.asarray(mu, float).ravel()
+    sigma = np.maximum(np.asarray(sigma, float).ravel(), 1e-12)
+    y = np.asarray(actual, float).ravel()
+    rng = np.random.default_rng(seed)
+    scores = np.empty(len(y))
+    for i in range(len(y)):
+        draws = mu[i] + sigma[i] * ppf_fn(rng.random(n_samples))
+        scores[i] = _crps_empirical_sorted(draws, y[i])
+    return float(np.mean(scores))
+
+
+def pit_parametric(mu, sigma, actual, dist="normal", shape=None, cdf_fn=None):
+    """PIT under the actual predictive law (generalizes pit_values)."""
+    mu = np.asarray(mu, float).ravel()
+    sigma = np.maximum(np.asarray(sigma, float).ravel(), 1e-12)
+    y = np.asarray(actual, float).ravel()
+    z = (y - mu) / sigma
+    if dist == "normal":
+        return stats.norm.cdf(z)
+    if dist == "lognormal":
+        return stats.norm.cdf((np.log(np.maximum(y, 1e-300)) - mu) / sigma)
+    if dist == "student_t":
+        dof = float(shape)
+        return stats.t.cdf(z / np.sqrt((dof - 2.0) / dof), dof)
+    if dist == "ged":
+        beta = float(shape)
+        uv = 1.0 / np.sqrt(stats.gennorm(beta).var())
+        return stats.gennorm.cdf(z / uv, beta)
+    if cdf_fn is not None:
+        return cdf_fn(z)
+    raise ValueError(f"pit_parametric: unsupported dist {dist!r} without cdf_fn")

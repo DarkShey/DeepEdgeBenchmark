@@ -50,3 +50,12 @@ experiments/.price_cache_d7_w1/
 # Cambria/Consolas (polices sous licence Microsoft) en base64 pour un rendu autonome ;
 # jamais versionné pour ne pas redistribuer ces polices, régénérer localement à la place.
 experiments/dist_options_report.html
+
+# Checkpoints d'exécution par tranches (suivi sigma-calibration 2026-07-30) --
+# gros dumps bruts pas-à-pas / poids Keras, régénérables via les scripts
+# experiments/{robustness_windows,prophet_sigma_investigation,lstm_sigma_variants}.py ;
+# seuls les *_results.json agrégés sont versionnés.
+experiments/robustness_state_*.json
+experiments/prophet_invest_state*.json
+experiments/lstm_sigma_state*.json
+experiments/lstm_sigma_ckpt*/

@@ -42,16 +42,46 @@ def test_run_naive_is_deterministic_across_seeds():
     np.testing.assert_array_equal(r1["upper"], r2["upper"])
 
 
-def test_run_naive_interval_is_gaussian_rw_band():
+def test_run_naive_interval_is_gaussian_rw_band_frozen_mode():
+    """sigma_mode='frozen' reproduces the historical constant-sigma band."""
     train, test = make_train_test()
 
-    result = naive_model.run_naive(train, test)
+    result = naive_model.run_naive(train, test, sigma_mode="frozen")
 
     sigma = float(np.std(np.diff(train.values.astype(float))))
     prev = np.asarray(result["predictions"], dtype=float)
     np.testing.assert_allclose(result["lower"], prev - naive_model.Z_95 * sigma)
     np.testing.assert_allclose(result["upper"], prev + naive_model.Z_95 * sigma)
     assert sigma > 0
+
+
+def test_run_naive_default_ewma_band_matches_sigma_path():
+    """Default sigma_mode='ewma' (adopted 2026-07-30): the band follows the
+    causal EWMA sigma path exactly, and is time-varying."""
+    train, test = make_train_test()
+
+    result = naive_model.run_naive(train, test)
+
+    sig = naive_model.ewma_sigma_path(train, test)
+    prev = np.asarray(result["predictions"], dtype=float)
+    np.testing.assert_allclose(result["lower"], prev - naive_model.Z_95 * sig)
+    np.testing.assert_allclose(result["upper"], prev + naive_model.Z_95 * sig)
+    assert np.std(sig) > 0  # actually varies over the window
+
+
+def test_ewma_sigma_path_is_causal():
+    """sigma_t must not depend on the change observed AT step t (or later):
+    perturbing test point t only affects sigmas strictly after t."""
+    train, test = make_train_test()
+    base = naive_model.ewma_sigma_path(train, test)
+
+    t_perturb = 4
+    test2 = test.copy()
+    test2.iloc[t_perturb] = test2.iloc[t_perturb] + 50.0
+    pert = naive_model.ewma_sigma_path(train, test2)
+
+    np.testing.assert_allclose(pert[:t_perturb + 1], base[:t_perturb + 1])
+    assert not np.allclose(pert[t_perturb + 1:], base[t_perturb + 1:])
 
 
 def test_run_naive_n_ensemble_zero_omits_ensemble_key():

@@ -52,6 +52,16 @@ GARCH_REFIT_FREQ = 20          # re-fit GARCH every N steps during the walk-forw
 Z_95             = 1.96        # 95% prediction interval z-score (normal dist only)
 PI_LEVELS        = (0.50, 0.80, 0.95)   # coverage levels reported by compute_metrics
 
+# Innovation distribution of the GARCH(1,1) volatility model. 'skewt' ADOPTED
+# 2026-07-30 after the three-window robustness comparison (experiments/
+# robustness_windows.py + HANDOFF_dist_options_comparison.md follow-up): the
+# native skew-t/GED rows are the only variants that stay best-calibrated across
+# W1 2020-2024 / W2 2018-2022 / W3 2022-2026 (MACE 4.0/2.9-3.0 vs 4.5-6.8 for
+# the normal baseline), at the cost of one slightly slower GARCH fit per refit
+# (~+1-2 s per full backtest, negligible at production's one-refit-per-day
+# cadence). Set dist='normal' to reproduce the historical behaviour.
+GARCH_DIST       = "skewt"
+
 
 # ── Data ─────────────────────────────────────────────────────────────────────
 def fetch_data(ticker: str, start: str, end: str) -> pd.Series:
@@ -144,7 +154,7 @@ def _std_quantiles(dist, shape, levels=PI_LEVELS) -> dict:
 # ── ARIMA-GARCH walk-forward backtest ────────────────────────────────────────
 def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
                     order=ARIMA_ORDER, garch_refit_freq=GARCH_REFIT_FREQ,
-                    dist: str = "normal", pi_levels=PI_LEVELS,
+                    dist: str = GARCH_DIST, pi_levels=PI_LEVELS,
                     n_ensemble: int = 0, ensemble_seed=None,
                     n_crps_samples: int = 0) -> dict:
     """Rolling 1-step-ahead ARIMA-GARCH forecast over the test window.
@@ -275,10 +285,15 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
     return result
 
 
-def next_step_arima_garch(series: pd.Series, order=ARIMA_ORDER):
+def next_step_arima_garch(series: pd.Series, order=ARIMA_ORDER,
+                          dist: str = GARCH_DIST):
     """Single 1-step forecast beyond the last observation (no backtest).
 
-    Returns (point_forecast, pi_low_95, pi_high_95).
+    Returns (point_forecast, pi_low_95, pi_high_95). Since the skew-t adoption
+    (GARCH_DIST) the 95% bounds use the fitted innovation distribution's own
+    quantiles -- same construction as run_arima_garch, so backtest and
+    production next-step emit the same law. dist='normal' reproduces the
+    historical symmetric Z_95 band.
     """
     prices  = series.astype(float).values
     returns = np.diff(np.log(prices)) * 100.0
@@ -292,15 +307,18 @@ def next_step_arima_garch(series: pd.Series, order=ARIMA_ORDER):
 
     resid = np.asarray(arima_res.resid, dtype=float)
     garch_res = arch_model(
-        resid, vol="Garch", p=1, q=1, dist="normal", rescale=False
+        resid, vol="Garch", p=1, q=1, dist=dist, rescale=False
     ).fit(disp="off")
     garch_fc = garch_res.forecast(horizon=1, reindex=False)
     sigma    = np.sqrt(garch_fc.variance.values[-1, 0]) / 100.0
 
+    dist_obj, shape = _dist_shape(garch_res)
+    q_lo, q_hi = _std_quantiles(dist_obj, shape, (0.95,))[0.95]
+
     last_price = prices[-1]
     pred   = last_price * np.exp(mu)
-    pi_low = last_price * np.exp(mu - Z_95 * sigma)
-    pi_hi  = last_price * np.exp(mu + Z_95 * sigma)
+    pi_low = last_price * np.exp(mu + sigma * q_lo)
+    pi_hi  = last_price * np.exp(mu + sigma * q_hi)
     return pred, pi_low, pi_hi
 
 
@@ -336,6 +354,9 @@ def main() -> None:
                    help="fraction of the series held out as the test set")
     p.add_argument("--order", default="2,0,2",
                    help="ARIMA order p,d,q on log-returns (default 2,0,2)")
+    p.add_argument("--dist", default=GARCH_DIST,
+                   help="GARCH innovation distribution (anything arch_model "
+                        f"accepts: skewt, ged, t, normal; default {GARCH_DIST})")
     p.add_argument("--next-step", action="store_true",
                    help="only forecast the single next step (no backtest)")
     p.add_argument("--plot", metavar="PATH", default=None,
@@ -349,7 +370,7 @@ def main() -> None:
     print(f"  {len(prices)} daily observations.\n")
 
     if args.next_step:
-        pred, lo, hi = next_step_arima_garch(prices, order=order)
+        pred, lo, hi = next_step_arima_garch(prices, order=order, dist=args.dist)
         last = prices.iloc[-1]
         print(f"Last close      : {last:,.4f}")
         print(f"Next-step point : {pred:,.4f}")
@@ -361,7 +382,7 @@ def main() -> None:
     print(f"Train: {len(train)}  Test: {len(test)}  "
           f"ARIMA order: {order}, GARCH(1,1)\n")
 
-    result = run_arima_garch(train, test, order=order)
+    result = run_arima_garch(train, test, order=order, dist=args.dist)
 
     print(f"=== ARIMA{order}-GARCH(1,1) — {args.ticker} ===")
     for k, v in result.items():
