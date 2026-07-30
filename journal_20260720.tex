@@ -1,0 +1,120 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+
+\title{Journal de travail --- Dashboard TC1.1--1.5 \& flag \texttt{real\_flag}}
+\author{DeepEdgeBenchmark}
+\date{20 juillet 2026}
+
+\begin{document}
+\maketitle
+
+\section{Contexte}
+Point de départ : le dashboard signalait des données manquantes pour ARIMA
+(``seulement 2 jours sur 9 avec signal''). Vérification faite directement en
+base (\texttt{validation/tracking.db}) plutôt que de faire confiance au
+diagnostic transmis.
+
+\section{Diagnostic du ``trou de données''}
+\begin{itemize}
+  \item La base locale était périmée (dernier \texttt{cutoff\_date} au 15/07,
+        alors que des runs plus récents existaient déjà sur \texttt{origin/main}).
+  \item Après \texttt{git pull}, les prédictions du 16 au 19/07 sont apparues,
+        mais leurs \texttt{sim\_trades} n'étaient pas encore générés : le cron
+        \texttt{evaluate\_daily} n'avait simplement pas encore tourné après ce
+        backfill (fait par Maeva Cavaleri le jour même).
+  \item Les chiffres ``2 jours sur 9 / 6 jours sur 9'' avancés dans l'échange
+        précédent ne correspondaient à aucune donnée réelle en base : ARIMA
+        avait en fait des signaux sur 9 jours sur 9 (\texttt{bull\_calm\_d1} et
+        \texttt{sideways\_d1}), simplement avec un taux de réussite directionnel
+        plus faible que SARIMA -- une question de performance, pas de collecte.
+  \item Conclusion : pas de bug à corriger, juste attendre le prochain passage
+        du cron \texttt{evaluate-daily.yml} (GitHub Actions, 01h30 Paris).
+\end{itemize}
+
+\section{Extension du tableau Test Cases à tous les actifs}
+Le tableau TC1.1--1.5 du dashboard (\texttt{model\_artifacts/generate\_dashboard.py})
+n'affichait que BTC-USD (\texttt{SIM\_TRADES\_ASSETS = ["BTC-USD"]}), alors que
+le rendu JS était déjà générique par actif.
+\begin{itemize}
+  \item \texttt{SIM\_TRADES\_ASSETS} tire désormais la liste depuis
+        \texttt{calibration.regime.assets.ASSETS} (source unique de vérité),
+        avec repli sur la liste connue si l'import échoue.
+  \item Vérifié : les 5 actifs (BTC-USD, ETH-USD, SPY, ZN=F, TLT) ont bien
+        leurs lignes dans le dashboard régénéré.
+  \item Commit \texttt{98aaff5}, poussé sur \texttt{main} --- déclenche le
+        redéploiement automatique de \texttt{deploy-pages.yml}.
+\end{itemize}
+
+\section{Nouveau flag \texttt{real\_flag} (vraie vs fausse prédiction)}
+
+\subsection{Le piège identifié avant de coder}
+La colonne \texttt{source} (\texttt{'live'}/\texttt{'oos'}) porte déjà un sens
+technique (provenance : pipeline de prod vs backtest), utilisé comme clé de
+jointure et d'unicité dans une bonne dizaine d'endroits (\texttt{sim\_trades},
+index unique OOS, \texttt{evaluate\_pending}, dédup, gate stress de
+\texttt{sideways\_gated\_d1}\ldots). Un historique git (\texttt{f60d71f} puis
+\texttt{d675188}, revert le jour même) montrait qu'une tentative précédente de
+réécrire \texttt{source} selon vraie/fausse prédiction avait cassé la jointure
+\texttt{daily\_detail()} et rendu les signaux TC invisibles --- exactement le
+symptôme diagnostiqué en section 2.
+
+\subsection{Conception retenue}
+\begin{itemize}
+  \item Nouvelle colonne \textbf{additive} \texttt{predictions.real\_flag}
+        (\texttt{'live'} = vraie prédiction, \texttt{'oos'} = fausse), jamais
+        utilisée comme clé de jointure ou d'unicité.
+  \item Règle unique de calcul : \texttt{tracking\_db.compute\_real\_flag(model,
+        cutoff\_date)} --- reprend exactement le seuil déjà utilisé côté JS
+        (\texttt{isRealPrediction}), qui devient la seule source de vérité.
+  \item Migration auto-réparatrice dans \texttt{init\_db()} : ajoute la colonne
+        si absente et backfille toute ligne existante à chaque appel.
+  \item Calcul également fait à l'insertion (\texttt{save\_prediction},
+        \texttt{insert\_oos\_predictions}) en défense en profondeur.
+  \item Propagation jusqu'au dashboard : vue \texttt{all\_predictions}
+        $\rightarrow$ \texttt{daily\_detail()} $\rightarrow$
+        \texttt{collect\_sim\_trades\_daily()} $\rightarrow$ JS
+        (\texttt{isRealPrediction(row) => row.real\_flag === 'live'}).
+\end{itemize}
+
+\subsection{Vérifications avant commit}
+\begin{itemize}
+  \item Tests ciblés : \texttt{pytest validation/test\_tracking\_db.py
+        validation/test\_sim\_trades.py -q} $\rightarrow$ 179 tests passés
+        (dont 5 nouveaux tests couvrant la migration et le cas backfill OOS).
+  \item Migration testée sur une copie de la base : aucune perte de ligne,
+        0 valeur \texttt{NULL} restante.
+  \item Spot-check exact sur les dates de backfill (08, 11, 13/07) :
+        \texttt{source='oos'} et \texttt{real\_flag='live'} coexistent bien sur
+        la même ligne --- le cas que \texttt{source} seul ne pouvait pas
+        représenter.
+  \item Dashboard régénéré : mêmes comptes de lignes par actif qu'avant le
+        changement (886/889/609/614/609) --- aucune régression du type
+        \texttt{d675188}.
+\end{itemize}
+
+\subsection{Commit}
+\texttt{71f3179} --- \emph{feat(db): flag real\_flag ('live'/'oos') pour
+vraie/fausse prédiction}, mergé avec un commit concurrent de Maeva
+(\texttt{documentation/oos\_vs\_live.pdf}, sans conflit), poussé sur
+\texttt{main} sous \texttt{d2a110e}.
+
+\section{Fichiers modifiés aujourd'hui}
+\begin{itemize}
+  \item \texttt{validation/tracking\_db.py} --- schéma, migration, \texttt{compute\_real\_flag}.
+  \item \texttt{validation/sim\_trades.py} --- vue \texttt{all\_predictions}, \texttt{daily\_detail}, \texttt{insert\_oos\_predictions}.
+  \item \texttt{model\_artifacts/generate\_dashboard.py} --- \texttt{SIM\_TRADES\_ASSETS}, \texttt{collect\_sim\_trades\_daily}, JS \texttt{isRealPrediction}.
+  \item \texttt{validation/test\_tracking\_db.py}, \texttt{validation/test\_sim\_trades.py} --- nouveaux tests.
+  \item \texttt{validation/tracking.db} --- backfill réel de \texttt{real\_flag}.
+\end{itemize}
+
+\section{Suite}
+Le cron \texttt{evaluate-daily.yml} (01h30 Paris) doit résoudre les
+prédictions du 16--19/07 et générer leurs \texttt{sim\_trades} manquants ---
+rien d'autre à faire de ce côté. Le dashboard en ligne est à jour suite aux
+deux pushs du jour.
+
+\end{document}

@@ -129,6 +129,50 @@ def directional_accuracy(pred, prev, actual):
 
 # ── Diebold-Mariano with Newey-West / HAC variance (Points 1, 3) ─────────────
 
+def dm_hac_test(diff, h=1) -> dict:
+    """Diebold-Mariano statistic on an ALREADY-COMPUTED loss differential series
+    (extracted from diebold_mariano() so callers that pool/scale their own loss
+    differential across assets before testing -- e.g. a MASE-scaled or CRPS-
+    normalised differential, not raw dollar errors -- can reuse the exact same
+    Newey-West/HLN machinery without going through diebold_mariano()'s "compute
+    loss from two raw error series" step, cf. experiments/pooled_analysis.py).
+
+    ``diff`` = loss(model_A) - loss(model_B) per (ordered, chronological)
+    observation -- already whatever loss/scale the caller wants (squared error,
+    absolute error, MASE-scaled error, ...). ``h`` is the forecast horizon;
+    autocorrelation is truncated at lag h-1 (at least T**(1/3)), matching
+    diebold_mariano()'s convention. Includes the Harvey-Leybourne-Newbold (1997)
+    small-sample correction and a Student-t p-value (T-1 df).
+
+    Convention: mean(diff) < 0 => model_A has lower loss (better). Returns a
+    dict: dm_stat, p_value, lag, mean_diff, n."""
+    d = np.asarray(diff, float).ravel()
+    d = d[np.isfinite(d)]
+    T = len(d)
+    if T < 8:
+        return {"dm_stat": 0.0, "p_value": 1.0, "lag": 0, "mean_diff": float(np.mean(d)) if T else float("nan"), "n": T}
+
+    dbar = float(np.mean(d))
+    lag = max(int(h) - 1, int(np.floor(T ** (1 / 3))))
+    lag = min(lag, T - 1)
+
+    # long-run variance (Newey-West, Bartlett kernel)
+    gamma0 = float(np.mean((d - dbar) ** 2))
+    var = gamma0
+    for k in range(1, lag + 1):
+        cov = float(np.mean((d[k:] - dbar) * (d[:-k] - dbar)))
+        var += 2.0 * (1.0 - k / (lag + 1)) * cov
+    if var <= 0:
+        return {"dm_stat": 0.0, "p_value": 1.0, "lag": lag, "mean_diff": dbar, "n": T}
+
+    dm = dbar / np.sqrt(var / T)
+    # Harvey, Leybourne & Newbold (1997) small-sample correction
+    corr = np.sqrt(max((T + 1 - 2 * h + h * (h - 1) / T) / T, 1e-12))
+    dm *= corr
+    p = 2.0 * stats.t.cdf(-abs(dm), df=T - 1)
+    return {"dm_stat": float(dm), "p_value": float(p), "lag": int(lag), "mean_diff": dbar, "n": T}
+
+
 def diebold_mariano(errors_model, errors_bench, h=1, loss="squared", power=2):
     """Diebold-Mariano test with Newey-West (Bartlett) HAC variance.
 
@@ -157,25 +201,8 @@ def diebold_mariano(errors_model, errors_bench, h=1, loss="squared", power=2):
     else:
         raise ValueError(f"unknown loss {loss!r}")
 
-    dbar = float(np.mean(d))
-    lag = max(int(h) - 1, int(np.floor(T ** (1 / 3))))
-    lag = min(lag, T - 1)
-
-    # long-run variance (Newey-West, Bartlett kernel)
-    gamma0 = float(np.mean((d - dbar) ** 2))
-    var = gamma0
-    for k in range(1, lag + 1):
-        cov = float(np.mean((d[k:] - dbar) * (d[:-k] - dbar)))
-        var += 2.0 * (1.0 - k / (lag + 1)) * cov
-    if var <= 0:
-        return (0.0, 1.0, lag)
-
-    dm = dbar / np.sqrt(var / T)
-    # Harvey, Leybourne & Newbold (1997) small-sample correction
-    corr = np.sqrt(max((T + 1 - 2 * h + h * (h - 1) / T) / T, 1e-12))
-    dm *= corr
-    p = 2.0 * stats.t.cdf(-abs(dm), df=T - 1)
-    return (float(dm), float(p), int(lag))
+    out = dm_hac_test(d, h=h)
+    return (out["dm_stat"], out["p_value"], out["lag"])
 
 
 # ── interval / probabilistic metrics (Points 3, 4) ───────────────────────────

@@ -49,7 +49,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 # ── Config (defaults; override via CLI) ──────────────────────────────────────
 ARIMA_ORDER      = (2, 0, 2)   # mean equation on log-returns (d=0: returns are stationary)
 GARCH_REFIT_FREQ = 20          # re-fit GARCH every N steps during the walk-forward
-Z_95             = 1.96        # 95% prediction interval z-score
+Z_95             = 1.96        # 95% prediction interval z-score (normal dist only)
+PI_LEVELS        = (0.50, 0.80, 0.95)   # coverage levels reported by compute_metrics
 
 
 # ── Data ─────────────────────────────────────────────────────────────────────
@@ -70,8 +71,10 @@ def fetch_data(ticker: str, start: str, end: str) -> pd.Series:
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
-def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
+def compute_metrics(actual, predicted, pi_bounds: dict = None,
                     train_time=0.0) -> dict:
+    """`pi_bounds`: optional {level: (lower_array, upper_array)}, e.g.
+    {0.95: (lower, upper)} -- one Coverage/Width pair is reported per level."""
     actual    = np.asarray(actual).flatten()
     predicted = np.asarray(predicted).flatten()
 
@@ -92,32 +95,92 @@ def compute_metrics(actual, predicted, pi_lower=None, pi_upper=None,
     except Exception:
         lb_p = np.nan
 
-    pi_cov = np.nan
-    if pi_lower is not None and pi_upper is not None:
-        pi_cov = np.mean((actual >= pi_lower) & (actual <= pi_upper)) * 100
-
-    return {
+    metrics = {
         "RMSE":           round(rmse,  4),
         "MAE":            round(mae,   4),
         "MAPE (%)":       round(mape,  2),
         "SMAPE (%)":      round(smape, 2),
         "Dir. Acc (%)":   round(dir_acc, 2),
-        "PI Cov 95% (%)": round(pi_cov, 2) if not np.isnan(pi_cov) else "N/A",
         "Ljung-Box p":    round(lb_p,  4) if not np.isnan(lb_p) else "N/A",
         "Train Time (s)": round(train_time, 2),
     }
 
+    if pi_bounds:
+        for level in sorted(pi_bounds):
+            lo, hi = np.asarray(pi_bounds[level][0]), np.asarray(pi_bounds[level][1])
+            pct = int(round(level * 100))
+            cov   = np.mean((actual >= lo) & (actual <= hi)) * 100
+            width = np.mean((hi - lo) / actual) * 100
+            metrics[f"PI Cov {pct}% (%)"]   = round(cov, 2)
+            metrics[f"PI Width {pct}% (%)"] = round(width, 2)
+    else:
+        metrics["PI Cov 95% (%)"] = "N/A"
+
+    return metrics
+
+
+def _dist_shape(garch_res):
+    """(distribution object, fitted shape-parameter array) from a fitted arch_model
+    result -- e.g. shape=[nu] for GED, [eta, lambda] for skew-t, None for normal."""
+    dist  = garch_res.model.distribution
+    names = dist.parameter_names()
+    shape = garch_res.params[names].values if names else None
+    return dist, shape
+
+
+def _std_quantiles(dist, shape, levels=PI_LEVELS) -> dict:
+    """{level: (q_lo, q_hi)} unit-variance standardized quantiles for a two-sided PI
+    at each level, from the GARCH innovation distribution's own ppf (arch normalizes
+    every built-in distribution to unit variance, so this is a drop-in replacement for
+    the fixed Z_95 normal multiplier: PI = mu +/- sigma * q)."""
+    out = {}
+    for level in levels:
+        alpha = 1.0 - level
+        q_lo, q_hi = dist.ppf(np.array([alpha / 2.0, 1.0 - alpha / 2.0]), shape)
+        out[level] = (float(q_lo), float(q_hi))
+    return out
+
 
 # ── ARIMA-GARCH walk-forward backtest ────────────────────────────────────────
 def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
-                    order=ARIMA_ORDER, garch_refit_freq=GARCH_REFIT_FREQ) -> dict:
+                    order=ARIMA_ORDER, garch_refit_freq=GARCH_REFIT_FREQ,
+                    dist: str = "normal", pi_levels=PI_LEVELS,
+                    n_ensemble: int = 0, ensemble_seed=None,
+                    n_crps_samples: int = 0) -> dict:
     """Rolling 1-step-ahead ARIMA-GARCH forecast over the test window.
 
-    Mean equation : ARIMA(order) on 100*log-returns
-    Volatility    : GARCH(1,1) on the ARIMA residuals -> 95% intervals
+    Mean equation : ARIMA(order) on 100*log-returns (unaffected by `dist`)
+    Volatility    : GARCH(1,1) on the ARIMA residuals, innovation law `dist`
+                    (anything arch_model accepts: 'normal', 'ged', 'skewt', 't', ...)
     Returns a dict of metrics plus the raw prediction/interval arrays.
+
+    `pi_levels` (default PI_LEVELS = 50/80/95%): two-sided PI at each level is
+    mu +/- sigma * dist.ppf(...), using the *fitted* innovation distribution's own
+    quantile function instead of the fixed Z_95 normal multiplier -- so non-normal
+    `dist` choices actually reshape the interval, not just the volatility path. 95%
+    is always included so `result["lower"]/["upper"]` (95% PI, kept for existing
+    callers) stay populated regardless of what's passed in.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` bootstrap samples of the next-step price by
+    resampling (with replacement) the GARCH standardized residuals
+    (resid / conditional_volatility) and applying them to that step's own mu/sigma
+    -- a residual bootstrap around the already-fitted mean/volatility forecast,
+    not a fresh distributional assumption. Populates `result["ensemble"]` (list of
+    length n_test, one [n_ensemble] price array per step) for empirical CRPS
+    (cf. model_artifacts/crps_kpis.py). Kept dist-agnostic on purpose (production
+    Gate 2 KPI, do not change its semantics here).
+
+    `n_crps_samples` (0 = off, default): separate, purely opt-in companion to
+    `n_ensemble` -- draws samples via inverse-transform sampling of `dist` itself
+    (same ppf as the PI bounds) rather than bootstrapping empirical residuals, so
+    the resulting `result["crps_ensemble"]` sample clouds actually differ in SHAPE
+    between e.g. normal/ged/skewt, which the bootstrap-based `ensemble` mostly does
+    not (it always resamples the same empirical residuals). Use this one when the
+    goal is comparing distribution families via CRPS, not the production KPI.
     """
     t0 = time.time()
+    pi_levels = tuple(sorted(set(pi_levels) | {0.95}))
 
     train_prices = train_series.astype(float).values
     test_prices  = test_series.astype(float).values
@@ -127,9 +190,13 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
     returns    = np.diff(log_prices) * 100.0   # percent log-returns
 
     preds  = np.empty(n_test)
-    lower  = np.empty(n_test)
-    upper  = np.empty(n_test)
     sigmas = np.empty(n_test)
+    lower_by_level = {lvl: np.empty(n_test) for lvl in pi_levels}
+    upper_by_level = {lvl: np.empty(n_test) for lvl in pi_levels}
+    ensembles      = [] if n_ensemble > 0 else None
+    crps_ensembles = [] if n_crps_samples > 0 else None
+    need_rng = n_ensemble > 0 or n_crps_samples > 0
+    rng = np.random.default_rng(ensemble_seed) if need_rng else None
 
     arima_res = ARIMA(
         returns, order=order,
@@ -138,8 +205,10 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
 
     resid = np.asarray(arima_res.resid, dtype=float)
     garch_res = arch_model(
-        resid, vol="Garch", p=1, q=1, dist="normal", rescale=False
+        resid, vol="Garch", p=1, q=1, dist=dist, rescale=False
     ).fit(disp="off")
+    dist_obj, shape = _dist_shape(garch_res)
+    qmult = _std_quantiles(dist_obj, shape, pi_levels)
 
     last_price = train_prices[-1]
 
@@ -150,16 +219,30 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
         if t % garch_refit_freq == 0:
             resid = np.asarray(arima_res.resid, dtype=float)
             garch_res = arch_model(
-                resid, vol="Garch", p=1, q=1, dist="normal", rescale=False
+                resid, vol="Garch", p=1, q=1, dist=dist, rescale=False
             ).fit(disp="off")
+            dist_obj, shape = _dist_shape(garch_res)
+            qmult = _std_quantiles(dist_obj, shape, pi_levels)
 
         garch_fc = garch_res.forecast(horizon=1, reindex=False)
         sigma    = np.sqrt(garch_fc.variance.values[-1, 0]) / 100.0
 
         preds[t]  = last_price * np.exp(mu)
-        lower[t]  = last_price * np.exp(mu - Z_95 * sigma)
-        upper[t]  = last_price * np.exp(mu + Z_95 * sigma)
         sigmas[t] = sigma
+        for lvl, (q_lo, q_hi) in qmult.items():
+            lower_by_level[lvl][t] = last_price * np.exp(mu + sigma * q_lo)
+            upper_by_level[lvl][t] = last_price * np.exp(mu + sigma * q_hi)
+
+        if n_ensemble > 0:
+            std_resid = np.asarray(garch_res.resid, dtype=float) / \
+                np.asarray(garch_res.conditional_volatility, dtype=float)
+            z_boot = rng.choice(std_resid, size=n_ensemble, replace=True)
+            ensembles.append(last_price * np.exp(mu + sigma * z_boot))
+
+        if n_crps_samples > 0:
+            pits = rng.random(n_crps_samples)
+            z_dist = dist_obj.ppf(pits, shape)
+            crps_ensembles.append(last_price * np.exp(mu + sigma * z_dist))
 
         # walk forward: append the realised return, then move on
         actual_price = test_prices[t]
@@ -169,19 +252,27 @@ def run_arima_garch(train_series: pd.Series, test_series: pd.Series,
 
     train_time = time.time() - t0
 
+    pi_bounds = {lvl: (lower_by_level[lvl], upper_by_level[lvl]) for lvl in pi_levels}
     metrics = compute_metrics(
-        test_prices, preds, pi_lower=lower, pi_upper=upper, train_time=train_time
+        test_prices, preds, pi_bounds=pi_bounds, train_time=train_time
     )
     metrics["Avg GARCH sigma"] = round(float(np.mean(sigmas)), 6)
+    metrics["Dist"] = dist
 
-    return {
+    result = {
         **metrics,
         "predictions": preds,
-        "lower": lower,
-        "upper": upper,
+        "lower": lower_by_level[0.95],
+        "upper": upper_by_level[0.95],
+        "pi_bounds": {lvl: {"lower": lo, "upper": hi} for lvl, (lo, hi) in pi_bounds.items()},
         "index": test_series.index,
         "actual": test_prices,
     }
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    if crps_ensembles is not None:
+        result["crps_ensemble"] = crps_ensembles
+    return result
 
 
 def next_step_arima_garch(series: pd.Series, order=ARIMA_ORDER):

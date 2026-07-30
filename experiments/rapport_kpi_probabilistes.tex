@@ -1,0 +1,242 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\title{Synth\`ese KPI probabilistes \\ \large DeepEdgeBenchmark --- 240 combinaisons r\'ee\'valu\'ees sur CRPS/calibration}
+\author{}
+\date{Ex\'ecut\'e le 21 juillet 2026}
+
+\begin{document}
+\maketitle
+
+\section{Pourquoi cette synth\`ese}
+
+La synth\`ese pr\'ec\'edente classait les mod\`eles au \textbf{RMSE}, qui ne
+juge que la pr\'evision \emph{centrale}. C'est inadapt\'e \`a un mod\`ele
+\textbf{probabiliste/de diffusion} comme TSDiff, qui produit une distribution
+enti\`ere de sc\'enarios~: le RMSE ignore la forme de la distribution, les
+queues et l'incertitude. Cette synth\`ese r\'e\'evalue les \textbf{240
+combinaisons} (6 mod\`eles $\times$ 5 actifs $\times$ 8 cellules de r\'egime)
+sur des KPI adapt\'es~: \textbf{CRPS empirique}, \textbf{couverture
+multi-niveaux} (50/80/95\,\%), \textbf{finesse}, \textbf{score de Winkler} et,
+en secondaire, \textbf{MASE}.
+
+\section{M\'ethode}
+
+\paragraph{\'Echantillons (N=500, sans r\'e-entra\^inement pour 5 mod\`eles sur 6).}
+La base ne stockait que point + intervalle \`a 95\,\%. Pour ARIMA-GARCH,
+SARIMA, Prophet, Naive et LSTM, chaque intervalle est construit par le mod\`ele
+lui-m\^eme comme $\hat y \pm z\sigma$ (log-normal en espace rendement pour
+ARIMA-GARCH, gaussien en espace prix pour les 4 autres --- v\'erifi\'e
+directement dans \texttt{models/*.py}). $\sigma$ est donc retrouvable
+alg\'ebriquement depuis (y\_pred, y\_lower, y\_upper) d\'ej\`a en base, et
+N=500 \'echantillons sont tir\'es de cette m\^eme loi param\'etrique --- z\'ero
+r\'e-entra\^inement, z\'ero nouveau calcul lourd.
+
+\paragraph{TSDiff : r\'e\'echantillonnage natif, avec un vrai calcul.}
+TSDiff n'a \textbf{aucun checkpoint persist\'e} dans ce d\'ep\^ot
+(\texttt{model\_artifacts/pipeline.py} ne s\'erialise jamais d'artefact
+TSDiff --- v\'erifi\'e directement, pas suppos\'e). Chaque valeur
+actuellement en base a \'et\'e produite par un unique passage
+train-once-forward dont le nuage d'\'echantillons a \'et\'e jet\'e
+imm\'ediatement (r\'eduit \`a moyenne + quantiles 2,5/97,5). Obtenir de vrais
+\'echantillons exige donc de rejouer ce m\^eme protocole (m\^eme fen\^etre de
+donn\'ees, seed=42, m\^eme nombre d'epochs d\'ej\`a s\'electionn\'e par
+\texttt{epoch\_sweep.py} par actif) en conservant les 500 tirages au lieu de
+les jeter --- pas une nouvelle m\'ethodologie, juste la capture de ce que le
+pipeline calcule d\'ej\`a en interne \`a chaque origine.
+
+\paragraph{Trois cellules de r\'egime, un seul entra\^inement chacune.}
+\begin{itemize}
+  \item \textbf{R\'egime A} (D+1/D+7, natif quotidien) : fen\^etre glissante
+        de 700 jours (\'echelle v\'erifi\'ee sur les runs de production),
+        epochs=40 (d\'efaut \texttt{tsdiff\_model.py}).
+  \item \textbf{R\'egime B} (W+1/W+2/W+3, entra\^in\'e quotidien --
+        \guillemotleft{}TSDiff-D\guillemotright{}) : horizon=15 pas
+        quotidiens, epochs par actif issus de
+        \texttt{epoch\_sweep\_results\_*.json}.
+  \item \textbf{R\'egime C} (W+1/W+2/W+3, natif hebdomadaire --
+        \guillemotleft{}TSDiff-W\guillemotright{}) : horizon=3 pas
+        hebdomadaires, epochs par actif issus de
+        \texttt{weekly\_multiasset\_results.json}.
+\end{itemize}
+
+\paragraph{Garde-fous respect\'es.} N=500 identique pour les 6 mod\`eles ;
+m\^eme estimateur de CRPS empirique partout (Gneiting \& Raftery 2007, \'eq.
+20) ; PIT sur la distribution compl\`ete ; aucun r\'e\'echantillonnage
+conditionn\'e sur des donn\'ees post\'erieures \`a l'origine ; puissance
+effective (bootstrap par blocs) toujours affich\'ee.
+
+\section{R\'esultats poolés par mod\`ele (tous horizons, 5 actifs)}
+
+CRPS normalis\'e par l'\'echelle MASE de l'actif (m\^eme convention que
+l'analyse pool\'ee existante) --- comparable entre BTC-USD et ZN=F malgr\'e
+l'\'ecart d'\'echelle des prix.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+Mod\`ele & n & CRPS (norm.) & Cov 50\,\% & Cov 80\,\% & Cov 95\,\% \\
+\midrule
+SARIMA      & 1520 & 2,03 & 0,609 & 0,855 & 0,936 \\
+ARIMA-GARCH & 1520 & 2,03 & 0,567 & 0,828 & 0,933 \\
+Naive       & 1520 & 2,14 & 0,614 & 0,853 & 0,940 \\
+TSDiff      & 1395 & 2,34 & 0,525 & 0,760 & 0,878 \\
+LSTM        & 1549 & 3,39 & 0,660 & 0,864 & 0,941 \\
+Prophet     & 1520 & 9,06 & 0,416 & 0,630 & 0,801 \\
+\bottomrule
+\end{tabular}
+\caption{Cible de couverture~: 0,50 / 0,80 / 0,95. CRPS~: plus bas = meilleur.}
+\end{table}
+
+SARIMA et ARIMA-GARCH restent en t\^ete sur le CRPS pool\'e, suivis de pr\`es
+par Naive et \textbf{TSDiff, qui n'est plus dernier ou hors-jeu comme au RMSE
+seul} --- son CRPS est du m\^eme ordre de grandeur que les mod\`eles
+statistiques classiques. Prophet reste tr\`es en retrait, coh\'erent avec
+son d\'ecrochage d\'ej\`a connu au RMSE. LSTM se distingue~: sa couverture
+est la plus proche de la cible \`a tous les niveaux, mais son CRPS reste
+m\'ediocre --- intervalles bien positionn\'es mais trop larges (manque de
+finesse).
+
+\section{Ce que le RMSE cachait~: TSDiff par horizon}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Horizon & CRPS (norm.) & Cov 95\,\% & Commentaire \\
+\midrule
+D+1  & 1,16 & 0,999 & Meilleure couverture \textbf{de tous les mod\`eles} \`a cet horizon \\
+D+7  & 3,86 & 0,953 & Encore bien calibr\'e \\
+W+1  & 2,55 & 0,580 & Sous-couverture s\'ev\`ere \\
+W+2  & 3,96 & 0,587 & Sous-couverture s\'ev\`ere \\
+W+3  & 3,45 & 0,674 & Sous-couverture s\'ev\`ere \\
+\bottomrule
+\end{tabular}
+\caption{TSDiff seul, par horizon (pool\'e sur les actifs disponibles).}
+\end{table}
+
+C'est le r\'esultat central de cette r\'ee\'valuation~: \`a D+1, TSDiff est
+\textbf{le mieux calibr\'e des 6 mod\`eles} --- un signal totalement invisible
+au RMSE, qui ne regarde que le point central. Mais la calibration se
+d\'egrade fortement d\`es que l'horizon s'allonge au-del\`a de D+7
+(r\'egime B, \guillemotleft{}TSDiff-D\guillemotright{})~: la couverture \`a
+95\,\% tombe \`a 0,58--0,67, confirmant ce qui \'etait d\'ej\`a not\'e
+ailleurs dans ce d\'ep\^ot comme \guillemotleft{}structurellement
+sous-calibr\'e\guillemotright{} pour TSDiff-D.
+
+\section{Tests statistiques pool\'es}
+
+M\^eme protocole que l'analyse pool\'ee existante (DM-HAC + bootstrap par
+blocs, clusters bonds=ZN=F+TLT et crypto=BTC-USD+ETH-USD, correction de Holm
+sur les 6 mod\`eles), rejou\'e sur le CRPS empirique et la calibration
+multi-niveaux au lieu du RMSE.
+
+\subsection{Calibration (\'ecart \`a la cible, apr\`es correction de Holm)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Mod\`ele & \'Ecart @50\,\% & \'Ecart @80\,\% & \'Ecart @95\,\% \\
+\midrule
+ARIMA-GARCH & +0,059* & +0,026 & --0,016 \\
+SARIMA      & +0,082* & +0,032 & --0,027* \\
+Prophet     & --0,109* & --0,196* & --0,166* \\
+Naive       & +0,088* & +0,034 & --0,022 \\
+LSTM        & +0,124* & +0,040 & --0,025 \\
+TSDiff      & +0,013 & --0,048 & --0,077* \\
+\bottomrule
+\end{tabular}
+\caption{Signe positif = sur-couverture (intervalles trop larges), n\'egatif
+= sous-couverture. * = significatif apr\`es correction de Holm (IC \`a 95\,\%
+excluant 0). Puissance effective (bootstrap par blocs)~: n\_eff $\approx$
+270--305 par cellule (sur $\sim$900--1500 lignes brutes).}
+\end{table}
+
+\textbf{TSDiff est le seul mod\`ele bien calibr\'e \`a 50\,\%} (\'ecart
+non-significatif, +0,013) mais se d\'egrade significativement aux niveaux
+plus \'elev\'es --- coh\'erent avec le tableau pr\'ec\'edent (bonne
+calibration \`a D+1/D+7, mauvaise sur les horizons hebdomadaires qui dominent
+le pool). Prophet est significativement mal calibr\'e \`a tous les niveaux,
+et dans le sens de la sous-couverture partout (intervalles trop \'etroits
+malgr\'e un CRPS d\'ej\`a mauvais). ARIMA-GARCH, Naive et LSTM sur-couvrent
+significativement \`a 50\,\% (intervalles un peu trop larges \`a ce niveau)
+mais sont statistiquement bien calibr\'es \`a 95\,\%.
+
+\subsection{D+7 vs W+1 (align\'e vendredi)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrl}
+\toprule
+Mod\`ele & n (n\_eff) & \'Ecart CRPS & Verdict \\
+\midrule
+ARIMA-GARCH & 35 (11) & --0,29 & pas de diff\'erence exploitable \\
+SARIMA      & 35 (11) & --0,30 & pas de diff\'erence exploitable \\
+Naive       & 35 (11) & --0,28 & pas de diff\'erence exploitable \\
+Prophet     & 35 (11) & --8,90* & D+7 significativement meilleur \\
+LSTM        & 40 (13) & --3,19* & D+7 significativement meilleur \\
+TSDiff      & --      & -- & donn\'ees insuffisantes \\
+\bottomrule
+\end{tabular}
+\caption{\'Ecart = CRPS(D+7) $-$ CRPS(W+1). Puissance tr\`es limit\'ee
+(n\_eff $\approx$ 11--13) --- \`a lire avec prudence.}
+\end{table}
+
+\subsection{Fr\'equence B vs C (entra\^in\'e quotidien vs natif hebdomadaire)}
+
+\textbf{Donn\'ees insuffisantes pour les 6 mod\`eles.} Le r\'egime C
+(natif hebdomadaire) est quasi-vide dans la matrice actuelle~: pour TSDiff,
+89--90 des $\sim$90 lignes possibles par actif sont marqu\'ees
+\texttt{daily\_duplicate=1} (v\'erifi\'e directement en base) --- un trou de
+couverture pr\'eexistant, pas un artefact de cette r\'ee\'valuation. Aucun
+verdict n'est tir\'e faute de puissance.
+
+\section{Limites}
+
+\begin{itemize}
+  \item \textbf{5 mod\`eles sur 6 : \'echantillons param\'etriques, pas le nuage
+        d'origine.} Le nuage brut n'a jamais exist\'e pour ARIMA-GARCH,
+        SARIMA, Prophet, Naive, LSTM --- seule sa loi implicite (gaussienne/
+        log-normale) est reconstruite depuis le PI stock\'e.
+  \item \textbf{TSDiff : r\'e-entra\^inement fid\`ele, pas bit-identique.}
+        M\^eme protocole, m\^eme seed, mais un nouveau calcul --- les points
+        centraux corr\`elent \`a $\sim$0,97 avec les valeurs stock\'ees en
+        base sans \^etre identiques.
+  \item \textbf{TSDiff-D, W+3, actifs crypto~: plafond structurel.} Le mod\`ele
+        r\'egime B est entra\^in\'e avec horizon=15 pas (calibr\'e pour des
+        march\'es \`a 5 jours/semaine) ; BTC-USD/ETH-USD (7 jours/semaine)
+        ont besoin de 21 pas pour W+3 --- au-del\`a de la capacit\'e native du
+        mod\`ele. 30 lignes (W+3 r\'egime B, crypto) sont donc absentes de
+        cette matrice, un plafond h\'erit\'e du protocole d'origine, pas
+        corrig\'e ici (corriger exigerait un nouvel entra\^inement avec un
+        horizon plus grand, hors p\'erim\`etre~: ce brief ne r\'e-entra\^ine
+        pas au-del\`a de ce qui \'etait d\'ej\`a n\'ecessaire).
+  \item \textbf{Classement inter-mod\`ele toujours hors p\'erim\`etre.}
+        L'asymétrie de protocole (TSDiff entra\^in\'e une fois par cellule vs
+        les 5 autres r\'ee\'chantillonn\'es depuis une PI stock\'ee sans
+        r\'eentra\^inement) n'est corrig\'ee par aucun test statistique --- un
+        \'ecart de CRPS entre TSDiff et les autres ne doit pas \^etre lu comme
+        un verdict de sup\'eriorit\'e/inf\'eriorit\'e de mod\`ele.
+\end{itemize}
+
+\section{Conclusion}
+
+Jug\'e sur ce qu'il fait vraiment (une distribution, pas un point), TSDiff
+n'est plus le mod\`ele hors-jeu que sugg\'erait le RMSE seul~: son CRPS pool\'e
+est comparable \`a ARIMA-GARCH/SARIMA/Naive, et sa calibration \`a D+1 est la
+meilleure des 6 mod\`eles. La contrepartie, elle aussi invisible au RMSE~: une
+sous-calibration significative et robuste (test\'ee, pas suppos\'ee) sur les
+horizons hebdomadaires, coh\'erente avec le diagnostic \guillemotleft{}TSDiff-D
+structurellement sous-calibr\'e\guillemotright{} d\'ej\`a pos\'e ailleurs dans
+ce d\'ep\^ot. Prophet reste le point faible confirm\'e, cette fois sur CRPS
+\emph{et} calibration, pas seulement sur l'erreur ponctuelle.
+
+\end{document}

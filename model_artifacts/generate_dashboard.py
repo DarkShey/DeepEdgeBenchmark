@@ -10,13 +10,21 @@ par model_artifacts/pipeline.py et génère une page HTML autonome affichant, pa
 Plus un onglet Comparaison (tous actifs confondus, graphiques barres — fonctionnalité
 préexistante conservée telle quelle).
 
-En bas de chaque onglet actif où la donnée existe (BTC-USD pour l'instant) : un tableau
-jour par jour des test cases TC1.1-TC1.5 (`validation/sim_trades.py`), le TC qui a généré
-un signal ce jour-là et son counter — restreint à D+1 (seul horizon supporté par ces
-règles, cf. docstring de validation/sim_trades.py).
+En bas de chaque onglet actif où la donnée existe (tous les actifs de
+calibration.regime.assets.ASSETS) : un tableau jour par jour des test cases TC1.1-TC1.5
+(`validation/sim_trades.py`), le TC qui a généré un signal ce jour-là et son counter —
+restreint à D+1 (seul horizon supporté par ces règles, cf. docstring de
+validation/sim_trades.py).
+
+Depuis 2026-07 : par défaut, les séries lourdes (predictions/prices) ne sont plus
+embarquées dans le HTML mais écrites à côté dans data/<run_date>.json, chargées par le
+navigateur au fil de la sélection de date (fetch), pour garder un poids de page borné
+quel que soit le nombre de dates historiques. `--inline` retrouve l'ancien comportement
+mono-fichier (tout embarqué), utile pour prévisualiser en file:// sans serveur.
 
 Exécution (depuis DeepEdgeBenchmark/) :
-    python -m model_artifacts.generate_dashboard
+    python -m model_artifacts.generate_dashboard --inline   # mono-fichier, file:// OK
+    python -m model_artifacts.generate_dashboard             # mode CI : coquille + data/*.json
     python -m model_artifacts.generate_dashboard --run-root Run --out Run/dashboard.html
 """
 
@@ -33,11 +41,20 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 import sys
 sys.path.insert(0, str(REPO_ROOT))
 from validation import sim_trades as st
+sys.path.insert(0, str(REPO_ROOT / "experiments"))
+import prob_kpi_common as pkc   # noqa: E402 -- réutilisé pour les KPI weekly (BRIEF_weekly_pipeline_integration.md)
 
-# Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief), et un
-# seul actif pour l'instant (BTC-USD) -- étendre en ajoutant des tickers ici.
+# Test cases TC1.1-TC1.5 : jamais Naive (hors périmètre des règles, cf. brief). Tous les
+# actifs de calibration.regime.assets.ASSETS (source unique de vérité, cf. docstring de ce
+# module) -- fallback sur la liste connue si l'import échoue (même logique défensive que
+# _load_assets_order, pour ne jamais faire échouer la génération du reste du dashboard).
 SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff"]
-SIM_TRADES_ASSETS = ["BTC-USD"]
+try:
+    sys.path.insert(0, str(REPO_ROOT / "models"))
+    from calibration.regime.assets import ASSETS as _SIM_TRADES_ASSETS_REGISTRY
+    SIM_TRADES_ASSETS = [a["ticker"] for a in _SIM_TRADES_ASSETS_REGISTRY]
+except Exception:
+    SIM_TRADES_ASSETS = ["BTC-USD", "ETH-USD", "SPY", "ZN=F", "TLT"]
 SIM_TRADES_DB_PATH = "validation/tracking.db"
 
 # Bouton "pipeline" du tableau TC : famille de règles par horizon de résolution. Seul
@@ -49,6 +66,21 @@ SIM_TRADES_PIPELINES = ["daily", "weekly", "monthly"]
 TC_PIPELINE = {
     "TC1.1": "daily", "TC1.2": "daily", "TC1.3": "daily", "TC1.4": "daily", "TC1.5": "daily",
 }
+
+# Weekly (régime C, BRIEF_weekly_pipeline_integration.md) : réduit à TSDiff seul (décision
+# de revue -- le gain mesuré du weekly n'existe QUE pour TSDiff, cf.
+# experiments/METHODOLOGIE_weekly_vs_daily.md ; les 5 autres modèles ont des données
+# weekly en base mais aucun gain démontré, donc pas de surface dédiée pour eux). Le
+# weekly n'est PAS plus précis pour TSDiff non plus (CRPS non significatif, p=0.236) --
+# seule sa calibration (couverture 95% 0,55 -> 0,78, p<0,001 Holm) est un résultat
+# solide. Ne jamais écrire/suggérer "plus précis".
+WEEKLY_KPI_MODELS = ["TSDiff"]
+# CRPS/couverture 50-80% recalculés depuis (y_pred,y_lower,y_upper) via un tirage
+# gaussien (cf. collect_weekly_kpis) : APPROXIMATION pour TSDiff (nuage réel non
+# gaussien, déjà collapsé en point+IC95 lors de la génération -- aucun nuage brut n'est
+# persisté). La couverture à 95%, elle, est recalculée directement depuis les bornes
+# stockées (in_interval), sans aucune hypothèse de forme -- seul chiffre "exact".
+WEEKLY_APPROX_CRPS_MODELS = ["TSDiff"]
 
 MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
@@ -113,7 +145,8 @@ def collect_run_data(run_root: Path) -> dict:
             "model": model, "asset": asset, "asset_class": metadata.get("asset_class", ""),
             "rmse_vs_naive": None,
             "horizon": horizon,
-            "RMSE": metrics.get("RMSE"), "MAE": metrics.get("MAE"), "MAPE": metrics.get("MAPE"),
+            "RMSE": metrics.get("RMSE"), "CRPS": metrics.get("crps"),
+            "MAE": metrics.get("MAE"), "MAPE": metrics.get("MAPE"),
             "directional_accuracy": metrics.get("directional_accuracy"),
             "pi_coverage_95": metrics.get("pi_coverage_95"),
             "pi_width_min": metrics.get("pi_width_min"),
@@ -217,7 +250,8 @@ def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
             rows = []
         out[asset] = [
             {
-                "source": r["source"], "d_date": r["d_date"], "target_date": r["target_date"],
+                "source": r["source"], "real_flag": r["real_flag"],
+                "d_date": r["d_date"], "target_date": r["target_date"],
                 "model": r["model"],
                 "reference_price": _num(r["reference_price"]), "predicted": _num(r["predicted"]),
                 "pi_lower": _num(r["pi_lower"]), "pi_upper": _num(r["pi_upper"]),
@@ -229,7 +263,99 @@ def collect_sim_trades_daily(db_path: str = SIM_TRADES_DB_PATH) -> dict:
     return out
 
 
-def render_html(run_data: dict, run_root_label: str) -> str:
+def _weekly_row_samples(model: str, y_pred: float, y_lower: float, y_upper: float,
+                        last_close: float, n_samples: int, rng) -> "np.ndarray":
+    """Nuage d'échantillons pour une ligne weekly régime C, réutilisant
+    experiments/prob_kpi_common.sample_parametric pour les 5 modèles paramétriques
+    (recouvre exactement leur distribution prédictive stockée). TSDiff n'a pas de
+    nuage brut persisté ici (collapsé en point+IC95 dès la génération, cf.
+    weekly_headtohead_v2.run_pair_v2) -- prob_kpi_common refuse volontairement ce
+    modèle (réservé à son cas natif). Pour ce SEUL affichage dashboard, TSDiff est
+    traité par la même approximation gaussienne (sigma récupéré du PI stocké) déjà
+    documentée et utilisée telle quelle par experiments/weekly_vs_daily_pooled.py --
+    voir WEEKLY_APPROX_CRPS_MODELS, jamais présenté comme un résultat exact."""
+    if model == "TSDiff":
+        sigma = max((y_upper - y_lower) / (2.0 * pkc.Z95), 1e-10)
+        return rng.normal(loc=y_pred, scale=sigma, size=n_samples)
+    return pkc.sample_parametric(model, y_pred, y_lower, y_upper, last_close, n_samples, rng)
+
+
+def collect_weekly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
+                        seed: int = 42) -> dict:
+    """KPI probabilistes weekly (régime C uniquement, BRIEF_weekly_pipeline_integration.md
+    Couche A) par (actif x modèle x W+1/2/3) : point, IC95, couverture 95% EXACTE
+    (recalculée directement depuis les bornes stockées, sans hypothèse de forme --
+    seul chiffre valable pour tous les modèles y compris TSDiff), puis CRPS/couverture
+    50-80% via un nuage gaussien (exact pour les 5 modèles paramétriques, APPROXIMATION
+    pour TSDiff -- cf. WEEKLY_APPROX_CRPS_MODELS). Silencieux (liste vide) si
+    tracking.db est absent ou vide, même logique défensive que collect_sim_trades_daily."""
+    import numpy as np
+    import sqlite3
+
+    out = {}
+    try:
+        con = sqlite3.connect(db_path)
+        try:
+            df = pd.read_sql_query(
+                """
+                SELECT model, asset, horizon, horizon_unit, cutoff_date, target_date,
+                       last_close, y_pred, y_lower, y_upper, y_true, source, real_flag
+                FROM predictions
+                WHERE frequence = 'weekly' AND horizon_type = 'weekly'
+                      AND source IN ('oos', 'live') AND model IN ({})
+                """.format(",".join("?" * len(WEEKLY_KPI_MODELS))),
+                con, params=list(WEEKLY_KPI_MODELS),
+            )
+        finally:
+            con.close()
+    except Exception as exc:
+        print(f"[generate_dashboard] weekly KPI indisponibles ({exc})")
+        return out
+
+    if df.empty:
+        return out
+
+    rng = np.random.default_rng(seed)
+    for (asset, model, horizon_unit), g in df.groupby(["asset", "model", "horizon_unit"]):
+        realized = g[g["y_true"].notna()]
+        crps_vals, cov50, cov80 = [], [], []
+        for _, r in realized.iterrows():
+            samples = _weekly_row_samples(model, float(r.y_pred), float(r.y_lower),
+                                          float(r.y_upper), float(r.last_close),
+                                          n_samples, rng)
+            kpis = pkc.row_kpis(samples, float(r.y_true))
+            crps_vals.append(kpis["crps"])
+            cov50.append(kpis["cov50"])
+            cov80.append(kpis["cov80"])
+        cov95_direct = ((realized["y_true"] >= realized["y_lower"]) &
+                       (realized["y_true"] <= realized["y_upper"])).mean() if len(realized) else None
+
+        rows = [
+            {
+                "cutoff_date": r.cutoff_date, "target_date": r.target_date,
+                "last_close": _num(r.last_close), "y_pred": _num(r.y_pred),
+                "y_lower": _num(r.y_lower), "y_upper": _num(r.y_upper),
+                "y_true": _num(r.y_true), "source": r.source, "real_flag": r.real_flag,
+            }
+            for r in g.sort_values("cutoff_date").itertuples()
+        ]
+        out.setdefault(asset, {}).setdefault(model, {})[horizon_unit] = {
+            "n_total": int(len(g)), "n_realized": int(len(realized)),
+            "cov95_exact": _num(cov95_direct),
+            "cov50_gaussian": _num(np.mean(cov50)) if cov50 else None,
+            "cov80_gaussian": _num(np.mean(cov80)) if cov80 else None,
+            "crps_gaussian": _num(np.mean(crps_vals)) if crps_vals else None,
+            "crps_is_approx": model in WEEKLY_APPROX_CRPS_MODELS,
+            "rows": rows,
+        }
+    return out
+
+
+def render_html(run_data: dict, run_root_label: str, external_series: bool = False) -> str:
+    """external_series=False (mode --inline) : predictions/prices embarquées dans le
+    payload comme avant, page autonome ouvrable en file://. external_series=True (mode
+    par défaut) : predictions/prices exclues du payload -- le JS les récupère par
+    fetch('data/<date>.json') à la demande (cf. main() pour l'écriture de ces fichiers)."""
     records = run_data["records"]
     asset_catalog = build_asset_catalog(records)
     models_present = [m for m in MODEL_ORDER if any(r["model"] == m for r in records)]
@@ -243,18 +369,36 @@ def render_html(run_data: dict, run_root_label: str) -> str:
         "assets": asset_catalog,
         "records": records,
         "run_dates": run_data["run_dates"],
-        "predictions": run_data["predictions"],
-        "prices": run_data["prices"],
         "sim_trades_daily": collect_sim_trades_daily(),
         "sim_trades_models": SIM_TRADES_MODELS,
         "sim_trades_pipelines": SIM_TRADES_PIPELINES,
         "tc_pipeline": TC_PIPELINE,
+        "weekly_kpis": collect_weekly_kpis(),
+        "weekly_kpi_models": WEEKLY_KPI_MODELS,
+        "external_series": external_series,
     }
+    if not external_series:
+        payload["predictions"] = run_data["predictions"]
+        payload["prices"] = run_data["prices"]
     data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
     return HTML_TEMPLATE.replace("__DATA_JSON__", data_json)
 
 
-HTML_TEMPLATE = r"""<title>Dashboard KPI — Modèles de prévision</title>
+def write_date_series_files(run_data: dict, data_dir: Path) -> None:
+    """Écrit data/<run_date>.json (predictions + prices de cette seule date) -- appelé
+    uniquement en mode externe (cf. render_html external_series=True)."""
+    data_dir.mkdir(parents=True, exist_ok=True)
+    for run_date in run_data["run_dates"]:
+        series = {
+            "predictions": run_data["predictions"].get(run_date, {}),
+            "prices": run_data["prices"].get(run_date, {}),
+        }
+        series_json = json.dumps(series, ensure_ascii=False)
+        (data_dir / f"{run_date}.json").write_text(series_json, encoding="utf-8")
+
+
+HTML_TEMPLATE = r"""<meta charset="utf-8">
+<title>Dashboard KPI — Modèles de prévision</title>
 <style>
 :root {
   --surface-1:      #fcfcfb;
@@ -338,6 +482,7 @@ h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
 .stat-tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
 .stat-tile .value.pos { color: var(--pos-color); }
 .stat-tile .value.neg { color: var(--neg-color); }
+.stat-tile .value .frac { font-size: 14px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
 .panel-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
 }
@@ -400,6 +545,14 @@ tbody tr:hover { background: rgba(128,128,128,0.06); }
 .kpi-row.warn { background: rgba(214,58,58,0.10); border-radius: 4px; margin: 1px -6px; padding: 3px 6px; }
 .kpi-row.warn b { color: #d63a3a; }
 td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 600; border-radius: 4px; }
+.kpi-card.validated-ok { background: rgba(27,175,122,0.10); border-color: var(--pos-color); }
+.kpi-card.validated-bad { background: rgba(214,69,80,0.10); border-color: var(--neg-color); }
+@media (prefers-color-scheme: dark) {
+  .kpi-card.validated-ok { background: rgba(46,204,154,0.14); }
+  .kpi-card.validated-bad { background: rgba(229,96,107,0.14); }
+}
+.kpi-card.validation-global { border-width: 2px; }
+.kpi-card.validation-global .kpi-card-title { font-size: 14px; }
 .last-price-card {
   flex: 1 1 220px; border: 1px solid var(--text-primary); border-radius: 8px; padding: 12px 14px;
   background: rgba(128,128,128,0.05);
@@ -421,6 +574,13 @@ td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 60
 .chart-checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
 .chart-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
 .chart-wrap { min-height: 480px; }
+.tc-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-secondary);
+  margin: -2px 0 14px;
+}
+.tc-legend .tc-legend-item { white-space: nowrap; }
+.tc-legend b { color: var(--text-primary); }
+td.gated-out-cell { color: var(--text-muted); font-style: italic; }
 </style>
 
 <h1>Dashboard KPI — Modèles de prévision</h1>
@@ -434,6 +594,35 @@ td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 60
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script>
 const DATA = __DATA_JSON__;
+
+// ---- Séries par date (predictions/prices) : embarquées (mode --inline) ou chargées à
+// la demande via fetch('data/<date>.json') (mode par défaut, cf. generate_dashboard.py).
+const dataCache = new Map();
+function seedDataCacheFromInline() {
+  if (DATA.external_series) return;
+  (DATA.run_dates || []).forEach(d => {
+    dataCache.set(d, {
+      predictions: (DATA.predictions || {})[d] || {},
+      prices: (DATA.prices || {})[d] || {},
+    });
+  });
+}
+async function ensureDateData(date) {
+  if (!date || dataCache.has(date)) return dataCache.get(date) || { predictions: {}, prices: {} };
+  if (!DATA.external_series) return { predictions: {}, prices: {} };
+  try {
+    const res = await fetch(`data/${date}.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    dataCache.set(date, d);
+    return d;
+  } catch (err) {
+    console.error(`Échec du chargement de data/${date}.json`, err);
+    return { predictions: {}, prices: {}, error: true };
+  }
+}
+function predsBucket(date) { return (dataCache.get(date) || {}).predictions || {}; }
+function pricesBucket(date) { return (dataCache.get(date) || {}).prices || {}; }
 
 const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const MODEL_COLORS = isDark ? DATA.model_colors_dark : DATA.model_colors_light;
@@ -503,7 +692,12 @@ function hideTooltip() { tooltipEl.style.display = 'none'; }
 
 // ---- Définitions des KPI (bulle au survol du repère "ⓘ") -------------------
 const KPI_DEFINITIONS = {
+  weeklyintro: "Régime hebdomadaire natif (C), TSDiff uniquement — le weekly ne rend PAS TSDiff plus précis (CRPS non significatif, p=0.236, cf. experiments/METHODOLOGIE_weekly_vs_daily.md). Il est affiché ici parce qu'il corrige significativement sa sur-confiance sur la calibration de l'incertitude — jamais présenté comme un gain de précision. Les 5 autres modèles ont des données weekly en base mais aucun gain démontré, donc pas de surface dédiée.",
+  weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. C'est le résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm).",
+  weeklycov5080: "Couverture 50%/80% (gaussienne) — recalculée en tirant un nuage gaussien depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. APPROXIMATION pour TSDiff (nuage réel non gaussien, non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
+  weeklycrps: "CRPS (gaussien) — score de la distribution complète (précision + incertitude), calculé sur un nuage gaussien recalculé depuis (prédit, IC95). APPROXIMATION pour TSDiff (nuage réel non gaussien) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
+  crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, bande gaussienne (même hypothèse que son IC95) pour Naive, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
   mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   mape: "MAPE — erreur absolue moyenne en % du prix réel. Comparable entre actifs de prix différents.",
   diracc: "Exactitude directionnelle — % de fois où le modèle a prédit le bon sens (hausse/baisse) par rapport à la veille.",
@@ -520,6 +714,22 @@ const KPI_DEFINITIONS = {
   diraccchg: "Dir. Acc (variations) — % de bon sens sur la variation prédite vs le dernier prix connu, avec IC binomial de Wilson à 95%. Si l'IC contient 50%, indiscernable du pile-ou-face.",
   dmdef: "Diebold-Mariano vs persistence — test de différence de perte quadratique (variance Newey-West, correction HLN). p < 0.05 et DM < 0 : le modèle bat significativement le naïf.",
   skillverdict: "Verdict de skill — synthèse Theil's U + DM : 'beats naive' / 'no better than naive' / 'worse than naive'. Règle de lecture du Point 1 du brief.",
+  tcsource: "Source (colonne technique) — 'oos' (rejouée hors-échantillon, backfill inclus) ou 'live' (production ce jour-là). Ne détermine PAS le filtre Vraies/Fausses prédictions ci-dessus (qui lit la colonne séparée real_flag) : certains jours 'oos' (backfills des 8, 11, 13, 14, 17-20/07) sont bien de vraies prédictions, cf. Vraies/Fausses.",
+  tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
+  tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
+  tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2), sur le nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
+  tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
+  tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
+  tcsourcefilter: "Vraies vs fausses prédictions — lit real_flag (calculé et stocké côté base, validation/tracking_db.py::compute_real_flag) : vraie ('live') à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), indépendamment de la colonne technique source (des jours ont été rejoués en source='oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14, 17-20/07, mais restent real_flag='live'). Fausse ('oos') : tout ce qui précède, reconstruction de backtest sur la période de validation.",
+  tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
+  tcvalidatedglobal: "Validation agrégée — s'affiche quand plusieurs modèles sont cochés ci-dessus. Même règle que la validation par modèle, mais le taux d'utilisation est calculé sur les lignes de tous les modèles cochés confondus (pas une moyenne des taux individuels). Décochez tous les modèles sauf un pour voir le détail de ce seul modèle.",
+  tcgatedcol: "Sideways gaté (TC1.5b) — même signal plat que TC1.5, mais écarté si le marché est jugé trop volatil/stressé (gate régime, cf. légende). N'entre PAS dans le pipeline 'daily' (Test case(s)/Counter/validation ci-dessus) : colonne d'inspection à part, indépendante du filtre pipeline. 'Écarté (vol/stress élevé)' = signal plat détecté mais rejeté par le gate. Sinon : counter (justesse, identique à TC1.5) + pnl proxy short-vol entre parenthèses (JAMAIS un rendement exécuté, cf. BRIEF_sideways_v2.md).",
+  tc11: "TC1.1 Bull-Calm — signal : predicted > P(D) ET P(D) ≥ pi_low (exclut les jours déjà sous la borne basse, qui relèvent de TC1.2). Position longue. Résolution : réel > pi_high → +2 ; P(D) < réel ≤ pi_high → +1 ; pi_low ≤ réel ≤ P(D) → -1 ; réel < pi_low → -2.",
+  tc12: "TC1.2 Bull-Stress — signal plus strict que TC1.1 : pi_low > P(D) (même la borne basse du PI 95% prédit une hausse, quasi-certitude). Mêmes branches de résolution que TC1.1 (+2/+1/-1/-2).",
+  tc13: "TC1.3 Bear-Calm — miroir de TC1.1 pour une position courte. Signal : predicted < P(D) ET P(D) ≤ pi_high (exclut les jours déjà au-dessus de la borne haute, qui relèvent de TC1.4). Résolution : réel < pi_low → +2 ; réel < P(D) → +1 ; P(D) ≤ réel ≤ pi_high → -1 ; réel > pi_high → -2.",
+  tc14: "TC1.4 Bear-Stress — signal plus strict que TC1.3 : pi_high < P(D) (même la borne haute du PI prédit une baisse, quasi-certitude). Mêmes branches de résolution que TC1.3 (+2/+1/-1/-2).",
+  tc15: "TC1.5 Sideways — signal : P(D) dans [pi_low, pi_high] ET |predicted − P(D)| ≤ 10% de la largeur du PI (k=0.10). Pas de position (roi toujours null), teste uniquement la justesse : quasi immobile (≤25% de la largeur) → +2 ; reste dans la bande → +1 ; petit dépassement (≤50% de la largeur au-delà) → -1 ; gros dépassement → -2.",
+  tc15b: "TC1.5b Sideways gaté — même signal v1 que TC1.5, filtré en plus par le régime : rejeté si vol_bucket > 1 ou (en live) stress_score > 0.30. Résolution/justesse identiques à TC1.5 si le signal passe le filtre. Ajoute un P&L proxy de short straddle (pnl_shortvol, borné [-1, +1]) — jamais un rendement exécuté, cf. BRIEF_sideways_v2.md.",
 };
 
 function infoDot(defKey) {
@@ -561,6 +771,7 @@ DATA.assets.forEach(a => {
     showPred: true,
     warnThreshold: 20,
     subtab: 'kpis',
+    freq: 'daily',
   };
 });
 
@@ -591,13 +802,19 @@ function switchAssetTab(ticker) {
 
 function assetPanelSkeleton(a) {
   const s = a.short;
+  const hasWeekly = !!(DATA.weekly_kpis && DATA.weekly_kpis[a.ticker]);
   return `
     <div class="card controls-row">
       <div class="subtabbar" id="subtab-${s}">
         <button class="active" data-sub="kpis">KPIs</button>
         <button data-sub="chart">Graphique</button>
       </div>
-      <label class="field-label">Date de run
+      ${hasWeekly ? `
+      <div class="toggle-group" id="freq-${s}">
+        <button class="active" data-freq="daily">Daily</button>
+        <button data-freq="weekly">Weekly ${infoDot('weeklyintro')}</button>
+      </div>` : ''}
+      <label class="field-label" id="daterow-${s}">Date de run
         <select class="select-box" id="date-${s}"></select>
       </label>
       <div class="toggle-group" id="horizon-${s}"></div>
@@ -624,8 +841,8 @@ function assetPanelSkeleton(a) {
         <div class="chart-daterange" id="chart-daterange-${s}"></div>
         <div class="controls-row" style="margin-bottom:12px;">
           <div class="chart-checks" id="chart-checks-${s}">
-            <label class="chart-check"><input type="checkbox" id="showtrain-${s}" checked> Entraînement</label>
-            <label class="chart-check"><input type="checkbox" id="showval-${s}" checked> Validation</label>
+            <label class="chart-check" id="showtrain-label-${s}"><input type="checkbox" id="showtrain-${s}" checked> Entraînement</label>
+            <label class="chart-check" id="showval-label-${s}"><input type="checkbox" id="showval-${s}" checked> Validation</label>
             <label class="chart-check"><input type="checkbox" id="showpred-${s}" checked> Prédiction</label>
           </div>
           <label class="field-label">
@@ -639,15 +856,28 @@ function assetPanelSkeleton(a) {
 
     <div class="card" id="simtrades-card-${s}" style="display:none;">
       <h2>Test cases (TC1.1&ndash;TC1.5, D+1) &mdash; jour par jour</h2>
+      <div class="tc-legend" id="simtrades-legend-${s}"></div>
       <div class="controls-row" style="margin-bottom:12px;">
         <div class="toggle-group" id="simtrades-pipeline-${s}"></div>
         <div class="model-checks" id="simtrades-models-${s}"></div>
+        <div class="chart-checks" id="simtrades-sources-${s}"></div>
         <label class="field-label">
           <input type="checkbox" id="simtrades-onlysignal-${s}" checked> Seulement les jours avec signal
+        </label>
+        <label class="field-label">
+          <input type="checkbox" id="simtrades-showgated-${s}"> Afficher la colonne Sideways gaté (TC1.5b) ${infoDot('tcgatedcol')}
         </label>
       </div>
       <div style="overflow:auto; max-height:480px;" id="simtrades-table-${s}"></div>
       <div class="stat-tiles" id="simtrades-usage-${s}" style="margin-top:16px;"></div>
+      <div class="controls-row" style="margin-top:20px; margin-bottom:4px;">
+        <h2 style="margin:0;">Validation par modèle ${infoDot('tcvalidated')}</h2>
+        <label class="threshold-field">Seuil de validation
+          <input type="range" id="simtrades-threshold-${s}" min="0" max="100" step="1" value="80">
+          <span>&ge;<b id="simtrades-threshold-value-${s}">80</b>%</span>
+        </label>
+      </div>
+      <div class="kpi-cards" id="simtrades-validation-${s}"></div>
     </div>
   `;
 }
@@ -708,20 +938,17 @@ function buildAssetPanels() {
   DATA.assets.forEach(a => wireAssetPanel(a));
 }
 
-function wireAssetPanel(a) {
-  const s = a.short, ticker = a.ticker, st = assetState[ticker];
-
-  const dateSel = document.getElementById(`date-${s}`);
-  DATA.run_dates.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d; opt.textContent = d;
-    if (d === st.date) opt.selected = true;
-    dateSel.appendChild(opt);
-  });
-  dateSel.addEventListener('change', () => { st.date = dateSel.value; refreshAssetTab(ticker); });
-
-  const horizons = [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
+// Reconstruit le toggle d'horizon selon la fréquence courante (daily: D1/D7 depuis
+// DATA.records ; weekly: W+1/2/3 fixes, TSDiff uniquement) -- appelé au chargement et
+// à chaque bascule du toggle Daily/Weekly (cf. wireAssetPanel).
+function buildHorizonToggle(ticker) {
+  const s = DATA.assets.find(x => x.ticker === ticker).short;
+  const st = assetState[ticker];
   const hEl = document.getElementById(`horizon-${s}`);
+  hEl.innerHTML = '';
+  const horizons = st.freq === 'weekly'
+    ? ['W+1', 'W+2', 'W+3']
+    : [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
   if (!horizons.includes(st.horizon)) st.horizon = horizons[0];
   horizons.forEach(h => {
     const btn = document.createElement('button');
@@ -734,6 +961,38 @@ function wireAssetPanel(a) {
     });
     hEl.appendChild(btn);
   });
+}
+
+function wireAssetPanel(a) {
+  const s = a.short, ticker = a.ticker, st = assetState[ticker];
+
+  const dateSel = document.getElementById(`date-${s}`);
+  DATA.run_dates.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (d === st.date) opt.selected = true;
+    dateSel.appendChild(opt);
+  });
+  dateSel.addEventListener('change', () => { switchAssetDate(ticker, dateSel.value, dateSel); });
+
+  buildHorizonToggle(ticker);
+
+  if (DATA.weekly_kpis && DATA.weekly_kpis[ticker]) {
+    const freqEl = document.getElementById(`freq-${s}`);
+    freqEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        st.freq = btn.dataset.freq;
+        freqEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+        const isWeekly = st.freq === 'weekly';
+        document.getElementById(`daterow-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`models-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`showtrain-label-${s}`).style.display = isWeekly ? 'none' : '';
+        document.getElementById(`showval-label-${s}`).style.display = isWeekly ? 'none' : '';
+        buildHorizonToggle(ticker);
+        refreshAssetTab(ticker);
+      });
+    });
+  }
 
   const mEl = document.getElementById(`models-${s}`);
   MODELS.forEach(m => {
@@ -803,11 +1062,217 @@ function refreshAssetTab(ticker) {
 }
 
 // =============================================================================
+// Weekly (régime C, TSDiff uniquement) — BRIEF_weekly_pipeline_integration.md
+// Restreint à TSDiff (décision de revue) : seul modèle avec un gain mesuré (calibration,
+// PAS précision -- cf. weeklyintro/weeklycrps dans KPI_DEFINITIONS et le badge
+// DATA.weekly_calibration_badge). Les 5 autres modèles ont des données weekly en base
+// mais aucune surface dédiée ici, faute de gain démontré.
+// =============================================================================
+
+// Réutilise EXACTEMENT le schéma daily (cartes KPI + breakdown dans l'onglet KPIs,
+// graphique prix + prévision dans l'onglet Graphique) -- toggle Daily/Weekly bascule
+// le contenu de ces DEUX onglets existants, pas un 3e onglet à part (cf. revue).
+function weeklyRows(ticker) {
+  const weekly = (DATA.weekly_kpis[ticker] || {})['TSDiff'] || {};
+  const rows = [];
+  Object.entries(weekly).forEach(([horizonUnit, kpi]) => rows.push({ horizonUnit, ...kpi }));
+  rows.sort((a, b) => a.horizonUnit.localeCompare(b.horizonUnit));
+  return rows;
+}
+
+function renderWeeklyKpisInline(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short, st = assetState[ticker];
+
+  const rows = weeklyRows(ticker);
+  const cardsEl = document.getElementById(`kpi-cards-${s}`);
+  cardsEl.innerHTML = '';
+  const rec = rows.find(r => r.horizonUnit === st.horizon);
+  const card = document.createElement('div');
+  card.className = 'kpi-card';
+  let rowsHtml;
+  if (!rec) {
+    rowsHtml = '<div class="no-data">Pas de données</div>';
+  } else {
+    const crpsLabel = rec.crps_gaussian == null ? '—' :
+      fmt(rec.crps_gaussian, 3) + (rec.crps_is_approx ? ' (approx.)' : '');
+    rowsHtml = [
+      [`Couverture 95% ${infoDot('weeklycov95')}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
+      [`Couverture 50% / 80% ${infoDot('weeklycov5080')}`,
+       (rec.cov50_gaussian == null ? '—' : fmt(rec.cov50_gaussian * 100, 1) + ' %') + ' / ' +
+       (rec.cov80_gaussian == null ? '—' : fmt(rec.cov80_gaussian * 100, 1) + ' %')],
+      [`CRPS ${infoDot('weeklycrps')}`, crpsLabel],
+      ['n (réalisé/total)', `${rec.n_realized}/${rec.n_total}`],
+    ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
+  }
+  card.innerHTML = `<div class="kpi-card-title">`
+    + `<span class="swatch" style="background:${MODEL_COLORS['TSDiff']};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>TSDiff</div>`
+    + rowsHtml;
+  cardsEl.appendChild(card);
+
+  const wrap = document.getElementById(`breakdown-wrap-${s}`);
+  wrap.innerHTML = '';
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead><tr>
+      <th>Horizon</th><th>n (réalisé/total)</th>
+      <th>Couverture 95% ${infoDot('weeklycov95')}</th>
+      <th>Couverture 50% / 80% ${infoDot('weeklycov5080')}</th>
+      <th>CRPS ${infoDot('weeklycrps')}</th>
+    </tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const crpsLabel = r.crps_gaussian == null ? '—' :
+      fmt(r.crps_gaussian, 3) + (r.crps_is_approx ? ' (approx.)' : '');
+    tr.innerHTML = `
+      <td>${r.horizonUnit}</td>
+      <td>${r.n_realized}/${r.n_total}</td>
+      <td>${r.cov95_exact == null ? '—' : fmt(r.cov95_exact * 100, 1) + '%'}</td>
+      <td>${r.cov50_gaussian == null ? '—' : fmt(r.cov50_gaussian * 100, 1) + '%'} / ${r.cov80_gaussian == null ? '—' : fmt(r.cov80_gaussian * 100, 1) + '%'}</td>
+      <td>${crpsLabel}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+// ---- Graphique weekly : prix hebdo réel + prévision TSDiff à l'horizon sélectionné --
+// Même schéma visuel que le Graphique daily (Plotly zoomable, bande IC95), sourcé
+// directement depuis DATA.weekly_kpis (déjà tout en mémoire, pas de fetch réseau
+// contrairement au daily en mode externe).
+function renderWeeklyChart(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short, st = assetState[ticker];
+  const container = document.getElementById(`chart-${s}`);
+  const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
+
+  const rows = weeklyRows(ticker);
+  if (!rows.length) {
+    container.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+    dateRangeEl.textContent = '';
+    return;
+  }
+
+  // Prix réel hebdo : un point par origine (cutoff_date, last_close), dédupliqué --
+  // last_close est identique pour un même cutoff_date quel que soit l'horizon.
+  const priceByDate = new Map();
+  rows.forEach(r => r.rows.forEach(row => priceByDate.set(row.cutoff_date, row.last_close)));
+  const priceDates = [...priceByDate.keys()].sort();
+  dateRangeEl.textContent = priceDates.length
+    ? `Historique hebdomadaire : ${priceDates[0]} → ${priceDates[priceDates.length - 1]}`
+    : '';
+
+  const traces = [{
+    x: priceDates, y: priceDates.map(d => priceByDate.get(d)),
+    mode: 'lines+markers', name: 'Réel (clôture hebdo)',
+    line: { color: ACTUAL_COLOR, width: 1.6 }, marker: { size: 4 },
+    hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
+  }];
+
+  const sel = (rows.find(r => r.horizonUnit === st.horizon) || {}).rows || [];
+  const sorted = sel.slice().sort((x, y) => x.target_date.localeCompare(y.target_date));
+  const color = MODEL_COLORS['TSDiff'];
+  if (sorted.length) {
+    if (st.showPI) {
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_upper),
+        mode: 'lines', line: { width: 0, color }, showlegend: false, hoverinfo: 'skip',
+      });
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_lower),
+        mode: 'lines', line: { width: 0, color }, fill: 'tonexty',
+        fillcolor: hexToRgba(color, 0.16), showlegend: false, hoverinfo: 'skip',
+      });
+    }
+    if (st.showPred) {
+      traces.push({
+        x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_pred),
+        mode: 'lines+markers', name: `TSDiff (prévision ${st.horizon})`,
+        line: { color, width: 1.8, dash: 'dot' }, marker: { color, size: 5 },
+        hovertemplate: `%{x}<br>%{y:.2f}<extra>TSDiff ${st.horizon}</extra>`,
+      });
+    }
+  }
+
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: AXIS_TEXT_COLOR, family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 12 },
+    margin: { l: 55, r: 20, t: 30, b: 40 },
+    xaxis: { gridcolor: GRID_COLOR, showgrid: true },
+    yaxis: { gridcolor: GRID_COLOR, showgrid: true, title: 'Prix' },
+    legend: { orientation: 'h', y: -0.15 },
+    hovermode: 'x unified',
+  };
+  Plotly.newPlot(`chart-${s}`, traces, layout, { responsive: true, displaylogo: false });
+}
+
+// Changement de date de run pour un actif : si les séries de cette date ne sont pas
+// encore en cache, les récupère (fetch, mode externe) avant de rafraîchir l'onglet --
+// affiche un état de chargement le temps du fetch, un message d'erreur s'il échoue.
+async function switchAssetDate(ticker, date, dateSel) {
+  const st = assetState[ticker];
+  st.date = date;
+  if (dataCache.has(date) || !DATA.external_series) { refreshAssetTab(ticker); return; }
+
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short;
+  dateSel.disabled = true;
+  document.getElementById(`kpi-cards-${s}`).innerHTML = '<div class="no-data">Chargement…</div>';
+  const chartEl = document.getElementById(`chart-${s}`);
+  if (chartEl) chartEl.innerHTML = '<div class="no-data">Chargement…</div>';
+
+  const result = await ensureDateData(date);
+  dateSel.disabled = false;
+  if (st.date !== date) return; // l'utilisateur a changé de date entre-temps
+
+  if (result.error) {
+    document.getElementById(`kpi-cards-${s}`).innerHTML =
+      '<div class="no-data">Erreur de chargement des données pour cette date. Réessayez.</div>';
+    return;
+  }
+  refreshAssetTab(ticker);
+}
+
+// =============================================================================
 // Test cases TC1.1-TC1.5 (validation/sim_trades.py) — tableau jour par jour, en bas
-// de chaque onglet actif où la donnée existe (BTC-USD pour l'instant, cf.
+// de chaque onglet actif où la donnée existe (tous les actifs, cf.
 // SIM_TRADES_ASSETS côté Python). Restreint à D+1 (seul horizon supporté par ces
 // règles — l'alignement D->D+1 ne s'applique pas au backtest D+7 rolling-origin).
 // =============================================================================
+
+// Vraie vs fausse prédiction : NE dépend PAS de la colonne source (live/oos, provenance
+// technique -- des jours ont été rejoués en 'oos' faute d'avoir tourné en 'live' le jour
+// même, panne/backfill des 8, 11, 13, 14, 17-20/07, mais restent de vraies prédictions
+// au sens où elles ont été produites comme telles). Dépend de `real_flag`, calculé et
+// stocké côté base (validation/tracking_db.py::compute_real_flag, seule source de
+// vérité désormais -- la règle n'est plus dupliquée ici en JS).
+function isRealPrediction(row) {
+  return row.real_flag === 'live';
+}
+
+// Légende statique TC1.1-1.5(b) affichée dans la carte "Test cases" -- cf.
+// validation/sim_trades.py (bull_calm_d1/pi95_conf/bear_calm_d1/bear_stress_d1/
+// sideways_d1/sideways_gated_d1) et BRIEF_sideways_d1.md / BRIEF_sideways_v2.md.
+const TC_DEFINITIONS = [
+  { id: 'TC1.1', name: 'Bull-Calm', desc: 'hausse prédite (predicted > P(D)), position longue modérée', def: 'tc11' },
+  { id: 'TC1.2', name: 'Bull-Stress', desc: 'hausse quasi certaine même au pire cas du PI (pi_low > P(D)), position longue forte', def: 'tc12' },
+  { id: 'TC1.3', name: 'Bear-Calm', desc: 'baisse prédite (predicted < P(D)), position courte modérée', def: 'tc13' },
+  { id: 'TC1.4', name: 'Bear-Stress', desc: 'baisse quasi certaine même au meilleur cas du PI (pi_high < P(D)), position courte forte', def: 'tc14' },
+  { id: 'TC1.5', name: 'Sideways', desc: 'journée plate prédite (P(D) dans la bande, variation prédite négligeable), pas de position, test de justesse pur', def: 'tc15' },
+  { id: 'TC1.5b', name: 'Sideways gaté', desc: 'comme TC1.5, mais écarté si le marché est jugé trop volatil/stressé ; ajoute un P&L proxy short-vol', def: 'tc15b' },
+];
+
+function renderTcLegend(s) {
+  const el = document.getElementById(`simtrades-legend-${s}`);
+  el.innerHTML = TC_DEFINITIONS.map(d =>
+    `<span class="tc-legend-item"><b>${d.id}</b> ${d.name} ${infoDot(d.def)} — ${d.desc}</span>`
+  ).join('');
+}
 
 const simTradesState = {};
 
@@ -816,13 +1281,18 @@ function setupSimTradesControls(a) {
   const rows = (DATA.sim_trades_daily || {})[ticker];
   if (!rows || !rows.length) return;   // pas de données pour cet actif -> rien à câbler
 
+  renderTcLegend(s);
+
   const models = DATA.sim_trades_models || [];
   const pipelines = DATA.sim_trades_pipelines || [];
   // Familles pipeline effectivement rattachées à au moins un TC (cf. TC_PIPELINE côté
   // Python) -- seule "daily" l'est aujourd'hui ; les autres restent grisées jusqu'à ce
   // que de nouvelles règles (D+7, mensuelles) leur soient rattachées.
   const activePipelines = new Set(Object.values(DATA.tc_pipeline || {}));
-  simTradesState[ticker] = { models: new Set(models), pipeline: 'daily' };
+  simTradesState[ticker] = {
+    models: new Set(models), pipeline: 'daily',
+    predKinds: new Set(['real', 'fake']), validateThreshold: 80, showGated: false,
+  };
 
   const pEl = document.getElementById(`simtrades-pipeline-${s}`);
   pEl.innerHTML = '';
@@ -865,7 +1335,40 @@ function setupSimTradesControls(a) {
     mEl.appendChild(label);
   });
 
+  const sourceEl = document.getElementById(`simtrades-sources-${s}`);
+  sourceEl.innerHTML = '';
+  const predKindLabel = {
+    real: `Vraies prédictions ${infoDot('tcsourcefilter')}`,
+    fake: 'Fausses prédictions (backtest)',
+  };
+  ['real', 'fake'].forEach(kind => {
+    const label = document.createElement('label');
+    label.className = 'chart-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = simTradesState[ticker].predKinds.has(kind);
+    cb.addEventListener('change', () => {
+      if (cb.checked) simTradesState[ticker].predKinds.add(kind); else simTradesState[ticker].predKinds.delete(kind);
+      renderSimTradesTable(ticker);
+    });
+    label.appendChild(cb);
+    label.insertAdjacentHTML('beforeend', predKindLabel[kind]);
+    sourceEl.appendChild(label);
+  });
+
+  const threshEl = document.getElementById(`simtrades-threshold-${s}`);
+  const threshValueEl = document.getElementById(`simtrades-threshold-value-${s}`);
+  threshEl.addEventListener('input', () => {
+    simTradesState[ticker].validateThreshold = Number(threshEl.value);
+    threshValueEl.textContent = threshEl.value;
+    renderSimTradesTable(ticker);
+  });
+
   document.getElementById(`simtrades-onlysignal-${s}`).addEventListener('change', () => renderSimTradesTable(ticker));
+
+  document.getElementById(`simtrades-showgated-${s}`).addEventListener('change', (e) => {
+    simTradesState[ticker].showGated = e.target.checked;
+    renderSimTradesTable(ticker);
+  });
 }
 
 function renderSimTradesTable(ticker) {
@@ -880,15 +1383,26 @@ function renderSimTradesTable(ticker) {
   const onlySignal = document.getElementById(`simtrades-onlysignal-${s}`).checked;
   const tcPipeline = DATA.tc_pipeline || {};
 
-  // Filtre modèle(s) + pipeline sélectionné (daily pour l'instant), signaux restreints
-  // à la famille choisie. Servie telle quelle à renderUsageStats -- calculée sur TOUTES
-  // ces lignes, indépendamment de la case "Seulement les jours avec signal" ci-dessous
-  // (sinon la cocher fausserait le taux d'utilisation en réduisant le dénominateur).
+  // Filtre modèle(s) + vraie/fausse prédiction (cf. isRealPrediction, PAS r.source) +
+  // pipeline sélectionné (daily pour l'instant), signaux restreints à la famille
+  // choisie. Servie telle quelle à renderUsageStats/renderValidationCards -- calculée
+  // sur TOUTES ces lignes, indépendamment de la case "Seulement les jours avec signal"
+  // ci-dessous (sinon la cocher fausserait le taux d'utilisation en réduisant le
+  // dénominateur).
+  // tc15b extrait AVANT le filtrage pipeline (TC1.5b n'est rattaché à aucune famille
+  // "daily"/"weekly"/"monthly" dans tc_pipeline -- le filtre pipeline l'exclurait sinon
+  // toujours des `signals`) : colonne à part, affichée indépendamment du pipeline choisi.
   const base = rows
-    .filter(r => state.models.has(r.model))
-    .map(r => ({ ...r, signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline) }));
+    .filter(r => state.models.has(r.model) && state.predKinds.has(isRealPrediction(r) ? 'real' : 'fake'))
+    .map(r => ({
+      ...r,
+      tc15b: r.signals.find(sig => sig.tc_id === 'TC1.5b') || null,
+      signals: r.signals.filter(sig => tcPipeline[sig.tc_id] === state.pipeline),
+    }));
 
   renderUsageStats(s, base);
+  const validationModels = (DATA.sim_trades_models || []).filter(m => state.models.has(m));
+  renderValidationCards(s, base, validationModels, state.validateThreshold);
 
   let filtered = base;
   if (onlySignal) filtered = filtered.filter(r => r.signals.length > 0);
@@ -899,8 +1413,11 @@ function renderSimTradesTable(ticker) {
     return;
   }
 
-  let html = '<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source</th><th>Modèle</th>'
-    + '<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s)</th><th>Counter</th></tr></thead><tbody>';
+  const showGated = state.showGated;
+  let html = `<table><thead><tr><th>Date (D)</th><th>Cible (D+1)</th><th>Source ${infoDot('tcsource')}</th><th>Modèle</th>`
+    + `<th>Réf. P(D)</th><th>Prévision</th><th>Réel</th><th>Test case(s) ${infoDot('tcsignal')}</th><th>Counter ${infoDot('tccounter')}</th>`
+    + (showGated ? `<th>Sideways gaté (TC1.5b) ${infoDot('tcgatedcol')}</th>` : '')
+    + '</tr></thead><tbody>';
   filtered.forEach(r => {
     const color = MODEL_COLORS[r.model] || '#888';
     const tcText = r.signals.length
@@ -913,10 +1430,28 @@ function renderSimTradesTable(ticker) {
     html += `<tr><td>${r.d_date}</td><td>${r.target_date}</td><td>${r.source}</td>`
       + `<td><span style="width:9px;height:9px;border-radius:2px;display:inline-block;background:${color};margin-right:6px;"></span>${r.model}</td>`
       + `<td>${fmt(r.reference_price, 2)}</td><td>${fmt(r.predicted, 2)}</td><td>${fmt(r.realized_price, 2)}</td>`
-      + `<td>${tcText}</td><td>${counterText}</td></tr>`;
+      + `<td>${tcText}</td><td>${counterText}</td>`;
+    if (showGated) {
+      const g = gatedCellInfo(r.tc15b);
+      html += `<td class="${g.cls}">${g.text}</td>`;
+    }
+    html += '</tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+}
+
+// Contenu de la colonne optionnelle "Sideways gaté (TC1.5b)" : pas de signal v1 (aucun
+// jour plat candidat) -> "—" ; signal v1 mais écarté par le gate régime/volatilité
+// (gated_out=1, "flat suspect") -> écarté, distinct d'une vraie absence de signal ;
+// résolu -> counter (justesse, identique à TC1.5) + pnl_shortvol (proxy short-vol, cf.
+// BRIEF_sideways_v2.md §3, PAS un rendement exécuté) ; encore ouvert -> "ouvert".
+function gatedCellInfo(g) {
+  if (!g) return { text: '—', cls: '' };
+  if (g.gated_out) return { text: 'Écarté (vol/stress élevé)', cls: 'gated-out-cell' };
+  if (g.branch === null) return { text: g.status === 'open' ? 'ouvert' : '—', cls: '' };
+  const counterText = g.counter > 0 ? '+' + g.counter : String(g.counter);
+  return { text: `${counterText} (pnl ${fmt(g.roi, 2)})`, cls: '' };
 }
 
 // Utilisation brute / performance simulation / taux d'utilisation : une ligne (jour ×
@@ -925,9 +1460,9 @@ function renderSimTradesTable(ticker) {
 // un trader, et un signal résolu négativement ne l'était pas non plus. La performance
 // (Σ counter) somme tous les signaux résolus, positifs et négatifs. Le taux rapporte
 // l'utilisation brute au nombre total de lignes de la sélection courante (modèle(s) +
-// pipeline) -- signaux ouverts (non encore résolus) comptés non-utilisables pour l'instant.
-function renderUsageStats(s, rows) {
-  const el = document.getElementById(`simtrades-usage-${s}`);
+// source(s) + pipeline) -- signaux ouverts (non encore résolus) comptés non-utilisables
+// pour l'instant.
+function computeUsage(rows) {
   const total = rows.length;
   let usableCount = 0;
   let counterSum = 0;
@@ -940,17 +1475,51 @@ function renderUsageStats(s, rows) {
     });
     if (rowUsable) usableCount++;
   });
-  const taux = total ? usableCount / total : null;
+  return { total, usableCount, counterSum, taux: total ? usableCount / total : null };
+}
+
+function renderUsageStats(s, rows) {
+  const el = document.getElementById(`simtrades-usage-${s}`);
+  const { total, usableCount, counterSum, taux } = computeUsage(rows);
 
   const tiles = [
-    { label: 'Utilisation brute', value: String(usableCount), cls: '' },
-    { label: 'Performance simulation (Σ counter)', value: fmt(counterSum, 0),
+    { label: 'Utilisation brute', def: 'tcusage', value: `${usableCount}<span class="frac">/ ${total}</span>`, cls: '' },
+    { label: 'Performance simulation (Σ counter)', def: 'tcperf', value: fmt(counterSum, 0),
       cls: counterSum > 0 ? 'pos' : (counterSum < 0 ? 'neg' : '') },
-    { label: "Taux d'utilisation", value: fmtPct(taux), cls: '' },
+    { label: "Taux d'utilisation", def: 'tcrate', value: fmtPct(taux), cls: '' },
   ];
   el.innerHTML = tiles.map(t =>
-    `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`
+    `<div class="stat-tile"><div class="label">${t.label} ${infoDot(t.def)}</div><div class="value ${t.cls}">${t.value}</div></div>`
   ).join('');
+}
+
+function validationCardHtml(titleHtml, rowsSubset, threshold, extraClass) {
+  const { total, usableCount, taux } = computeUsage(rowsSubset);
+  const pct = taux === null ? null : taux * 100;
+  const validated = pct !== null && pct >= threshold;
+  const cls = pct === null ? '' : (validated ? 'validated-ok' : 'validated-bad');
+  return `<div class="kpi-card ${cls} ${extraClass || ''}">`
+    + `<div class="kpi-card-title">${titleHtml}</div>`
+    + `<div class="kpi-row"><span>Taux d'utilisation ${infoDot('tcrate')}</span><b>${fmtPct(taux)}</b></div>`
+    + `<div class="kpi-row"><span>n (lignes)</span><b>${usableCount} / ${total}</b></div>`
+    + `<div class="kpi-row"><span>Verdict</span><b>${pct === null ? '—' : (validated ? 'Validé' : 'Non validé')}</b></div>`
+    + `</div>`;
+}
+
+// Une seule carte de validation, qui s'adapte à la sélection de modèles (cases à cocher
+// ci-dessus) : le détail du modèle si un seul est coché, l'agrégation de tous les
+// modèles cochés confondus (pas une moyenne des taux individuels) s'ils sont plusieurs.
+function renderValidationCards(s, rows, models, threshold) {
+  const el = document.getElementById(`simtrades-validation-${s}`);
+  if (!models.length) { el.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>'; return; }
+  if (models.length === 1) {
+    const m = models[0];
+    const swatch = `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}`;
+    el.innerHTML = validationCardHtml(swatch, rows.filter(r => r.model === m), threshold);
+    return;
+  }
+  const title = `${models.length} modèles sélectionnés (agrégé) ${infoDot('tcvalidatedglobal')}`;
+  el.innerHTML = validationCardHtml(title, rows, threshold, 'validation-global');
 }
 
 // ---- Prévision : delta vs dernier prix, seuil d'alerte, déphasage ----------
@@ -1011,6 +1580,7 @@ const BREAKDOWN_COLS = [
   { key: 'model', label: 'Modèle' },
   { key: 'horizon', label: 'Horizon' },
   { key: 'RMSE', label: 'RMSE', digits: 4, def: 'rmse' },
+  { key: 'CRPS', label: 'CRPS', digits: 4, def: 'crps' },
   { key: 'rmse_vs_naive', label: 'RMSE / RMSE naïf', digits: 3, render: v => v == null ? '—' : `${fmt(v, 3)}×` },
   { key: 'MAE', label: 'MAE', digits: 4, def: 'mae' },
   { key: 'MAPE', label: 'MAPE (%)', digits: 2, def: 'mape' },
@@ -1031,12 +1601,13 @@ const BREAKDOWN_COLS = [
 function renderAssetKpis(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
+  if (st.freq === 'weekly') { renderWeeklyKpisInline(ticker); return; }
   const checked = MODELS.filter(m => st.models.has(m));
 
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
   cardsEl.innerHTML = '';
 
-  const priceBucket = (DATA.prices[st.date] || {})[ticker];
+  const priceBucket = (pricesBucket(st.date) || {})[ticker];
   const anyRec = DATA.records.find(r => r.asset === ticker && r.horizon === st.horizon && r.run_date === st.date);
   const lastPrice = priceBucket ? priceBucket.points[priceBucket.points.length - 1] : null;
   const lastPriceCard = document.createElement('div');
@@ -1064,11 +1635,12 @@ function renderAssetKpis(ticker) {
         const pct = forecastPct(rec);
         const warn = isWarn(rec, st.warnThreshold);
         const pctText = pct === null ? '' : ` (${pct > 0 ? '+' : ''}${fmt(pct, 1)}%)`;
-        const predSeries = ((DATA.predictions[st.date] || {})[ticker] || {})[m] || {};
+        const predSeries = ((predsBucket(st.date) || {})[ticker] || {})[m] || {};
         const backtestPoints = predSeries[st.horizon] || [];
         const lag = backtestPoints.length >= 4 ? lagCorrelation(backtestPoints, 5) : null;
         rowsHtml = [
           [`RMSE ${infoDot('rmse')}`, fmt(rec.RMSE, 4)],
+          [`CRPS ${infoDot('crps')}`, rec.CRPS != null ? fmt(rec.CRPS, 4) : '—'],
           [`RMSE / RMSE naïf`, rec.rmse_vs_naive != null ? `${fmt(rec.rmse_vs_naive, 3)}×` : '—'],
           [`MAE ${infoDot('mae')}`, fmt(rec.MAE, 4)],
           [`MAPE ${infoDot('mape')}`, fmt(rec.MAPE, 2) + ' %'],
@@ -1154,10 +1726,11 @@ function renderBreakdownTable(ticker) {
 function renderAssetChart(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
+  if (st.freq === 'weekly') { renderWeeklyChart(ticker); return; }
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
 
-  const priceBucket = (DATA.prices[st.date] || {})[ticker];
+  const priceBucket = (pricesBucket(st.date) || {})[ticker];
   if (!priceBucket) {
     container.innerHTML = '<div class="no-data">Aucune donnée de prix pour cette date de run.</div>';
     dateRangeEl.textContent = '';
@@ -1207,7 +1780,7 @@ function renderAssetChart(ticker) {
   }
 
   const checked = MODELS.filter(m => st.models.has(m));
-  const predBucket = (DATA.predictions[st.date] || {})[ticker] || {};
+  const predBucket = (predsBucket(st.date) || {})[ticker] || {};
   const forecastAnchorDate = windowEnd;
   const forecastAnchorClose = (allPoints.find(p => p.date === forecastAnchorDate) || {}).close ?? lastClose;
   const forecastTargetDate = addDays(forecastAnchorDate, FORECAST_DAYS_OFFSET[st.horizon] || 1);
@@ -1634,11 +2207,19 @@ function renderComparisonTab() {
 // Boot
 // =============================================================================
 
-renderSubtitle();
-buildTabBar();
-buildAssetPanels();
-renderComparisonTab();
-document.getElementById('table-search').addEventListener('input', renderComparisonTable);
+async function boot() {
+  seedDataCacheFromInline();
+  renderSubtitle();
+  buildTabBar();
+  // Toutes les fiches actif démarrent sur la même date (la plus récente, cf. assetState
+  // ci-dessus) -- un seul fetch couvre le rendu KPI initial de tous les actifs.
+  const latestDate = DATA.run_dates[DATA.run_dates.length - 1];
+  if (latestDate) await ensureDateData(latestDate);
+  buildAssetPanels();
+  renderComparisonTab();
+  document.getElementById('table-search').addEventListener('input', renderComparisonTable);
+}
+boot();
 </script>
 """
 
@@ -1647,6 +2228,11 @@ def main():
     p = argparse.ArgumentParser(description="Génère un dashboard HTML des KPI depuis Run/")
     p.add_argument("--run-root", default=str(REPO_ROOT / "Run"))
     p.add_argument("--out", default=None, help="défaut : <run-root>/dashboard.html")
+    p.add_argument("--inline", action="store_true",
+                    help="mono-fichier autonome (embarque toutes les séries) -- "
+                         "ouvrable en file://, pratique en dev. Sans ce flag (défaut, "
+                         "utilisé en CI) : coquille légère + data/<date>.json à côté de "
+                         "--out, à servir via un serveur HTTP (fetch ne marche pas en file://).")
     args = p.parse_args()
 
     run_root = Path(args.run_root)
@@ -1655,9 +2241,17 @@ def main():
     run_data = collect_run_data(run_root)
     if not run_data["records"]:
         print(f"Aucun metrics.json trouvé sous {run_root}")
-    html = render_html(run_data, str(run_root))
+    html = render_html(run_data, str(run_root), external_series=not args.inline)
     out_path.write_text(html, encoding="utf-8")
-    print(f"Dashboard généré : {out_path}  ({len(run_data['records'])} combinaisons)")
+    if args.inline:
+        print(f"Dashboard généré (mono-fichier) : {out_path}  ({len(run_data['records'])} combinaisons)")
+    else:
+        data_dir = out_path.parent / "data"
+        write_date_series_files(run_data, data_dir)
+        print(f"Dashboard généré : {out_path} + {len(run_data['run_dates'])} fichier(s) dans {data_dir}"
+              f"  ({len(run_data['records'])} combinaisons)")
+        print("  Aperçu local : servez le dossier via `python -m http.server` "
+              "(fetch() ne fonctionne pas en file://) ou utilisez --inline.")
 
 
 if __name__ == "__main__":

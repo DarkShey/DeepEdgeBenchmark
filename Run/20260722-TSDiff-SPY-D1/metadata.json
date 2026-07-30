@@ -1,0 +1,23 @@
+{
+  "asset": "SPY",
+  "asset_class": "index",
+  "frequency": "1d",
+  "window_start": "2023-07-24",
+  "window_end": "2026-07-21",
+  "train_end": "2026-02-05",
+  "run_date": "2026-07-22",
+  "git_commit": "4d2c4e3c80d785abf0af903785d144b45e997830",
+  "seed": 42,
+  "lib_versions": {
+    "numpy": "2.2.6",
+    "pandas": "3.0.3",
+    "statsmodels": "0.14.6",
+    "sklearn": "1.9.0",
+    "arch": "8.0.0",
+    "yfinance": "1.5.1",
+    "tensorflow": "2.21.0",
+    "prophet": "1.3.0"
+  },
+  "gate1_reused_from": null,
+  "gate2_reused_from": "20260721"
+}

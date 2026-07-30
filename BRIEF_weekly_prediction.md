@@ -1,143 +1,178 @@
-# BRIEF — Prédiction hebdomadaire (W+1 / W+2 / W+3) par modèles entraînés en weekly
+# BRIEF — Prédiction hebdomadaire : TSDiff-W vs TSDiff-D (head-to-head train-once-forward)
 
 ## 0. Contexte
 
-Aujourd'hui, l'horizon long (« D+7 ») est produit par des modèles **entraînés en
-journalier** puis extrapolés sur plusieurs pas :
+Le tuteur a esquissé (en local, non poussé sur le repo) un prototype **TSDiff-W** :
+resample de la série en hebdomadaire + génération des semaines W+1/W+2/W+3 + backtest
+hebdo. Un premier mini-test (Phase 0) a été lancé et donne un signal **bruité et non
+concluant** :
 
-- **LSTM** — rollout **récursif** : `benchmarks/multi_horizon.py:forecast_from_fitted_lstm`
-  ré-injecte ses propres prédictions (`buffer.append(p_scaled)  # recursif : jamais le vrai
-  futur`) sur 5-7 pas. Les erreurs se **composent** (biais + variance qui s'accumulent).
-- **ARIMA / SARIMA / Prophet** — multi-step natif, mais qui extrapole une dynamique
-  **quotidienne** vers un horizon d'une semaine.
-- Le backtest D+7 (`pipeline.py:_run_model_d7_rolling`) fait des **origines glissantes au pas
-  quotidien**, chaque origine ré-appelant `forecast_horizons_<model>` (refit).
+| Actif | Horizon | Modèle | RMSE | Cov95 | CRPS |
+|---|---|---|---|---|---|
+| SPY | W1 | TSDiff-W | 17.19 | 1.00 | 9.00 |
+| SPY | W1 | TSDiff-D | 14.08 | 0.17 | 11.49 |
+| SPY | W2 | TSDiff-W | 16.20 | 1.00 | 10.15 |
+| SPY | W2 | TSDiff-D | 14.86 | 0.00 | 12.94 |
+| SPY | W3 | TSDiff-W | 20.14 | 1.00 | 11.77 |
+| SPY | W3 | TSDiff-D | 12.16 | 0.33 | 9.23 |
+| BTC | W1 | TSDiff-W | 7901 | 0.83 | 4448 |
+| BTC | W1 | TSDiff-D | 5866 | 0.00 | 4069 |
+| BTC | W2 | TSDiff-W | 12219 | 1.00 | 6121 |
+| BTC | W2 | TSDiff-D | 8378 | 0.00 | 6360 |
+| BTC | W3 | TSDiff-W | 16818 | 1.00 | 7048 |
+| BTC | W3 | TSDiff-D | 7532 | 0.00 | 5560 |
 
-**Problème *by-design*.** Un modèle appris sur des rendements *quotidiens* n'a jamais vu la
-loi à 1 semaine ; il la déduit en enchaînant des pas courts. Un modèle entraîné sur des
-rendements **hebdomadaires** cible directement la distribution à 1 semaine : **un seul pas**,
-pas de compounding, et la structure vol/autocorrélation hebdo est **apprise** et non extrapolée.
+**Lecture honnête de la Phase 0** : le daily gagne le RMSE point partout (contre-intuitif),
+mais **sous-couvre catastrophiquement** (Cov95 ≈ 0.00 : la vraie valeur ne tombe jamais dans
+son IC → sur-confiance). Le weekly est bien calibré (0.83–1.0, peut-être un peu large). Le
+CRPS est un match nul (3/6 chacun). **Mais** : (a) 6 origines = puissance statistique quasi
+nulle (une couverture « 0.17 » = 1/6) ; (b) la sur-confiance du daily est **confondue** avec
+un sous-entraînement (40 epochs). Résultat *suggestif*, pas *probant*.
 
-**Ancrages « daily-centric » du code** (surface à généraliser) :
-
-| Couche | Point | Fichier |
-|---|---|---|
-| Données | fetch en barres journalières, aucun resample | `benchmarks/run_benchmark.py:download_full_data` |
-| Horizons | codés en **jours de bourse** : `{"D1":1,"D7":5}`, business `(1,7)` | `pipeline.py:113,120` |
-| Backtest | origines glissantes au **pas quotidien** | `pipeline.py:_run_model_d7_rolling` |
-| Multi-step | rollout récursif (LSTM) | `multi_horizon.py:forecast_from_fitted_lstm` |
-| tracking.db | colonne `horizon` = jours de bourse | `tracking_db.py` |
-| Fenêtre | `WINDOW_YEARS = 3` → **~156 barres hebdo** | `pipeline.py:124` |
+**État du repo au moment d'écrire ce brief** : ni le brief du tuteur, ni le code du prototype
+weekly, ni `experiments/weekly_headtohead_results.json` ne sont présents (vérifié sur l'arbre
+de travail, toutes les branches et tout l'historique git). On (ré)implémente donc **à partir
+du TSDiff quotidien existant** (`models/tsdiff_model.py`), qui supporte déjà le mécanisme
+nécessaire (voir §3).
 
 ## 1. Objectif
 
-Ouvrir une **voie hebdomadaire** : des modèles entraînés sur des séries **resamplées en
-weekly**, produisant nativement **W+1, W+2, W+3**. But scientifique : vérifier que le
-**weekly-natif** bat le **daily-multistep** aux horizons pluri-hebdomadaires (RMSE / CRPS /
-couverture plus stables, sans erreur composée).
+Trancher proprement l'hypothèse (§2) avec une **puissance statistique suffisante** et **les
+deux modèles correctement entraînés**, sans exploser le budget de calcul. Concrètement :
+refactorer le prototype en protocole **train-once-forward**, lancer le head-to-head à
+**30 origines walk-forward × 300 epochs** sur **SPY + BTC**, et produire un verdict exploitable
+(RMSE / Cov95 / CRPS par actif × horizon).
 
-> **Livré en 2 temps** : d'abord un **prototype tête-à-tête** (Phase 0, ce brief + code joint)
-> pour **valider ou infirmer l'hypothèse avec des chiffres** ; ensuite seulement, si le signal
-> est là, la **généralisation** dans le pipeline (Phases 1-3).
+Ce brief **s'arrête à la décision**. L'extension à tous les modèles + bascule weekly/daily du
+Dashboard + pipeline daily (§9) n'est déclenchée **que si** le verdict est net.
 
-## 2. Principe de conception : la fréquence devient une dimension
+## 2. Hypothèse à tester
 
-Aujourd'hui l'axe d'horizons est `{"D1":1,"D7":5}` (jours). On généralise en
-**(fréquence, pas)** :
+> Pour un horizon **hebdomadaire** (W+1, W+2, W+3), un modèle diffusion **entraîné nativement
+> en hebdo** (TSDiff-W) produit-il de **meilleures prévisions** — en particulier une **meilleure
+> calibration de l'incertitude** — qu'un modèle **quotidien poussé en multi-pas** (TSDiff-D) ?
 
-```python
-HORIZONS = {"D1":("D",1), "D7":("D",5), "W1":("W",1), "W2":("W",2), "W3":("W",3)}
-```
+Le point d'intérêt principal est la **calibration** (Cov95, CRPS), pas seulement la précision
+ponctuelle (RMSE). Le pattern à confirmer/infirmer de la Phase 0 : *le daily-multistep est-il
+fondamentalement sur-confiant à horizon pluri-hebdo, ou est-ce juste un artefact de
+sous-entraînement ?*
 
-Un modèle weekly opère sur la série resamplée ; son « 1 pas » = **1 semaine**. La fréquence
-est threadée à travers : données (resample) → fit → forecast (pas en fréquence native) →
-backtest (walk-forward au pas d'1 semaine) → tracking.db (colonne `frequency`) → dossiers
-`Run/` → dashboard.
+## 3. Le cœur : protocole train-once-forward + le helper « from fitted »
 
-### 2.1 Convention de resampling (à figer)
+**Problème de calcul.** La config visée (30 origines × 300 epochs × 3 actifs) avec
+ré-entraînement à chaque origine ≈ **180 entraînements ≈ 15–20 h**. Infaisable en une fois.
 
-```python
-weekly = daily.resample("W-FRI").last().dropna()   # clôture du vendredi
-```
+**Décision de conception assumée** : on passe en **train-once-forward**.
 
-- **W-FRI** (clôture vendredi) comme ancre canonique.
-- **Point-in-time** : une semaine n'est comptée que **complète**. Un run en milieu de semaine
-  ne doit PAS créer une barre hebdo partielle du vendredi à venir (sinon fuite/instabilité).
-- Jours fériés : `.last()` sur le resample gère l'absence du vendredi (prend le dernier jour
-  coté de la semaine).
+- On entraîne chaque modèle **une seule fois**, sur les données **≤ première origine**.
+- On prévoit ensuite aux **30 origines** en ne faisant que **ré-échantillonner** : TSDiff est
+  conditionné sur la **fenêtre d'historique** passée en entrée, donc il forecast depuis
+  n'importe quelle origine **sans réentraînement**.
+- → **6 entraînements** au lieu de 180 (2 actifs × 2 modèles + marge) → **~1 h** avec epochs élevés.
 
-### 2.2 Longueur d'historique
+**Validité confirmée par le code** (`models/tsdiff_model.py`) :
 
-3 ans = **~156 barres hebdo** : insuffisant pour SARIMA saisonnier (période 52) et marginal
-pour LSTM/diffusion. → pour la voie weekly, viser **8-10 ans** (~400-520 barres). yfinance
-fournit 10 ans de daily sans difficulté ; `WINDOW_YEARS` doit être **fréquence-dépendant**.
+- `TSDiff.train()` est le **seul** endroit où les poids bougent (`opt.step` sur `net`+`decomp`+`hist_embed`).
+- `TSDiff.sample_paths(hist_window, ...)` est décoré `@torch.no_grad()` : uniquement des
+  forward passes conditionnés sur `hist_embed(h)` de la fenêtre fournie, **aucun** pas
+  d'optimisation. → un modèle fitté forecast depuis n'importe quel historique par simple
+  ré-échantillonnage.
 
-## 3. Phase 0 — Prototype tête-à-tête (TSDiff-W vs TSDiff daily-multistep)
+C'est **OOS et sans lookahead** (on ne conditionne que sur du passé réalisé ≤ origine), et
+**strictement identique** pour les deux modèles → comparaison équitable.
 
-**Objectif** : mesurer, sur les mêmes actifs / dates-cibles, l'écart entre :
-- **TSDiff-W** : entraîné sur rendements **hebdo**, `horizon=3` → génère W+1/W+2/W+3 **en un
-  seul tir** (le UNet1D produit tout le chemin d'un coup, **aucune récursion**) ;
-- **TSDiff-D** : le port daily existant (`models/tsdiff_model.py`), `horizon` étendu à ~15
-  jours de bourse, lu aux offsets correspondant aux vendredis cibles (multi-step daily natif).
+**Le helper à écrire — `forecast_from_fitted(...)`** : à partir d'un modèle **déjà entraîné**
++ les stats de standardisation figées (`mu`, `sd`) + le dernier prix + une fenêtre
+d'historique jusqu'à une origine donnée, il retourne les échantillons de prévision (chemins)
+aux horizons W1/W2/W3. C'est essentiellement ce que fait déjà la boucle interne de
+`run_tsdiff()`, extrait en fonction réutilisable appelée à chaque origine **sans** rappeler
+`model.train()`.
 
-**Pourquoi TSDiff d'abord** : son architecture génère déjà un **chemin d'horizon complet**
-(pas de rollout récursif), c'est donc le cas où la comparaison isole proprement l'effet
-« fréquence d'entraînement » (weekly vs daily) sans mélanger l'effet « récursif vs one-shot ».
+## 4. Les deux modèles comparés
 
-**Code joint** (prototype, hors pipeline de prod) :
-- `models/tsdiff_weekly.py` — `to_weekly()`, `forecast_weekly()` (fit hebdo + W+1/2/3),
-  réutilise la classe `TSDiff` de `models/tsdiff_model.py` avec `horizon=3`.
-- `experiments/weekly_headtohead_tsdiff.py` — walk-forward hebdo sur N origines : à chaque
-  vendredi-origine, on entraîne les deux modèles sur les données ≤ origine et on prévoit les
-  **mêmes dates-cibles** (vendredis t+1/t+2/t+3) ; on agrège **RMSE, couverture PI, CRPS** par
-  horizon et par actif.
+Même architecture TSDiff, deux régimes de données :
 
-**Critère de décision** : si TSDiff-W ≤ TSDiff-D en RMSE/CRPS à W+2/W+3 (attendu) avec une
-couverture PI au moins aussi bonne → on généralise (Phases 1-3). Sinon → on documente que
-l'intuition ne se matérialise pas sur ces séries et on s'arrête.
+- **TSDiff-W (natif hebdo)** : série resamplée en **hebdomadaire** (clôture de fin de semaine,
+  ex. `W-FRI`), entraîné sur les **rendements hebdo**, `horizon = 3` (→ W1/W2/W3 directement).
+- **TSDiff-D (quotidien multi-pas)** : série **quotidienne**, `horizon` étendu à
+  **15 jours ouvrés** (3 semaines × 5 jours de bourse), puis **agrégé en hebdo** pour
+  produire W1/W2/W3.
 
-## 4. Phases de généralisation (si Phase 0 concluante)
+> ⚠️ Le `HORIZON = 7` actuel du TSDiff quotidien ne couvre que ~1,4 semaine → **insuffisant**
+> pour W2/W3. Le passer à **15** est indispensable pour une comparaison honnête sur les trois
+> horizons. C'est un paramètre du run daily, pas une modif du modèle.
 
-### Phase 1 — Couche données + axe d'horizons
-- `to_weekly()` réutilisable ; `WINDOW_YEARS` fréquence-dépendant.
-- Généraliser le mapping d'horizons en `(fréquence, pas)`.
+**Alignement obligatoire** : les deux modèles sont évalués sur **exactement les mêmes
+dates-cibles** (mêmes fins de semaines W1/W2/W3), sinon la comparaison n'a pas de sens.
 
-### Phase 2 — Variantes de modèles weekly (patron TSDiff déjà en place)
-- Enregistrer `TSDiff-W` (puis `LSTM-W`, `Prophet-W`, `Naive-W`, `ARIMA-W`) dans `MODELS`,
-  `MODEL_FOLDER_NAME`, le dispatch (`_run_model_*`), `MODEL_ADAPTERS`, le dashboard.
-- Chaque variante : resample train→weekly, fit, forecast W+1/2/3.
-  - **Direct multi-horizon** privilégié (une sortie par horizon → zéro compounding) ; TSDiff-W
-    le fait nativement (chemin généré d'un coup).
+## 5. Configuration expérimentale
 
-### Phase 3 — Backtest hebdo + persistance
-- `_run_model_weekly()` : walk-forward **au pas d'1 semaine** (généralise
-  `_run_model_d7_rolling`).
-- `tracking.db` : colonne `frequency` (`D`/`W`) + `step` ; horizons `W1/W2/W3`. Permet la
-  comparaison **côte à côte** daily-multistep vs weekly-natif dans le dashboard.
-- Dossiers `Run/<date>-<modèle>-<actif>-W1/W2/W3`, facet weekly au dashboard.
+- **Origines** : **30**, walk-forward (puissance statistique — corrige le principal défaut de
+  la Phase 0).
+- **Epochs** : **300** (les deux modèles doivent être correctement entraînés — corrige le
+  confounding sous-entraînement de la Phase 0).
+- **Actifs** : **SPY + BTC** (reprise directe de la Phase 0 pour comparer au signal bruité
+  existant).
+- **Horizons** : **W1, W2, W3**.
+- **n_samples** : ≥ 50 par prévision (nuage d'échantillons → point = moyenne, IC = quantiles
+  2.5 / 97.5).
+- **Budget** : ~1 h en mode train-once-forward (le « mode caféine » tient).
 
-## 5. Garde-fous
+## 6. Métriques
 
-- Branche dédiée : `maeva/weekly-prediction` (sans accent) pour la généralisation ;
-  le **prototype** (Phase 0) peut vivre sur une branche courte type `exp/weekly-tsdiff`.
-- **Ne pas modifier** le pipeline de prod ni les modèles daily existants en Phase 0 — le
-  prototype est **additif** (`models/tsdiff_weekly.py` réutilise `tsdiff_model.py` en lecture).
-- **Point-in-time strict** : jamais de barre hebdo partielle ; le backtest ne voit jamais
-  au-delà de l'origine.
-- Reproductibilité : seeds fixées (`tsdiff_model.set_seed`).
+Par combinaison **(actif × horizon × modèle)** :
 
-## 6. Critères d'acceptation (Phase 0)
+- **RMSE** — précision du point (moyenne du nuage d'échantillons vs réalisé).
+- **Cov95** — couverture empirique de l'IC à 95 % (fraction des réalisés dans [q2.5, q97.5]).
+  Cible ≈ 0.95. **Métrique centrale** de l'hypothèse.
+- **CRPS** — score point+distribution. À calculer en **CRPS empirique sur le nuage
+  d'échantillons** (pas l'approximation gaussienne de `archives/`), TSDiff produisant
+  nativement des échantillons.
 
-1. `experiments/weekly_headtohead_tsdiff.py` tourne de bout en bout sur ≥ 2 actifs et produit
-   un tableau **RMSE + couverture + CRPS** par horizon (W+1/2/3) pour **TSDiff-W** et
-   **TSDiff-D**.
-2. Les deux modèles prévoient **exactement les mêmes dates-cibles** (vendredis t+k) à chaque
-   origine (comparaison équitable).
-3. Résultats sauvegardés (JSON/CSV) + lisibles, permettant de trancher le critère §3.
+## 7. Garde-fous (ne pas les ignorer)
 
-## 7. Hors périmètre (Phase 0)
+- **`mu`/`sd` figés** aux stats de la **1ère origine** (calculés une fois sur le train, jamais
+  recalculés aux origines suivantes → sinon micro-lookahead).
+- **Historique ≤ origine uniquement** : à chaque origine, la fenêtre ne contient que du réalisé
+  passé (aucun point futur).
+- **Équité** : même graine, même `n_samples`, même `k_denoise`, mêmes dates-cibles pour les
+  deux modèles.
+- **Persistance** : le TSDiff n'a pas de `save`/`load` (hors EMA). En un seul process en
+  mémoire c'est suffisant ; ajouter une sérialisation seulement si le run doit être scindé en
+  plusieurs process.
 
-- Intégration au pipeline de prod, tracking.db, dashboard (→ Phases 1-3).
-- Variantes weekly des autres modèles (LSTM-W, etc.).
-- Optimisation d'hyperparamètres weekly (lookback, horizon, epochs) — valeurs raisonnables
-  par défaut, à affiner en Phase 2.
+## 8. Livrables
+
+1. **`forecast_from_fitted(...)`** — le helper d'inférence multi-horizon depuis modèle fitté.
+2. **Script head-to-head refactoré** (train-once-forward, 30 origines, 2 modèles, 2 actifs).
+3. **`experiments/weekly_headtohead_results.json`** — résultats bruts (RMSE/Cov95/CRPS par
+   combinaison).
+4. **Tableau de synthèse** + lecture honnête (comme §0), avec le verdict : hypothèse
+   **confirmée / infirmée / toujours non concluante**.
+
+## 9. Critère de décision & suite (conditionnel)
+
+**Décision** : au vu des 30 origines × 300 epochs, on regarde si le pattern de calibration
+persiste une fois les deux modèles bien entraînés.
+
+- **Si le verdict est net** (ex. le weekly reste nettement mieux calibré même à 300 epochs) →
+  déclencher l'**Étape 3** : étendre le prototype weekly à **tous les modèles** (ARIMA, SARIMA,
+  Prophet, LSTM, Naive, TSDiff) pour permettre au **Dashboard** de basculer **weekly ↔ daily**.
+  **Bonus** : ajouter un **pipeline daily** dédié. *(Fera l'objet d'un brief séparé.)*
+- **Sinon** → on documente le résultat non concluant et on n'engage pas l'extension.
+
+## 10. Plan d'implémentation
+
+1. **Étendre `HORIZON` du daily à 15** (paramètre de run, pas du modèle).
+2. **Écrire `forecast_from_fitted(...)`** — extraire la logique d'inférence de `run_tsdiff()`
+   en fonction réutilisable (échantillonnage → dé-standardisation → prix → agrégation hebdo),
+   **sans** rappeler `train()`.
+3. **Ajouter un resample hebdo** (`W-FRI`) pour construire la série TSDiff-W.
+4. **Écrire le CRPS empirique** sur le nuage d'échantillons.
+5. **Assembler le protocole head-to-head** train-once-forward (entraîner une fois ≤ origine 1,
+   boucler sur 30 origines, mêmes dates-cibles pour W et D).
+6. **Lancer** sur SPY + BTC (300 epochs) et sauver `experiments/weekly_headtohead_results.json`.
+7. **Vérification** : contrôler l'absence de lookahead (fenêtres ≤ origine), l'alignement des
+   dates-cibles W/D, et la stabilité des métriques (relancer avec une 2ᵉ graine pour estimer le
+   bruit résiduel).
+8. **Rédiger la lecture honnête** + le verdict (§8.4).

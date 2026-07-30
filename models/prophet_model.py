@@ -108,7 +108,8 @@ def infer_next_date(series: pd.Series):
 
 
 # ── Prophet walk-forward backtest ────────────────────────────────────────────
-def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1) -> dict:
+def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1,
+                n_ensemble: int = 0, ensemble_seed=None) -> dict:
     """Rolling 1-step-ahead Prophet forecast over the test window (walk-forward),
     aligned with run_sarima: at each step, (re)fit Prophet on the history known up
     to t-1 and take ONLY the next date (yhat/yhat_lower/yhat_upper).
@@ -117,11 +118,23 @@ def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1) -> dict:
     default). Values >1 speed things up but reintroduce drift proportional to the
     gap -- between two refits the forecast degrades back into a k-step-ahead
     extrapolation, exactly the bias this walk-forward rewrite exists to remove.
-    Keep it at 1 unless the cost is genuinely prohibitive."""
+    Keep it at 1 unless the cost is genuinely prohibitive.
+
+    `n_ensemble` (0 = off, default -- no cost for existing callers): at each step,
+    additionally draws `n_ensemble` bootstrap samples of the next-step price by
+    resampling (with replacement) the in-sample residuals of the current fit
+    (yhat - y over history_ds, recomputed on each refit -- one extra
+    `model.predict(df_train)` call per refit, so roughly doubles the cost of the
+    default refit_freq=1 backtest) around the point forecast. Populates
+    `result["ensemble"]` (list of length len(test), one [n_ensemble] price array
+    per step) for empirical CRPS (cf. model_artifacts/crps_kpis.py)."""
     t0 = time.time()
     history_ds = list(pd.to_datetime(train.index))
     history_y  = list(train.astype(float).values.flatten())
     preds, lower, upper = [], [], []
+    ensembles = [] if n_ensemble > 0 else None
+    rng = np.random.default_rng(ensemble_seed) if n_ensemble > 0 else None
+    residual_pool = None
 
     model = None
     for i in range(len(test)):
@@ -130,12 +143,19 @@ def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1) -> dict:
             model = Prophet(interval_width=1 - PI_ALPHA, daily_seasonality=False,
                             weekly_seasonality=True, yearly_seasonality=True)
             model.fit(df_train)
+            if n_ensemble > 0:
+                in_sample = model.predict(df_train)["yhat"].values
+                residual_pool = in_sample - np.asarray(history_y, dtype=float)
 
         next_ds = pd.to_datetime(test.index[i])
         fc = model.predict(pd.DataFrame({"ds": [next_ds]}))
-        preds.append(float(fc["yhat"].iloc[0]))
+        point = float(fc["yhat"].iloc[0])
+        preds.append(point)
         lower.append(float(fc["yhat_lower"].iloc[0]))
         upper.append(float(fc["yhat_upper"].iloc[0]))
+
+        if n_ensemble > 0:
+            ensembles.append(point + rng.choice(residual_pool, size=n_ensemble, replace=True))
 
         # walk forward: reveal the realised value for step i
         history_ds.append(next_ds)
@@ -145,8 +165,11 @@ def run_prophet(train: pd.Series, test: pd.Series, refit_freq: int = 1) -> dict:
     preds, lower, upper = map(np.array, (preds, lower, upper))
     metrics = compute_metrics(test.values, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test.values}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test.values}
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_prophet(series: pd.Series, next_date=None):

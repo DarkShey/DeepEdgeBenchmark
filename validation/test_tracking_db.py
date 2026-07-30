@@ -629,6 +629,93 @@ def test_flag_daily_duplicates_is_idempotent(tmp_path):
     assert total == 2   # aucune ligne supprimée par le rejeu
 
 
+# ── flag_oos_superseded_by_live ───────────────────────────────────────────────
+
+
+def test_flag_oos_superseded_by_live_flags_matching_cutoff_date(tmp_path):
+    """Même si le target_date diverge (décalage business_lag), une ligne oos partage
+    la même clé (model, asset, horizon, frequence, horizon_type, cutoff_date) qu'une
+    ligne live -> doit être flaguée : c'est la même date de prédiction en double."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(
+        model="Prophet", asset="SPY", cutoff_date="2026-07-06", target_date="2026-07-07",
+    ), db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY",
+                     cutoff_date="2026-07-06", target_date="2026-07-08")   # target divergent
+
+    n_flagged = td.flag_oos_superseded_by_live(db_path=db_path)
+    assert n_flagged == 1
+
+    conn = sqlite3.connect(db_path)
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+    assert oos_flag == 1
+
+
+def test_flag_oos_superseded_by_live_leaves_unmatched_oos_alone(tmp_path):
+    """Pas de ligne live pour ce cutoff_date -> le backtest oos reste la seule source
+    d'information pour cette date, il ne doit pas être flagué."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(
+        model="Prophet", asset="SPY", cutoff_date="2026-07-06",
+    ), db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2025-12-05")
+
+    n_flagged = td.flag_oos_superseded_by_live(db_path=db_path)
+    assert n_flagged == 0
+
+    conn = sqlite3.connect(db_path)
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+    assert oos_flag == 0
+
+
+def test_flag_oos_superseded_by_live_never_flags_live_rows(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(model="Prophet", asset="SPY", cutoff_date="2026-07-06"),
+                        db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2026-07-06")
+
+    td.flag_oos_superseded_by_live(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    live_flagged = conn.execute(
+        "SELECT COUNT(*) FROM predictions WHERE source='live' AND daily_duplicate=1"
+    ).fetchone()[0]
+    conn.close()
+    assert live_flagged == 0
+
+
+def test_flag_oos_superseded_by_live_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(model="Prophet", asset="SPY", cutoff_date="2026-07-06"),
+                        db_path=db_path)
+    _insert_oos_row(db_path, model="Prophet", asset="SPY", cutoff_date="2026-07-06")
+
+    n_first = td.flag_oos_superseded_by_live(db_path=db_path)
+    n_second = td.flag_oos_superseded_by_live(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    total = conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0]
+    oos_flag = conn.execute(
+        "SELECT daily_duplicate FROM predictions WHERE source='oos'"
+    ).fetchone()[0]
+    conn.close()
+
+    assert n_first == 1
+    assert n_second == 0   # déjà flaguée, rien de nouveau au 2e appel
+    assert oos_flag == 1
+    assert total == 2   # aucune ligne supprimée
+
+
 def test_export_csv_oos_daily_duplicate_filter_is_a_noop_once_no_duplicates_remain(tmp_path):
     """Depuis BRIEF_prevention_doublons.md, export_csv (comme toute fonction qui
     s'auto-initialise) ne peut plus être appelée sur une base contenant encore des
@@ -670,12 +757,16 @@ def test_oos_unique_index_rejects_raw_duplicate_business_key(tmp_path):
 
 
 def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
-    """L'index (source, model, asset, horizon, cutoff_date) doit servir de cible de
-    conflit valide pour un upsert SQL direct -- prérequis pour
+    """L'index (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
+    doit servir de cible de conflit valide pour un upsert SQL direct -- prérequis pour
     sim_trades.insert_oos_predictions (§5 du brief, testé au niveau applicatif dans
     test_sim_trades.py). Ici, au niveau SQL brut : deux INSERT ... ON CONFLICT ... DO
     UPDATE sur la même clé métier avec des run_id différents -> 1 seule ligne, dont le
-    contenu est celui du dernier insert (keep-latest)."""
+    contenu est celui du dernier insert (keep-latest).
+
+    `frequence`/`horizon_type` (BRIEF_audit_combinaisons.md) omis de l'INSERT ->
+    defaultent à 'daily'/'daily' (identiques aux deux appels), donc la collision sur
+    la clé métier étendue se produit toujours comme avant leur ajout."""
     db_path = str(tmp_path / "t.db")
     td.init_db(db_path)
 
@@ -686,7 +777,8 @@ def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
                                      target_date, last_close, y_pred, y_lower, y_upper, y_true, source)
             VALUES (?, 'Prophet', 'SPY', 1, 'unknown', '2026-02-01', '2026-02-02',
                     100.0, ?, 95.0, 107.0, 102.0, 'oos')
-            ON CONFLICT (source, model, asset, horizon, cutoff_date) WHERE source='oos'
+            ON CONFLICT (source, model, asset, horizon, frequence, horizon_type, cutoff_date)
+            WHERE source='oos'
             DO UPDATE SET run_id=excluded.run_id, y_pred=excluded.y_pred
         """, (run_id, y_pred))
         conn.commit()
@@ -703,3 +795,192 @@ def test_oos_unique_index_supports_upsert_keep_latest(tmp_path):
     assert len(rows) == 1
     assert rows[0]["run_id"] == "20260710-Prophet-SPY-D1"
     assert rows[0]["y_pred"] == pytest.approx(105.0)
+
+
+# ── frequence / horizon_type / horizon_unit (BRIEF_audit_combinaisons.md) ──────
+
+def test_fresh_db_has_frequency_horizon_columns_defaulting_daily(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    conn = sqlite3.connect(db_path)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(predictions)")}
+    conn.close()
+    assert {"frequence", "horizon_type", "horizon_unit"} <= cols
+
+
+def test_save_prediction_defaults_to_daily_native(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.save_prediction(make_record(horizon=7), db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+    assert row["horizon_type"] == "daily"
+    assert row["horizon_unit"] == "D+7"
+
+
+def test_save_prediction_respects_explicit_weekly_fields(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    record = make_record(horizon=2, tc_id="TC_W2", frequence="weekly",
+                         horizon_type="weekly", horizon_unit="W+2")
+    td.save_prediction(record, db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "weekly"
+    assert row["horizon_type"] == "weekly"
+    assert row["horizon_unit"] == "W+2"
+
+
+def test_legacy_db_migration_backfills_frequency_horizon(tmp_path):
+    """Une base créée AVANT ce brief (colonnes absentes) doit se retrouver, après
+    un simple appel à init_db(), avec toutes ses lignes existantes correctement
+    étiquetées daily natif -- ce sont réellement des prédictions daily, pas un
+    remplissage arbitraire."""
+    db_path = str(tmp_path / "t.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, tc_id TEXT,
+            model TEXT NOT NULL, asset TEXT NOT NULL, horizon INTEGER NOT NULL,
+            cutoff_date TEXT NOT NULL, target_date TEXT NOT NULL, regime TEXT NOT NULL,
+            last_close REAL NOT NULL, y_pred REAL NOT NULL, y_lower REAL NOT NULL,
+            y_upper REAL NOT NULL, verdict_integrite INTEGER, verdict_plausibilite INTEGER,
+            created_at TEXT, y_true REAL, in_interval INTEGER, abs_error REAL,
+            abs_error_naif REAL, beats_naif INTEGER, direction_correct INTEGER,
+            evaluated_at TEXT, source TEXT NOT NULL DEFAULT 'live',
+            daily_duplicate INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (tc_id, model, cutoff_date)
+        )
+    """)
+    conn.execute("""
+        INSERT INTO predictions (run_id, model, asset, horizon, cutoff_date, target_date,
+                                 regime, last_close, y_pred, y_lower, y_upper)
+        VALUES ('r1', 'ARIMA-GARCH', 'SPY', 7, '2026-01-01', '2026-01-08',
+                'calm', 100.0, 101.0, 95.0, 107.0)
+    """)
+    conn.commit()
+    conn.close()
+
+    td.init_db(db_path)   # doit migrer sans lever
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+    assert row["horizon_type"] == "daily"
+    assert row["horizon_unit"] == "D+7"
+
+
+def test_frequency_horizon_migration_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(), db_path=db_path)
+    td.init_db(db_path)   # ré-appel, ne doit pas lever ni modifier les données
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["frequence"] == "daily"
+
+
+def test_compute_real_flag_uses_per_model_threshold():
+    assert td.compute_real_flag("ARIMA-GARCH", "2026-07-05") == "oos"
+    assert td.compute_real_flag("ARIMA-GARCH", "2026-07-06") == "live"
+    assert td.compute_real_flag("TSDiff", "2026-07-06") == "oos"    # démarrage plus tardif
+    assert td.compute_real_flag("TSDiff", "2026-07-08") == "live"
+
+
+def test_save_prediction_sets_real_flag_from_cutoff_date(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.save_prediction(make_record(cutoff_date="2026-06-01"), db_path=db_path)   # fausse
+    td.save_prediction(make_record(tc_id="TC2", cutoff_date="2026-07-10"), db_path=db_path)   # vraie
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {r["cutoff_date"]: r["real_flag"] for r in conn.execute("SELECT * FROM predictions")}
+    conn.close()
+    assert rows["2026-06-01"] == "oos"
+    assert rows["2026-07-10"] == "live"
+
+
+def test_legacy_db_migration_backfills_real_flag(tmp_path):
+    """Une base créée AVANT ce brief (colonne real_flag absente) doit se retrouver,
+    après un simple appel à init_db(), avec real_flag correctement calculé pour
+    chaque ligne existante -- pas juste une valeur par défaut arbitraire."""
+    db_path = str(tmp_path / "t.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, tc_id TEXT,
+            model TEXT NOT NULL, asset TEXT NOT NULL, horizon INTEGER NOT NULL,
+            cutoff_date TEXT NOT NULL, target_date TEXT NOT NULL, regime TEXT NOT NULL,
+            last_close REAL NOT NULL, y_pred REAL NOT NULL, y_lower REAL NOT NULL,
+            y_upper REAL NOT NULL, verdict_integrite INTEGER, verdict_plausibilite INTEGER,
+            created_at TEXT, y_true REAL, in_interval INTEGER, abs_error REAL,
+            abs_error_naif REAL, beats_naif INTEGER, direction_correct INTEGER,
+            evaluated_at TEXT, source TEXT NOT NULL DEFAULT 'live',
+            daily_duplicate INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (tc_id, model, cutoff_date)
+        )
+    """)
+    conn.execute("""
+        INSERT INTO predictions (run_id, tc_id, model, asset, horizon, cutoff_date, target_date,
+                                 regime, last_close, y_pred, y_lower, y_upper, source)
+        VALUES ('r1', 'TC1', 'ARIMA-GARCH', 'BTC-USD', 1, '2026-07-08', '2026-07-09',
+                'calm', 100.0, 101.0, 95.0, 107.0, 'oos')
+    """)
+    conn.commit()
+    conn.close()
+
+    td.init_db(db_path)   # doit migrer + backfiller real_flag sans lever
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    # 2026-07-08 >= seuil réel (06/07) -> vraie prédiction, MEME si source='oos'
+    # (backfill technique) : real_flag et source portent des sens indépendants.
+    assert row["source"] == "oos"
+    assert row["real_flag"] == "live"
+
+
+def test_real_flag_migration_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    td.save_prediction(make_record(cutoff_date="2026-07-10"), db_path=db_path)
+    td.init_db(db_path)   # ré-appel, ne doit pas lever ni modifier la valeur déjà backfillée
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT * FROM predictions").fetchone()
+    conn.close()
+    assert row["real_flag"] == "live"
+
+
+def test_oos_index_lets_daily_and_weekly_coexist_same_asset_horizon_cutoff(tmp_path):
+    """Le coeur du problème BRIEF_audit_combinaisons.md §0 : un TSDiff-D (frequence=daily,
+    horizon_type=weekly, horizon=1 = 'W+1') et un TSDiff-W (frequence=weekly,
+    horizon_type=weekly, horizon=1) sur le MEME actif/horizon/cutoff_date sont deux
+    prédictions différentes -- l'ancien index (sans frequence/horizon_type) les aurait
+    fait collisionner (silently ignorées ou écrasées). Elles doivent coexister."""
+    db_path = str(tmp_path / "t.db")
+    td.init_db(db_path)
+    conn = sqlite3.connect(db_path)
+
+    def insert(frequence):
+        conn.execute("""
+            INSERT INTO predictions (run_id, model, asset, horizon, regime, cutoff_date,
+                                     target_date, last_close, y_pred, y_lower, y_upper,
+                                     y_true, source, frequence, horizon_type, horizon_unit)
+            VALUES ('r', 'TSDiff', 'BTC-USD', 1, 'unknown', '2025-12-05', '2025-12-12',
+                    100.0, 101.0, 95.0, 107.0, 102.0, 'oos', ?, 'weekly', 'W+1')
+        """, (frequence,))
+
+    insert("daily")     # TSDiff-D visant W+1
+    insert("weekly")    # TSDiff-W natif W+1
+    conn.commit()
+    n = conn.execute("SELECT COUNT(*) FROM predictions WHERE source='oos'").fetchone()[0]
+    conn.close()
+    assert n == 2   # les deux coexistent, aucune n'a écrasé/ignoré l'autre

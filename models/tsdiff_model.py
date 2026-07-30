@@ -402,20 +402,19 @@ def _make_windows(z: np.ndarray, seq_len: int, horizon: int):
     return np.asarray(H, dtype=np.float32), np.asarray(T, dtype=np.float32)
 
 
-def run_tsdiff(train: pd.Series, test: pd.Series,
-               seq_len=SEQ_LEN, horizon=HORIZON, hidden=HIDDEN, depth=DEPTH,
-               cond_dim=COND_DIM, T=T_DIFFUSION, epochs=EPOCHS, batch_size=BATCH_SIZE,
-               k_denoise=K_DENOISE, n_samples=N_SAMPLES, ddim_eta=DDIM_ETA) -> dict:
-    """Train on the train window's returns, roll 1-step-ahead over the test window.
+def fit_tsdiff(train: pd.Series, seq_len=SEQ_LEN, horizon=HORIZON, hidden=HIDDEN,
+              depth=DEPTH, cond_dim=COND_DIM, T=T_DIFFUSION, epochs=EPOCHS,
+              batch_size=BATCH_SIZE):
+    """Fit a TSDiff model once on `train`'s log-returns. Returns (model, mu, sd).
 
-    Point forecast = mean of the DDIM sample cloud; 95% PI = 2.5/97.5 sample
-    quantiles (the diffusion model's own predictive distribution).
+    `mu`/`sd` are the standardization stats of `train` — the caller is
+    responsible for reusing them (never recomputing) on any later data to
+    avoid lookahead in a walk-forward / train-once-forward protocol.
     """
     if len(train) <= seq_len + horizon:
         raise ValueError(
             f"train series has {len(train)} points, but seq_len={seq_len} + "
             f"horizon={horizon} requires more than {seq_len + horizon} points.")
-    t0 = time.time()
 
     train_p = train.values.astype(float)
     r = _log_returns(train_p)                                    # [len(train)-1]
@@ -429,23 +428,77 @@ def run_tsdiff(train: pd.Series, test: pd.Series,
 
     model = TSDiff(seq_len, horizon, hidden, depth, cond_dim, T)
     model.train(H_win, T_win, epochs=epochs, batch_size=batch_size)
+    return model, mu, sd
+
+
+def forecast_from_fitted(model: TSDiff, hist_window, mu: float, sd: float,
+                         last_price: float, horizons=None, n_samples=N_SAMPLES,
+                         k_denoise=K_DENOISE, ddim_eta=DDIM_ETA) -> dict:
+    """Sample forecasts from an already-fitted model — no `model.train()` call.
+
+    `hist_window` is a standardized-return history (>= model.seq_len values);
+    only the last `model.seq_len` are used as conditioning. `mu`/`sd`/`last_price`
+    de-standardize the sampled returns back into a price. `horizons` is a list of
+    steps-ahead (1-indexed, capped at `model.horizon`); defaults to `[1]` (single
+    next-step forecast, e.g. one walk-forward tick). Multi-step horizons read off
+    the cumulative sum of the sampled return path, exactly like
+    `benchmarks/multi_horizon.forecast_horizons_tsdiff`.
+
+    Returns `{h: price_samples}` — one `[n_samples]` array of price samples per
+    requested horizon.
+    """
+    if horizons is None:
+        horizons = [1]
+    window = np.asarray(hist_window[-model.seq_len:], dtype=np.float32)
+    paths = model.sample_paths(window, n_samples=n_samples, k_denoise=k_denoise,
+                               ddim_eta=ddim_eta)                # [n_samples, model.horizon]
+    out = {}
+    for h in horizons:
+        hh = min(int(h), model.horizon)
+        cum_r = paths[:, :hh].sum(axis=1) * sd + hh * mu         # de-standardized cumulative return
+        out[h] = last_price * np.exp(cum_r)                      # returns → price
+    return out
+
+
+def run_tsdiff(train: pd.Series, test: pd.Series,
+               seq_len=SEQ_LEN, horizon=HORIZON, hidden=HIDDEN, depth=DEPTH,
+               cond_dim=COND_DIM, T=T_DIFFUSION, epochs=EPOCHS, batch_size=BATCH_SIZE,
+               k_denoise=K_DENOISE, n_samples=N_SAMPLES, ddim_eta=DDIM_ETA,
+               keep_samples: bool = False) -> dict:
+    """Train on the train window's returns, roll 1-step-ahead over the test window.
+
+    Point forecast = mean of the DDIM sample cloud; 95% PI = 2.5/97.5 sample
+    quantiles (the diffusion model's own predictive distribution).
+
+    `keep_samples` (False = off, default -- no extra memory for existing callers):
+    the `n_samples`-wide price cloud already drawn at each step (normally reduced
+    to mean/quantiles and discarded) is instead kept in `result["ensemble"]` (list
+    of length len(test), one [n_samples] price array per step) for empirical CRPS
+    (cf. model_artifacts/crps_kpis.py) -- no extra sampling cost, TSDiff already
+    produces genuine forecast samples.
+    """
+    t0 = time.time()
+    model, mu, sd = fit_tsdiff(train, seq_len, horizon, hidden, depth, cond_dim, T,
+                               epochs, batch_size)
 
     # Walk-forward over the test window. `buffer` holds standardized returns up to
     # the point being predicted; `last_price` is the realised price at t-1.
-    buffer     = list(z)
+    train_p    = train.values.astype(float)
+    buffer     = list((_log_returns(train_p) - mu) / sd)
     last_price = float(train_p[-1])
     test_p     = test.values.astype(float)
 
     preds, lower, upper = [], [], []
+    ensembles = [] if keep_samples else None
     for i in range(len(test_p)):
-        window = np.asarray(buffer[-seq_len:], dtype=np.float32)
-        z_samples = model.sample_next(window, n_samples=n_samples,
-                                      k_denoise=k_denoise, ddim_eta=ddim_eta)
-        r_samples = z_samples * sd + mu                         # de-standardize returns
-        price_samples = last_price * np.exp(r_samples)          # returns → price
+        price_samples = forecast_from_fitted(
+            model, buffer, mu, sd, last_price, horizons=[1],
+            n_samples=n_samples, k_denoise=k_denoise, ddim_eta=ddim_eta)[1]
         preds.append(float(np.mean(price_samples)))
         lower.append(float(np.quantile(price_samples, 0.025)))
         upper.append(float(np.quantile(price_samples, 0.975)))
+        if keep_samples:
+            ensembles.append(price_samples)
         # walk forward with the realised value
         realised_r = np.log(test_p[i] / last_price)
         buffer.append((realised_r - mu) / sd)
@@ -455,8 +508,11 @@ def run_tsdiff(train: pd.Series, test: pd.Series,
     train_time = time.time() - t0
     metrics = compute_metrics(test_p, preds, pi_lower=lower, pi_upper=upper,
                               train_time=train_time)
-    return {**metrics, "predictions": preds, "lower": lower, "upper": upper,
-            "index": test.index, "actual": test_p}
+    result = {**metrics, "predictions": preds, "lower": lower, "upper": upper,
+              "index": test.index, "actual": test_p}
+    if ensembles is not None:
+        result["ensemble"] = ensembles
+    return result
 
 
 def next_step_tsdiff(series: pd.Series, seq_len=SEQ_LEN, horizon=HORIZON,

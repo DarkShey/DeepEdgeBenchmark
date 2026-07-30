@@ -131,14 +131,19 @@ def _forecast_from_fitted_lstm(model, scaler, std, scaled, horizons):
 
 def _d1_walk_forward(train, validation, seed, epochs):
     import lstm_model
+    from model_artifacts import crps_kpis
     lstm_model.set_seed(seed if seed is not None else lstm_model.DEFAULT_SEED)
-    result = lstm_model.run_lstm(train, validation, epochs=epochs or lstm_model.EPOCHS)
+    result = lstm_model.run_lstm(train, validation, epochs=epochs or lstm_model.EPOCHS,
+                                 n_ensemble=crps_kpis.DEFAULT_N_ENSEMBLE)
     dates = [str(d) for d in result["index"]]
     actual = np.asarray(result["actual"], dtype=float).tolist()
     pred = np.asarray(result["predictions"], dtype=float).tolist()
     lo = np.asarray(result["lower"], dtype=float).tolist()
     hi = np.asarray(result["upper"], dtype=float).tolist()
     metrics = lstm_model.compute_metrics(actual, pred, pi_lower=lo, pi_upper=hi)
+    # Nuage MC-Dropout jamais sérialisé dans le JSON de résultat (--result-json) --
+    # seul le scalaire crps y figure, comme les autres métriques (cf. crps_kpis.py).
+    metrics["crps"] = crps_kpis.crps_from_step_ensembles(result.get("ensemble"), actual)
     return metrics, dates, actual, pred, lo, hi
 
 

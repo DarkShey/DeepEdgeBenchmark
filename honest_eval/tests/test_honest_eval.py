@@ -98,6 +98,24 @@ def test_metrics():
     _, _, lag7 = metrics.diebold_mariano(better, ea, h=7)
     check("DM lag >= h-1 for h=7", lag7 >= 6, f"lag={lag7}")
 
+    # dm_hac_test on a pre-computed differential (BRIEF_analyse_poolee.md) must
+    # agree exactly with diebold_mariano()'s own internal loss differential --
+    # it's the same computation, just fed the diff directly instead of two raw
+    # error series (pooled/scaled differentials have no "raw error" to derive from).
+    diff_sq = better**2 - ea**2
+    dm3, dp3, lag3 = metrics.diebold_mariano(better, ea, h=1)
+    out3 = metrics.dm_hac_test(diff_sq, h=1)
+    check("dm_hac_test matches diebold_mariano on same squared-loss diff",
+         abs(out3["dm_stat"] - dm3) < 1e-9 and abs(out3["p_value"] - dp3) < 1e-9
+         and out3["lag"] == lag3, str(out3))
+    check("dm_hac_test(identical) not significant",
+         metrics.dm_hac_test(np.zeros(300), h=1)["p_value"] > 0.99)
+    check("dm_hac_test(clear negative diff) significant & negative",
+         metrics.dm_hac_test(better**2 - ea**2, h=1)["p_value"] < 0.05
+         and metrics.dm_hac_test(better**2 - ea**2, h=1)["dm_stat"] < 0)
+    check("dm_hac_test short series (T<8) returns p=1.0, no crash",
+         metrics.dm_hac_test(np.array([1.0, -1.0, 2.0]), h=1)["p_value"] == 1.0)
+
     # skill verdict wording
     check("verdict no-skill", metrics.skill_verdict(1.0, 0.5) == "no better than naive")
     check("verdict beats", metrics.skill_verdict(0.8, 0.01) == "beats naive")
