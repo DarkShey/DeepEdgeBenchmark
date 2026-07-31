@@ -1,0 +1,141 @@
+{
+  "window": "W1 (2020-01-01 -> 2024-12-31)",
+  "assets": {
+    "SPY": {
+      "base_alone": {
+        "mace_strict": 13.35,
+        "cov_50": 39.82,
+        "cov_80": 61.06,
+        "cov_95": 84.07
+      },
+      "base_ewma": {
+        "mace_strict": 2.14,
+        "cov_50": 47.79,
+        "cov_80": 78.76,
+        "cov_95": 92.04
+      },
+      "log_alone": {
+        "mace_strict": 5.38,
+        "cov_50": 46.02,
+        "cov_80": 72.57,
+        "cov_95": 90.27
+      },
+      "log_ewma": {
+        "mace_strict": 2.73,
+        "cov_50": 45.13,
+        "cov_80": 77.88,
+        "cov_95": 93.81
+      }
+    },
+    "BTC": {
+      "base_alone": {
+        "mace_strict": 28.46,
+        "cov_50": 27.44,
+        "cov_80": 46.95,
+        "cov_95": 65.24
+      },
+      "base_ewma": {
+        "mace_strict": 5.81,
+        "cov_50": 34.15,
+        "cov_80": 80.49,
+        "cov_95": 93.9
+      },
+      "log_alone": {
+        "mace_strict": 6.3,
+        "cov_50": 50.0,
+        "cov_80": 68.29,
+        "cov_95": 87.8
+      },
+      "log_ewma": {
+        "mace_strict": 3.78,
+        "cov_50": 43.29,
+        "cov_80": 80.49,
+        "cov_95": 90.85
+      }
+    },
+    "ETH": {
+      "base_alone": {
+        "mace_strict": 34.35,
+        "cov_50": 22.56,
+        "cov_80": 38.41,
+        "cov_95": 60.98
+      },
+      "base_ewma": {
+        "mace_strict": 9.35,
+        "cov_50": 30.49,
+        "cov_80": 87.2,
+        "cov_95": 96.34
+      },
+      "log_alone": {
+        "mace_strict": 16.26,
+        "cov_50": 34.76,
+        "cov_80": 56.1,
+        "cov_95": 85.37
+      },
+      "log_ewma": {
+        "mace_strict": 4.8,
+        "cov_50": 37.8,
+        "cov_80": 81.1,
+        "cov_95": 93.9
+      }
+    },
+    "ZN": {
+      "base_alone": {
+        "mace_strict": 41.08,
+        "cov_50": 9.73,
+        "cov_80": 30.97,
+        "cov_95": 61.06
+      },
+      "base_ewma": {
+        "mace_strict": 15.5,
+        "cov_50": 17.7,
+        "cov_80": 69.03,
+        "cov_95": 98.23
+      },
+      "log_alone": {
+        "mace_strict": 35.77,
+        "cov_50": 14.16,
+        "cov_80": 40.71,
+        "cov_95": 62.83
+      },
+      "log_ewma": {
+        "mace_strict": 8.42,
+        "cov_50": 31.86,
+        "cov_80": 74.34,
+        "cov_95": 96.46
+      }
+    },
+    "TLT": {
+      "base_alone": {
+        "mace_strict": 27.51,
+        "cov_50": 21.24,
+        "cov_80": 49.56,
+        "cov_95": 71.68
+      },
+      "base_ewma": {
+        "mace_strict": 14.03,
+        "cov_50": 24.78,
+        "cov_80": 66.37,
+        "cov_95": 98.23
+      },
+      "log_alone": {
+        "mace_strict": 36.06,
+        "cov_50": 16.81,
+        "cov_80": 32.74,
+        "cov_95": 67.26
+      },
+      "log_ewma": {
+        "mace_strict": 9.9,
+        "cov_50": 28.32,
+        "cov_80": 75.22,
+        "cov_95": 98.23
+      }
+    }
+  },
+  "mace_strict_mean_5assets": {
+    "base_alone": 28.95,
+    "base_ewma": 9.37,
+    "log_alone": 19.95,
+    "log_ewma": 5.93
+  }
+}
