@@ -64,3 +64,5 @@ experiments/robustness_state_*.json
 experiments/prophet_invest_state*.json
 experiments/lstm_sigma_state*.json
 experiments/lstm_sigma_ckpt*/
+experiments/d7_sigma_state.json
+experiments/d7_sigma_ckpt/

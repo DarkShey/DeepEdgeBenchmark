@@ -447,10 +447,40 @@ def test_calibrate_sigma_on_gives_asymmetric_arima_live_forecast(tmp_path, monke
     assert down != pytest.approx(up, rel=1e-6)
 
 
-def test_sigma_scale_wiring_widens_only_d1_business_row_in_tracking_db(tmp_path, monkeypatch, synthetic_split):
+def test_build_sigma_scale_map_horizons_per_model(monkeypatch):
+    """Périmètre par modèle du D+7 (activé 2026-07-31 après le backtest 7-pas dédié,
+    experiments/d7_sigma_scale_validation.py) : SARIMA/Prophet/Naive reçoivent D+1 ET
+    D+7 ; LSTM reste D+1 seulement (dégradation SPY au backtest) ; ARIMA-GARCH/TSDiff
+    jamais ; flag off -> None."""
+    calls = []
+
+    def fake_scale(model, asset, horizon, as_of, path):
+        calls.append((model, horizon))
+        return float(10 + horizon)
+
+    monkeypatch.setattr(mp.sigma_scale_mod, "sigma_scale", fake_scale)
+
+    lag = 1
+    assert mp._build_sigma_scale_map("SARIMA", "SYN", "2026-01-01", "db", lag, "on") == \
+        {1 + lag: 11.0, 7 + lag: 17.0}
+    assert mp._build_sigma_scale_map("Prophet", "SYN", "2026-01-01", "db", 0, "on") == \
+        {1: 11.0, 7: 17.0}
+    assert mp._build_sigma_scale_map("Naive", "SYN", "2026-01-01", "db", 0, "on") == \
+        {1: 11.0, 7: 17.0}
+    assert mp._build_sigma_scale_map("LSTM", "SYN", "2026-01-01", "db", 0, "on") == \
+        {1: 11.0}
+    assert mp._build_sigma_scale_map("ARIMA-GARCH", "SYN", "2026-01-01", "db", 0, "on") is None
+    assert mp._build_sigma_scale_map("TSDiff", "SYN", "2026-01-01", "db", 0, "on") is None
+    assert mp._build_sigma_scale_map("SARIMA", "SYN", "2026-01-01", "db", 0, "off") is None
+    # chaque facteur est bien demandé à validation/sigma_scale.py avec SON horizon
+    assert ("SARIMA", 1) in calls and ("SARIMA", 7) in calls and ("LSTM", 7) not in calls
+
+
+def test_sigma_scale_wiring_scales_d1_and_d7_business_rows_in_tracking_db(tmp_path, monkeypatch, synthetic_split):
     """sigma_scale calculé depuis tracking.db (validation/sigma_scale.py) doit atteindre
-    UNIQUEMENT la ligne business D+1 (horizon=1) écrite par _save_business_predictions --
-    jamais D+7 (horizon=7, périmètre du brief : EWMA non validée au-delà de 1 pas)."""
+    les DEUX lignes business (D+1 horizon=1 et D+7 horizon=7) écrites par
+    _save_business_predictions pour SARIMA -- le D+7 est actif depuis la validation
+    7-pas du 2026-07-31 (avant : D+1 seulement)."""
     train, validation = synthetic_split
     monkeypatch.setattr(mp, "RUN_ROOT", tmp_path)
     db_path = str(tmp_path / "tracking.db")
@@ -474,13 +504,16 @@ def test_sigma_scale_wiring_widens_only_d1_business_row_in_tracking_db(tmp_path,
     conn.close()
 
     assert set(rows) == {1, 7}
-    d1 = rows[1]
-    # Recalcule la bande NON corrigée (sigma_scale=1.0) pour comparer les demi-largeurs.
+    # Recalcule les bandes NON corrigées (sigma_scale=1.0) pour comparer les demi-largeurs.
     train_extended = pd.concat([train, validation])
     business_lag = 1 if validation.index[-1].date() < pd.Timestamp.now().date() else 0
-    raw = mp._forecast_all_horizons("SARIMA", train_extended, [1 + business_lag], seed=0, epochs=None)
-    _, raw_lo, raw_hi = raw[1 + business_lag]
-    raw_half_lo = d1["y_pred"] - raw_lo
-    raw_half_hi = raw_hi - d1["y_pred"]
-    assert (d1["y_pred"] - d1["y_lower"]) == pytest.approx(raw_half_lo * 5.0, rel=1e-6)
-    assert (d1["y_upper"] - d1["y_pred"]) == pytest.approx(raw_half_hi * 5.0, rel=1e-6)
+    raw = mp._forecast_all_horizons("SARIMA", train_extended,
+                                    [1 + business_lag, 7 + business_lag],
+                                    seed=0, epochs=None)
+    for h in (1, 7):
+        row = rows[h]
+        _, raw_lo, raw_hi = raw[h + business_lag]
+        raw_half_lo = row["y_pred"] - raw_lo
+        raw_half_hi = raw_hi - row["y_pred"]
+        assert (row["y_pred"] - row["y_lower"]) == pytest.approx(raw_half_lo * 5.0, rel=1e-6), h
+        assert (row["y_upper"] - row["y_pred"]) == pytest.approx(raw_half_hi * 5.0, rel=1e-6), h

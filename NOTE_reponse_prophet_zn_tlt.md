@@ -35,6 +35,8 @@ MACE stricte (quantiles normaux, 0 = parfait) :
   tirés par le niveau 50 % (cov ≈ 28-32 % vs 50) — le centre de la loi est trop étroit.
   C'est un problème de forme centrale, plus de niveau ni de transformation ; piste
   éventuelle : quantiles Student-t/GED par-dessus l'EWMA, ou λ plus réactif sur ces actifs.
-- Périmètre : W1 seulement pour ETH/ZN/TLT (comme l'extension de Kyrio). SPY/BTC déjà
-  validés sur 3 fenêtres. Une confirmation W3 de ZN/TLT est possible avec la même infra
-  (`prophet_sigma_investigation.py --window W3 --assets ZN TLT --configs base log`).
+- Périmètre : W1 pour ETH ; **ZN/TLT confirmés hors fenêtre sur W3** (2022-2026) :
+  ZN log+EWMA = 2,19 (meilleure combinaison), TLT log seul = 2,53 et log+EWMA = 4,87 —
+  aucune configuration catastrophique, le défaut de prod reste raisonnable partout.
+  Nuance TLT/W3 : quand le σ brut est déjà bien calibré, l'EWMA peut légèrement
+  sur-élargir (cov 80/95 = 89/100) — cohérent avec un λ=0,94 réactif ; sans gravité.

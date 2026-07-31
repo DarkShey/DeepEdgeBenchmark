@@ -1,0 +1,339 @@
+{
+  "config": {
+    "window": "2020-01-01 -> 2024-12-31",
+    "h_trading_days": 7,
+    "ewma_lambda": 0.94,
+    "resolution_lag": 7,
+    "test_ratio": 0.15,
+    "calib_frac": 0.4,
+    "seed": 42,
+    "models": [
+      "Naive",
+      "SARIMA",
+      "Prophet",
+      "LSTM"
+    ]
+  },
+  "assets": {
+    "SPY": {
+      "Naive": {
+        "raw": {
+          "cov_50": 46.36,
+          "cov_80": 79.09,
+          "cov_95": 90.0,
+          "mace_strict": 3.18
+        },
+        "ewma": {
+          "cov_50": 46.36,
+          "cov_80": 78.18,
+          "cov_95": 90.0,
+          "mace_strict": 3.49
+        },
+        "elapsed_s": 1.3
+      },
+      "SARIMA": {
+        "raw": {
+          "cov_50": 43.64,
+          "cov_80": 77.27,
+          "cov_95": 90.0,
+          "mace_strict": 4.7
+        },
+        "ewma": {
+          "cov_50": 45.45,
+          "cov_80": 79.09,
+          "cov_95": 90.0,
+          "mace_strict": 3.49
+        },
+        "elapsed_s": 36.1
+      },
+      "Prophet": {
+        "raw": {
+          "cov_50": 33.64,
+          "cov_80": 55.45,
+          "cov_95": 79.09,
+          "mace_strict": 18.94
+        },
+        "ewma": {
+          "cov_50": 45.45,
+          "cov_80": 73.64,
+          "cov_95": 88.18,
+          "mace_strict": 5.91
+        },
+        "elapsed_s": 96.0
+      },
+      "LSTM": {
+        "raw": {
+          "cov_50": 58.18,
+          "cov_80": 82.73,
+          "cov_95": 99.09,
+          "mace_strict": 5.0
+        },
+        "ewma": {
+          "cov_50": 44.55,
+          "cov_80": 69.09,
+          "cov_95": 82.73,
+          "mace_strict": 9.54
+        },
+        "elapsed_s": 62.7
+      }
+    },
+    "BTC": {
+      "Naive": {
+        "raw": {
+          "cov_50": 40.99,
+          "cov_80": 67.08,
+          "cov_95": 81.99,
+          "mace_strict": 11.65
+        },
+        "ewma": {
+          "cov_50": 58.39,
+          "cov_80": 79.5,
+          "cov_95": 90.06,
+          "mace_strict": 4.61
+        },
+        "elapsed_s": 0.0
+      },
+      "SARIMA": {
+        "raw": {
+          "cov_50": 39.75,
+          "cov_80": 67.08,
+          "cov_95": 81.99,
+          "mace_strict": 12.06
+        },
+        "ewma": {
+          "cov_50": 58.39,
+          "cov_80": 79.5,
+          "cov_95": 89.44,
+          "mace_strict": 4.82
+        },
+        "elapsed_s": 51.1
+      },
+      "Prophet": {
+        "raw": {
+          "cov_50": 39.13,
+          "cov_80": 60.25,
+          "cov_95": 74.53,
+          "mace_strict": 17.03
+        },
+        "ewma": {
+          "cov_50": 47.2,
+          "cov_80": 77.02,
+          "cov_95": 84.47,
+          "mace_strict": 5.44
+        },
+        "elapsed_s": 202.1
+      },
+      "LSTM": {
+        "raw": {
+          "cov_50": 52.17,
+          "cov_80": 78.26,
+          "cov_95": 91.3,
+          "mace_strict": 2.54
+        },
+        "ewma": {
+          "cov_50": 54.04,
+          "cov_80": 79.5,
+          "cov_95": 92.55,
+          "mace_strict": 2.33
+        },
+        "elapsed_s": 91.4
+      }
+    },
+    "ETH": {
+      "Naive": {
+        "raw": {
+          "cov_50": 47.2,
+          "cov_80": 83.85,
+          "cov_95": 91.93,
+          "mace_strict": 3.24
+        },
+        "ewma": {
+          "cov_50": 49.69,
+          "cov_80": 83.23,
+          "cov_95": 90.68,
+          "mace_strict": 2.62
+        },
+        "elapsed_s": 0.0
+      },
+      "SARIMA": {
+        "raw": {
+          "cov_50": 44.72,
+          "cov_80": 80.12,
+          "cov_95": 90.06,
+          "mace_strict": 3.45
+        },
+        "ewma": {
+          "cov_50": 50.93,
+          "cov_80": 83.23,
+          "cov_95": 91.3,
+          "mace_strict": 2.62
+        },
+        "elapsed_s": 48.9
+      },
+      "Prophet": {
+        "raw": {
+          "cov_50": 34.16,
+          "cov_80": 44.72,
+          "cov_95": 74.53,
+          "mace_strict": 23.86
+        },
+        "ewma": {
+          "cov_50": 42.86,
+          "cov_80": 75.78,
+          "cov_95": 88.2,
+          "mace_strict": 6.05
+        },
+        "elapsed_s": 170.5
+      },
+      "LSTM": {
+        "raw": {
+          "cov_50": 60.87,
+          "cov_80": 89.44,
+          "cov_95": 96.89,
+          "mace_strict": 7.4
+        },
+        "ewma": {
+          "cov_50": 51.55,
+          "cov_80": 81.99,
+          "cov_95": 91.93,
+          "mace_strict": 2.2
+        },
+        "elapsed_s": 91.8
+      }
+    },
+    "ZN": {
+      "Naive": {
+        "raw": {
+          "cov_50": 55.45,
+          "cov_80": 85.45,
+          "cov_95": 97.27,
+          "mace_strict": 4.39
+        },
+        "ewma": {
+          "cov_50": 51.82,
+          "cov_80": 74.55,
+          "cov_95": 87.27,
+          "mace_strict": 5.0
+        },
+        "elapsed_s": 0.0
+      },
+      "SARIMA": {
+        "raw": {
+          "cov_50": 51.82,
+          "cov_80": 85.45,
+          "cov_95": 97.27,
+          "mace_strict": 3.18
+        },
+        "ewma": {
+          "cov_50": 50.0,
+          "cov_80": 73.64,
+          "cov_95": 87.27,
+          "mace_strict": 4.7
+        },
+        "elapsed_s": 50.4
+      },
+      "Prophet": {
+        "raw": {
+          "cov_50": 5.45,
+          "cov_80": 14.55,
+          "cov_95": 36.36,
+          "mace_strict": 56.21
+        },
+        "ewma": {
+          "cov_50": 24.55,
+          "cov_80": 63.64,
+          "cov_95": 95.45,
+          "mace_strict": 14.09
+        },
+        "elapsed_s": 94.9
+      },
+      "LSTM": {
+        "raw": {
+          "cov_50": 82.73,
+          "cov_80": 100.0,
+          "cov_95": 100.0,
+          "mace_strict": 19.24
+        },
+        "ewma": {
+          "cov_50": 37.27,
+          "cov_80": 70.91,
+          "cov_95": 80.91,
+          "mace_strict": 11.97
+        },
+        "elapsed_s": 63.0
+      }
+    },
+    "TLT": {
+      "Naive": {
+        "raw": {
+          "cov_50": 69.09,
+          "cov_80": 97.27,
+          "cov_95": 100.0,
+          "mace_strict": 13.79
+        },
+        "ewma": {
+          "cov_50": 41.82,
+          "cov_80": 71.82,
+          "cov_95": 91.82,
+          "mace_strict": 6.51
+        },
+        "elapsed_s": 0.0
+      },
+      "SARIMA": {
+        "raw": {
+          "cov_50": 60.0,
+          "cov_80": 90.91,
+          "cov_95": 98.18,
+          "mace_strict": 8.03
+        },
+        "ewma": {
+          "cov_50": 39.09,
+          "cov_80": 70.91,
+          "cov_95": 90.91,
+          "mace_strict": 8.03
+        },
+        "elapsed_s": 31.6
+      },
+      "Prophet": {
+        "raw": {
+          "cov_50": 10.0,
+          "cov_80": 18.18,
+          "cov_95": 33.64,
+          "mace_strict": 54.39
+        },
+        "ewma": {
+          "cov_50": 23.64,
+          "cov_80": 61.82,
+          "cov_95": 97.27,
+          "mace_strict": 15.6
+        },
+        "elapsed_s": 108.0
+      },
+      "LSTM": {
+        "raw": {
+          "cov_50": 91.82,
+          "cov_80": 100.0,
+          "cov_95": 100.0,
+          "mace_strict": 22.27
+        },
+        "ewma": {
+          "cov_50": 31.82,
+          "cov_80": 65.45,
+          "cov_95": 88.18,
+          "mace_strict": 13.18
+        },
+        "elapsed_s": 64.5
+      }
+    }
+  },
+  "summary_mace_strict_mean_5assets": {
+    "LSTM/ewma": 7.84,
+    "LSTM/raw": 11.29,
+    "Naive/ewma": 4.45,
+    "Naive/raw": 7.25,
+    "Prophet/ewma": 9.42,
+    "Prophet/raw": 34.09,
+    "SARIMA/ewma": 4.73,
+    "SARIMA/raw": 6.28
+  }
+}

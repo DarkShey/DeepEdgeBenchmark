@@ -147,6 +147,42 @@ def _sigma_adoption_kwargs(calibrate_sigma: str) -> tuple:
     return None, None
 
 
+# Modèles recevant la correction EWMA par horizon business (jours de trading).
+# ARIMA-GARCH (sigma GARCH déjà dynamique) et TSDiff (échantillonnage natif) n'y
+# figurent jamais -- les deux seuls modèles du registre qui n'acceptent pas
+# `sigma_scale=` côté mh.py.
+#   D+1 : SARIMA / Prophet / Naive / LSTM (validation 1-pas, brief §Périmètre).
+#   D+7 : SARIMA / Prophet / Naive -- activé 2026-07-31 après le backtest 7-pas
+#         dédié exigé par le brief (experiments/d7_sigma_scale_validation.py, W1
+#         5 actifs, correction causale avec lag de résolution 7 j : MACE stricte
+#         Prophet 34,1->9,4, Naive 7,3->4,5, SARIMA 6,3->4,7). LSTM est EXCLU du
+#         D+7 : gain moyen (11,3->7,8) mais dégradation sévère sur SPY (5,0->9,5,
+#         cov95 99->83) -- garde-fou par actif à concevoir avant activation.
+SIGMA_SCALE_HORIZONS = {
+    "SARIMA": (1, 7),
+    "Prophet": (1, 7),
+    "Naive": (1, 7),
+    "LSTM": (1,),
+}
+
+
+def _build_sigma_scale_map(model_key: str, ticker: str, cutoff_date_str: str,
+                           db_path: str, business_lag: int,
+                           calibrate_sigma: str):
+    """{h_jours_business: facteur} pour mh._scaled_bounds, ou None si la correction
+    ne s'applique pas (flag off / modèle hors périmètre). Un facteur par horizon,
+    lu de tracking.db via validation/sigma_scale.py -- seules les prédictions
+    RÉSOLUES (y_true IS NOT NULL, cutoff < as_of) alimentent l'EWMA, donc le lag
+    de résolution D+7 du backtest de validation est reproduit tel quel."""
+    if calibrate_sigma != "on" or model_key not in SIGMA_SCALE_HORIZONS:
+        return None
+    return {
+        h + business_lag: sigma_scale_mod.sigma_scale(
+            model_key, ticker, h, cutoff_date_str, db_path)
+        for h in SIGMA_SCALE_HORIZONS[model_key]
+    }
+
+
 # ── Utilitaires ────────────────────────────────────────────────────────────────
 
 def _num(v):
@@ -1104,17 +1140,10 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     # sigma_scale (Chantier 1b, BRIEF_branchement_prod_calibration_sigma.md) : correction
     # EWMA causale sqrt(EWMA(z^2)) depuis tracking.db, calculée UNE SEULE FOIS ici (donc
     # avec le même cutoff_date="fin de validation" pour Gate2/live -- pas de refetch par
-    # horizon) et appliquée UNIQUEMENT à l'horizon D+1 business (jamais D+7, cf.
-    # §Périmètre du brief : la correction EWMA n'a été validée qu'en 1-pas). Hors
-    # ARIMA-GARCH (sigma dynamique déjà natif via GARCH, jamais cette correction, cf.
-    # HANDOFF §5) et hors TSDiff (échantillonnage natif) -- les deux seuls modèles du
-    # registre qui n'acceptent pas `sigma_scale=` côté mh.py.
-    d1_h_days = 1 + business_lag
-    sigma_scale_map = None
-    if calibrate_sigma == "on" and model_key in ("SARIMA", "Prophet", "Naive", "LSTM"):
-        cutoff_date_str = str(validation.index[-1].date())
-        scale = sigma_scale_mod.sigma_scale(model_key, ticker, 1, cutoff_date_str, db_path)
-        sigma_scale_map = {d1_h_days: scale}
+    # horizon). Périmètre modèles/horizons : cf. _build_sigma_scale_map.
+    sigma_scale_map = _build_sigma_scale_map(
+        model_key, ticker, str(validation.index[-1].date()), db_path,
+        business_lag, calibrate_sigma)
 
     lstm_worker_result = None
     gate1_reused = False

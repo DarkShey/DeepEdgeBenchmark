@@ -73,6 +73,13 @@ p.ex. `validation/sigma_scale.py`, réutilisée par `pipeline._forecast_horizon`
   §3-4). Défaut : **activée en D+1**, **désactivée en D+7** (flag OFF + `TODO`), pour ne pas
   extrapoler un réglage non testé sur la prod. → activer D+7 seulement après un backtest
   7-pas dédié.
+- **MISE À JOUR 2026-07-31** : le backtest 7-pas dédié a été fait
+  (`experiments/d7_sigma_scale_validation.py`, W1 × 5 actifs, correction causale avec lag
+  de résolution 7 j). Verdict : D+7 **activé** pour SARIMA (MACE 6,3→4,7), Prophet
+  (34,1→9,4) et Naive (7,3→4,5) ; **LSTM exclu du D+7** (gain moyen 11,3→7,8 mais
+  dégradation sévère sur SPY 5,0→9,5 — garde-fou par actif à concevoir avant activation).
+  Câblé dans `pipeline.py` (sigma_scale_map étendu à `7+business_lag`), toujours
+  réversible via `--calibrate-sigma off`.
 
 ### Chantier 2 — Tests
 
@@ -119,6 +126,8 @@ Prouver, **chiffres à l'appui, sur les données offline reproductibles**
 - Suite de tests **verte**, y compris `test_pipeline.py` en local.
 - Vérification comportementale du chantier 3 **documentée** (petit rapport chiffré).
 - EWMA **D+7 non activée** tant que non validée par un backtest 7-pas.
+  *(Fait le 2026-07-31 — validée puis activée pour SARIMA/Prophet/Naive, LSTM exclu ; cf.
+  mise à jour du §Périmètre.)*
 
 ## 5. Ce que ce brief ne fait PAS
 
