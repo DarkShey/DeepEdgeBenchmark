@@ -28,7 +28,9 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+    KeepTogether,
 )
+from reportlab.graphics.shapes import Drawing, Rect, String, Line, Circle
 
 ROOT = Path(__file__).resolve().parent.parent
 SUMMARY = json.loads((ROOT / "experiments" / "dist_options_summary.json").read_text())
@@ -52,6 +54,13 @@ caption_style = ParagraphStyle("Caption", fontName="Times-Roman", fontSize=8.6,
 li_style = ParagraphStyle("Li", fontName="Times-Roman", fontSize=10.2, leading=14.2,
                           alignment=TA_JUSTIFY, spaceAfter=9, leftIndent=12,
                           bulletIndent=0, bulletFontName="Times-Bold")
+h2_style = ParagraphStyle("H2", fontName="Times-Bold", fontSize=11.3, leading=14,
+                          spaceBefore=12, spaceAfter=5)
+model_verdict_style = ParagraphStyle("ModelVerdict", fontName="Times-Roman", fontSize=9.4,
+                                     leading=13, alignment=TA_JUSTIFY, spaceAfter=6)
+mono_caption_style = ParagraphStyle("MonoCaption", fontName="Times-Roman", fontSize=8.2,
+                                    leading=10.6, alignment=TA_JUSTIFY, spaceBefore=4,
+                                    spaceAfter=12, textColor=colors.grey)
 
 
 def p(text, style=body_style):
@@ -71,6 +80,137 @@ VERDICTS = {
     "Naive":       ("cqr",          "CQR",                "Vaut le coût — CQR nettement devant"),
     "ARIMA-GARCH": ("native_ged",   "GED natif (refit)",  "Le refit natif l'emporte pour de bon"),
 }
+
+MODEL_ORDER = ["SARIMA", "Prophet", "LSTM", "Naive", "ARIMA-GARCH"]
+VARIANT_LABEL = {
+    "normal": "Gaussienne (actuel)",
+    "student_t": "Student-t (fit manuel)",
+    "ged": "GED (fit manuel)",
+    "cqr": "CQR",
+    "native_ged": "GED natif (refit GARCH)",
+    "native_skewt": "Skew-t natif (refit GARCH)",
+}
+VARIANT_COLOR = {
+    "normal": "#2a78d6", "student_t": "#eb6834", "ged": "#1baf7a",
+    "cqr": "#eda100", "native_ged": "#e87ba4", "native_skewt": "#008300",
+}
+VARIANT_ORDER = ["normal", "student_t", "ged", "cqr", "native_ged", "native_skewt"]
+
+
+def bar_chart_drawing(rows, max_val, width=460, bar_h=13, gap=9, left_pad=132):
+    """rows: [(label, value, color_hex), ...]. Horizontal bars, value at tip --
+    same layout logic as the SVG version in generate_dist_options_report.py."""
+    row_h = bar_h + gap
+    height = len(rows) * row_h + 6
+    d = Drawing(width, height)
+    plot_w = width - left_pad - 46
+    d.add(Line(left_pad, 2, left_pad, height - 2,
+               strokeColor=colors.HexColor("#c7c4b6"), strokeWidth=0.6))
+    for i, (label, value, color_hex) in enumerate(rows):
+        y = height - 4 - (i + 1) * row_h + gap / 2
+        bw = max(2, (value / max_val) * plot_w) if max_val > 0 else 2
+        d.add(String(left_pad - 6, y + bar_h / 2 - 3, label, fontName="Times-Roman",
+                     fontSize=7.6, textAnchor="end", fillColor=colors.HexColor("#4c4b42")))
+        d.add(Rect(left_pad, y, bw, bar_h, fillColor=colors.HexColor(color_hex),
+                   strokeColor=None))
+        d.add(String(left_pad + bw + 5, y + bar_h / 2 - 3, fmt(value), fontName="Times-Bold",
+                     fontSize=7.6, fillColor=colors.HexColor("#14140f")))
+    return d
+
+
+def kpi_table(model_key, variants):
+    m = SUMMARY["models"][model_key]
+    best_key = VERDICTS[model_key][0]
+    head = ["Option", "Cov 50%", "Cov 80%", "Cov 95%", "Larg. rel.", "Pinball rel.", "Surcoût"]
+    data = [head]
+    style_cmds = [
+        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7.6),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.8, colors.black),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.black),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.8, colors.black),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]
+    for row_i, v in enumerate(variants, start=1):
+        d = m[v]
+        cov = d["cov_mean"]
+        oh = d["overhead_s_mean"]
+        oh_txt = f"+{fmt(oh,3)}s" if oh < 1 else f"+{fmt(oh,1)}s"
+        data.append([VARIANT_LABEL[v], f"{fmt(cov['50'],1)}%", f"{fmt(cov['80'],1)}%",
+                    f"{fmt(cov['95'],1)}%", f"{fmt(d['rel_width_mean']['50'],2)}×",
+                    f"{fmt(d['rel_pinball_mean'],3)}×", oh_txt])
+        if v == best_key:
+            style_cmds.append(("BACKGROUND", (0, row_i), (-1, row_i), colors.HexColor("#dff2df")))
+    col_widths = [3.6*cm, 1.5*cm, 1.5*cm, 1.5*cm, 1.7*cm, 1.9*cm, 1.6*cm]
+    t = Table(data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle(style_cmds))
+    return t
+
+
+def model_section(model_key):
+    m = SUMMARY["models"][model_key]
+    variants = ["normal"] + [v for v in VARIANT_ORDER if v in m and v != "normal"]
+    rows = [(VARIANT_LABEL[v], m[v]["mace_strict"], VARIANT_COLOR[v]) for v in variants]
+    max_val = max(r[1] for r in rows) * 1.15
+    best_key, best_label, headline = VERDICTS[model_key]
+
+    flow = [
+        p(f"{model_key} — <i>{headline}</i>", h2_style),
+        bar_chart_drawing(rows, max_val),
+        Spacer(1, 4),
+        kpi_table(model_key, variants),
+        p(f"Backtest de base : {fmt(m['base_train_time_s_mean'],1)}s par actif, "
+         "avant tout surcoût d'option.", mono_caption_style),
+    ]
+    return flow
+
+
+def mdn_section():
+    mdn = SUMMARY["mdn"]
+    base = SUMMARY["lstm_baseline_for_mdn_comparison"]
+    rows = [("LSTM (production)", base["mace_strict"], VARIANT_COLOR["normal"]),
+           ("LSTM-MDN (K=3, moy. 3 seeds)", mdn["mace_strict"], "#4a3aa7")]
+    max_val = max(r[1] for r in rows) * 1.15
+
+    head = ["Actif", "Cov 50% (moy. ± écart-type)", "Cov 95% (moy.)", "CRPS (moy.)",
+           "Temps d'entraînement"]
+    data = [head]
+    for asset, pa in mdn["per_asset"].items():
+        data.append([asset, f"{fmt(pa['cov_50_mean'],1)}% ±{fmt(pa['cov_50_std'],1)}",
+                    f"{fmt(pa['cov_95_mean'],1)}%", fmt(pa['crps_mean'], 2),
+                    f"{fmt(pa['train_time_s_mean'],1)}s"])
+    col_widths = [2.2*cm, 4.2*cm, 2.3*cm, 2.3*cm, 3.0*cm]
+    t = Table(data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7.8),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.8, colors.black),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.black),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.8, colors.black),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]))
+
+    return [
+        p("Option 3 — gros plan MDN (LSTM)", h2_style),
+        p("Seul modèle testé qui demande un vrai réentraînement (pas un post-traitement) — "
+         "architecture identique au LSTM de production, seule la tête de sortie change "
+         "(Dense(1) → mélange de 3 gaussiennes, perte MSE → log-vraisemblance).",
+         model_verdict_style),
+        bar_chart_drawing(rows, max_val),
+        Spacer(1, 4),
+        t,
+        p("Couverture à 50/95% et CRPS moyennés sur 3 seeds par actif — l'écart-type sur la "
+         "couverture à 50% est l'instabilité d'un entraînement à l'autre, code et données "
+         f"identiques (seeds {mdn['seeds']}). Coût moyen {fmt(mdn['mean_train_time_s'],1)}s "
+         f"contre {fmt(base['train_time_s'],1)}s pour le LSTM de production.",
+         mono_caption_style),
+    ]
 
 story = []
 
@@ -120,7 +260,7 @@ for model, (best_key, best_label, verdict) in VERDICTS.items():
     delta_pct = (after - before) / before * 100
     oh = m[best_key]["overhead_s_mean"]
     base_t = m["base_train_time_s_mean"]
-    oh_txt = f"+{oh:.3f}s" if oh < 1 else f"+{oh:.1f}s"
+    oh_txt = f"+{fmt(oh,3)}s" if oh < 1 else f"+{fmt(oh,1)}s"
     rows.append([model, fmt(before, 2), best_label, fmt(after, 2),
                 f"{delta_pct:+.0f}%", f"{oh_txt} / {fmt(base_t,0)}s", verdict])
 
@@ -146,8 +286,22 @@ story.append(p(
     "experiments/dist_options_summary.json.",
     caption_style))
 
-# ---- 3. Interpretation ----
-story.append(p("3&nbsp;&nbsp; Ce qu'il faut retenir", h1_style))
+# ---- 3. Detail per model ----
+story.append(p("3&nbsp;&nbsp; Détail par modèle", h1_style))
+story.append(p(
+    "Barres : erreur de calibration stricte par option (plus court = mieux calibré). "
+    "Tableau : couverture aux 3 niveaux, largeur relative au cas gaussien, perte pinball "
+    "relative, et surcoût de calcul par rapport au backtest de base.",
+    body_style))
+for model_key in MODEL_ORDER:
+    story.append(KeepTogether(model_section(model_key)))
+
+# ---- 4. MDN spotlight ----
+story.append(p("4&nbsp;&nbsp; Option 3 — gros plan MDN", h1_style))
+story.append(KeepTogether(mdn_section()))
+
+# ---- 5. Interpretation ----
+story.append(p("5&nbsp;&nbsp; Ce qu'il faut retenir", h1_style))
 
 sarima = SUMMARY["models"]["SARIMA"]
 naive = SUMMARY["models"]["Naive"]
