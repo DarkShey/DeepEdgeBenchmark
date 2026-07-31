@@ -54,50 +54,64 @@ VARIANT_COLOR = {
 }
 VARIANT_ORDER = ["normal", "student_t", "ged", "cqr", "native_ged", "native_skewt"]
 
-# Hand-authored verdicts -- numbers pulled live from the summary JSON below via
-# `best`/`status`/prose kept in sync with experiments/all_models_dist_options_results.json
-# as of the 29 juillet 2026 5-asset run (see HANDOFF_dist_options_comparison.md).
+# Hand-authored verdicts -- numbers pulled live from dist_options_summary.json's
+# `mace_strict` (mean absolute calibration error, averaged PER ASSET then
+# absolute-valued -- no cancellation across assets of opposite sign). An earlier
+# version of this report used `mace_loose` (abs of the cross-asset mean), which
+# lets a model that over-covers on one asset and under-covers on another look
+# "calibrated" on average when neither asset actually is -- flagged by an
+# independent robustness re-run, see HANDOFF_sigma_calibration_suivi.md. `best`/
+# `status`/prose kept in sync with experiments/dist_options_summary.json as of
+# the 30 juillet 2026 mace_strict fix (5-asset run, single window 2020-2024).
 VERDICTS = {
-    "SARIMA": dict(status="good", headline="Vaut le coût — quasi gratuit", best="cqr",
-        text="CQR ramène l'erreur de calibration de 4,56 à 1,08 point (\u221276\u202f%), GED et "
-             "Student-t suivent de près (1,61 / 1,92) — les trois pour un surcoût de calcul "
-             "de 0,0006 à 0,02\u202fs sur un backtest qui en prend déjà 70. Largeur des PI "
-             "réduite en prime, pas juste une meilleure couverture obtenue en élargissant."),
+    "SARIMA": dict(status="good", headline="Vaut le coût — CQR nettement devant", best="cqr",
+        text="CQR ramène l'erreur de calibration de 8,07 à 4,43 points (−45 %) ; "
+             "Student-t (6,22) et GED (7,45) aident aussi mais moins. Coût quasi nul "
+             "(0,0006 à 0,02 s sur un backtest qui en prend déjà 70). Largeur des PI "
+             "réduite en prime pour CQR/Student-t, pas juste une meilleure couverture obtenue "
+             "en élargissant."),
     "Prophet": dict(status="critical", headline="Aucune option testée ne suffit", best="cqr",
-        text="Sous-couverture massive à tous les niveaux sous loi normale (24\u202f% à 50\u202f%, "
-             "70\u202f% à 95\u202f% — erreur moyenne 28,1 points). Student-t/GED ne changent "
+        text="Sous-couverture massive à tous les niveaux sous loi normale (24 % à 50 %, "
+             "70 % à 95 % — erreur moyenne 28,1 points). Student-t/GED ne changent "
              "presque rien (28,2 / 28,3) : le problème n'est pas la forme de la queue, c'est "
-             "que le \u03c3 lui-même est sous-estimé. CQR aide un peu (20,6) sans corriger le "
-             "fond. Ce n'est pas un problème de loi — l'incertitude de Prophet dans ce pipeline "
-             "mérite une investigation dédiée avant d'y toucher davantage."),
-    "LSTM": dict(status="critical", headline="Le swap manuel dégrade la calibration", best="cqr",
-        text="Student-t et GED empirent l'erreur de calibration (6,77 \u2192 11,25 et 9,58 — "
-             "jusqu'à +66\u202f%) : le \u03c3 de LSTM est une seule valeur figée sur les résidus "
-             "d'entraînement, pas un chemin qui varie dans le temps comme pour ARIMA-GARCH — lui "
-             "changer la forme de queue ne corrige rien et peut aggraver les choses. CQR est "
-             "neutre (6,89, ≈ la même chose). Aucune des options 1/2 testées n'est à adopter ici."),
-    "Naive": dict(status="good", headline="Vaut le coût — quasi gratuit", best="ged",
-        text="GED ramène l'erreur de 5,32 à 1,10 point (\u221279\u202f%), Student-t et CQR "
-             "améliorent aussi nettement (2,04 / 1,40). Coût de calcul négligeable. Même lecture "
-             "que SARIMA : la loi normale sur-couvre au centre pour de bon, corriger la forme "
-             "suffit."),
-    "ARIMA-GARCH": dict(status="good", headline="Le swap manuel égale le refit natif, 800× moins cher",
-        best="student_t",
-        text="Student-t (fit manuel, 1,32) et skew-t natif (vrai refit GARCH sous cette loi, "
-             "1,29) arrivent quasiment au même résultat — mais le premier coûte 0,004\u202fs "
-             "et le second 2,4\u202fs par actif (\u2248800×). Le refit complet de la volatilité "
-             "sous une nouvelle loi n'apporte pas de bénéfice mesurable ici par rapport au "
-             "simple changement de quantile appliqué au \u03c3 déjà calculé."),
+             "que le σ lui-même est sous-estimé. CQR aide (20,7, −26 %) sans "
+             "corriger le fond. Ce n'est pas un problème de loi — l'incertitude de Prophet dans "
+             "ce pipeline mérite une investigation dédiée avant d'y toucher davantage."),
+    "LSTM": dict(status="warning", headline="CQR aide un peu, ne règle pas le vrai problème",
+        best="cqr",
+        text="CQR est la seule des trois options à faire mieux que la loi normale ici "
+             "(10,96 → 8,43 points, −23 %) — mais Student-t et GED empirent "
+             "nettement l'erreur (12,36 et 12,53, jusqu'à +14 %) : le σ de LSTM est "
+             "une seule valeur figée sur les résidus d'entraînement, pas un chemin qui varie "
+             "dans le temps comme pour ARIMA-GARCH — lui changer juste la forme de queue ne "
+             "corrige pas un problème de niveau. CQR n'est qu'un pansement partiel ; la vraie "
+             "cause (σ figé) demande une correction dynamique plutôt qu'un changement de "
+             "forme."),
+    "Naive": dict(status="good", headline="Vaut le coût — CQR nettement devant", best="cqr",
+        text="CQR ramène l'erreur de 9,26 à 3,76 points (−59 %), loin devant "
+             "Student-t (7,06) et surtout GED (7,81 — à peine mieux que ne rien faire). Coût "
+             "négligeable. Contrairement à SARIMA/ARIMA-GARCH, changer seulement la forme de la "
+             "queue (GED) ne suffit pas ici — CQR, qui recalibre directement sur les données "
+             "plutôt que de supposer une famille, s'en sort nettement mieux."),
+    "ARIMA-GARCH": dict(status="good", headline="Le refit natif l'emporte pour de bon",
+        best="native_ged",
+        text="Le refit natif (GED ou skew-t, vrai réajustement du GARCH sous la nouvelle loi) "
+             "l'emporte dans l'absolu : 2,51 / 2,52 points contre 3,27 pour le swap manuel "
+             "Student-t le moins cher — et CQR fait ici moins bien (4,27) que les corrections "
+             "de forme. Le refit natif coûte ~2,4 s de plus par actif contre "
+             "~0,004 s pour le swap manuel — négligeable si le calcul n'est pas la "
+             "contrainte ; sinon, Student-t manuel reste la meilleure option gratuite."),
 }
 MDN_VERDICT = dict(status="critical", headline="Ne vaut pas le coût, en l'état",
-    text="Erreur de calibration moyenne 9,23 points contre 6,77 pour le LSTM de production "
-        "(pire, alors que le LSTM sous-couvre déjà) — pour +23\u202f% de temps d'entraînement "
-        "(37,6\u202fs contre 30,6\u202fs) et une instabilité réelle d'un entraînement à l'autre : "
-        "même seed, même code, la couverture à 50\u202f% sur SPY est passée de 66\u202f% à "
-        "14\u202f% entre deux runs identiques avant stabilisation (clipping de gradient + patience "
-        "augmentée), et reste dispersée (écart-type jusqu'à 4,2 points sur 3 seeds). Un réseau à "
-        "mélange de gaussiennes correctement stabilisé demanderait plus d'ingénierie que ce "
-        "prototype pour espérer battre le ruban ±1,96·\u03c3 actuel — pas rentable tel quel.")
+    text="Erreur de calibration moyenne 13,74 points contre 10,96 pour le LSTM de production "
+        "(pire, +25 %, alors que le LSTM sous-couvre déjà) — pour +23 % de temps "
+        "d'entraînement (37,6 s contre 30,6 s) et une instabilité réelle d'un "
+        "entraînement à l'autre : même seed, même code, la couverture à 50 % sur SPY est "
+        "passée de 66 % à 14 % entre deux runs identiques avant stabilisation "
+        "(clipping de gradient + patience augmentée), et reste dispersée (écart-type jusqu'à "
+        "4,2 points sur 3 seeds). Un réseau à mélange de gaussiennes correctement stabilisé "
+        "demanderait plus d'ingénierie que ce prototype pour espérer battre le ruban "
+        "±1,96·σ actuel — pas rentable tel quel.")
 
 
 def subset_fonts_b64(tmpdir: Path) -> dict:
@@ -147,7 +161,7 @@ def bar_chart_svg(rows, max_val, width=560, bar_h=22, gap=14, left_pad=190, char
 def model_section(summary, model_key):
     m = summary["models"][model_key]
     variants = ["normal"] + [v for v in VARIANT_ORDER if v in m and v != "normal"]
-    rows = [(VARIANT_LABEL[v], m[v]["mean_abs_calibration_error"], *VARIANT_COLOR[v], v) for v in variants]
+    rows = [(VARIANT_LABEL[v], m[v]["mace_strict"], *VARIANT_COLOR[v], v) for v in variants]
     max_val = max(r[1] for r in rows) * 1.18
     verdict = VERDICTS[model_key]
     chart_svg = bar_chart_svg(rows, max_val, chart_id=model_key)
@@ -190,8 +204,8 @@ def verdict_card(summary, model_key):
     m = summary["models"][model_key]
     v = VERDICTS[model_key]
     best = v["best"]
-    before = m["normal"]["mean_abs_calibration_error"]
-    after = m[best]["mean_abs_calibration_error"]
+    before = m["normal"]["mace_strict"]
+    after = m[best]["mace_strict"]
     delta_pct = (after - before) / before * 100
     return f"""
     <a class="verdict-card status-{v['status']}" href="#model-{model_key.lower().replace(' ', '-')}">
@@ -214,8 +228,8 @@ def mdn_section(summary):
     base = summary["lstm_baseline_for_mdn_comparison"]
     v = MDN_VERDICT
     rows = [
-        ("LSTM (production)", base["mean_abs_calibration_error"], *VARIANT_COLOR["normal"], "normal"),
-        ("LSTM-MDN (K=3, moy. 3 seeds)", mdn["mean_abs_calibration_error"], "#4a3aa7", "#9085e9", "mdn"),
+        ("LSTM (production)", base["mace_strict"], *VARIANT_COLOR["normal"], "normal"),
+        ("LSTM-MDN (K=3, moy. 3 seeds)", mdn["mace_strict"], "#4a3aa7", "#9085e9", "mdn"),
     ]
     max_val = max(r[1] for r in rows) * 1.2
     chart_svg = bar_chart_svg(rows, max_val, chart_id="mdn-cal", bar_h=26, gap=20)
@@ -478,27 +492,45 @@ footer code {{ font-family: {mono_font}; background: var(--surface-2); padding: 
   </section>
   <section class="block takeaways" id="takeaways">
     <h2>Ce qu'il faut retenir</h2>
+    <p class="section-intro" style="margin-bottom:18px"><b>Correction du 30 juillet 2026</b> :
+      les chiffres de ce rapport utilisent désormais <code>mace_strict</code> (erreur absolue
+      moyennée <i>par actif</i>) plutôt que <code>mace_loose</code> (erreur absolue de la
+      moyenne inter-actifs) — la version précédente laissait des écarts de signe opposé
+      s'annuler entre actifs (BTC sur-couvre, SPY sous-couvre → « calibré » en moyenne sans
+      qu'aucun des deux actifs le soit). Repéré par une vérification indépendante, voir
+      <code>HANDOFF_sigma_calibration_suivi.md</code>. Les chiffres sont moins spectaculaires
+      qu'avant mais plus honnêtes ; deux conclusions s'en trouvent inversées (LSTM, ARIMA-GARCH).</p>
     <ul>
-      <li><b>Le swap de loi (option 1) est quasi gratuit et net partout où le problème est
-        la forme de la queue</b> — SARIMA, Naive, ARIMA-GARCH : -60 à -80% d'erreur de
-        calibration pour quelques millisecondes de calcul, sur un backtest qui prend déjà
-        des dizaines de secondes.</li>
+      <li><b>CQR est l'option qui aide le plus souvent</b> — SARIMA, Naive, Prophet, et même
+        LSTM (les quatre modèles où le σ ne varie pas dans le temps par construction) :
+        -23 à -59% d'erreur de calibration, pour un surcoût de calcul négligeable sur des
+        backtests qui prennent déjà des dizaines de secondes.</li>
+      <li><b>Le swap de loi seul (Student-t/GED) est plus fragile qu'il n'y paraissait.</b>
+        Il aide nettement pour SARIMA, mais pour Naive il fait à peine mieux que ne rien
+        faire (GED : -16% contre -59% pour CQR), et pour LSTM il <i>dégrade</i> franchement
+        la calibration (jusqu'à +14%) — le σ de LSTM est une seule valeur figée sur les résidus
+        d'entraînement, pas un chemin qui varie dans le temps ; lui changer la forme de queue ne
+        corrige pas un problème de niveau.</li>
       <li><b>Il ne corrige rien quand le problème est ailleurs.</b> Prophet sous-couvre
         massivement à <i>tous</i> les niveaux — changer la forme de la queue autour d'un
-        σ déjà trop petit ne le rend pas plus grand. LSTM a un σ unique, figé sur les
-        résidus d'entraînement — lui changer la forme peut activement <i>dégrader</i>
-        la calibration.</li>
-      <li><b>CQR est l'option la plus universellement sûre</b> — jamais catastrophique,
-        parfois la meilleure (SARIMA, Prophet), parfois juste correcte — mais pas toujours la
-        plus précise en valeur absolue face à un bon fit paramétrique (ARIMA-GARCH,
-        Naive), et légèrement plus large à 95% partout.</li>
-      <li><b>Le refit natif d'ARIMA-GARCH sous une nouvelle loi n'apporte rien de mesurable</b> par
-        rapport au simple changement de quantile appliqué après coup — pour ~800× plus
-        cher. Pas rentable.</li>
+        σ déjà trop petit ne le rend pas plus grand ; même CQR (-26%) ne suffit pas à le
+        rendre correctement calibré.</li>
+      <li><b>Pour ARIMA-GARCH, c'est l'inverse : le refit natif l'emporte pour de bon</b> sur
+        le swap manuel gratuit (2,51 contre 3,27 points) — et CQR, ici seulement, fait moins
+        bien que les corrections de forme. Logique : c'est le seul modèle dont le σ est déjà
+        dynamique par construction (GARCH), donc le vrai problème restant est bien la forme de
+        la queue, pas son niveau — l'inverse du diagnostic pour les 4 autres modèles.</li>
       <li><b>Le MDN (option 3) n'est pas rentable en l'état</b> — plus cher, moins bien
         calibré en moyenne que le ruban ±1,96·σ actuel, et instable d'un entraînement à
         l'autre à seed égal. Le vrai problème de LSTM (σ figé dans le temps) reste à
         résoudre, mais pas par cette voie telle qu'implémentée ici.</li>
+      <li><b>Attention, tout ce qui précède reste sur une seule fenêtre</b> (2020–2024).
+        Un travail de suivi (<code>HANDOFF_sigma_calibration_suivi.md</code>) a testé les mêmes
+        options sur 3 fenêtres temporelles et montré que les gagnants statiques ci-dessus
+        (CQR pour SARIMA/Naive) ne généralisent pas d'une fenêtre à l'autre — seul ARIMA-GARCH
+        natif reste robuste. La correction qui tient sur les 3 fenêtres pour les 4 autres
+        modèles est un σ dynamique par EWMA causale, pas un choix de loi statique : à lire
+        avant d'adopter quoi que ce soit en dur sur la base de ce rapport seul.</li>
     </ul>
   </section>
   <footer>
