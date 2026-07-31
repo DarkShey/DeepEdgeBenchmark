@@ -351,6 +351,89 @@ def collect_weekly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
     return out
 
 
+ROLLING_COVERAGE_WINDOW = 30   # dernières N prédictions résolues par cellule
+
+
+def collect_rolling_coverage(db_path: str = SIM_TRADES_DB_PATH,
+                             window: int = ROLLING_COVERAGE_WINDOW) -> dict:
+    """Monitoring post-déploiement de la calibration (suivi de l'adoption sigma
+    dynamique 2026-07-30/31) : couverture 95% RÉALISÉE, par (actif x modèle x
+    horizon), recalculée directement depuis les bornes stockées (y_lower <=
+    y_true <= y_upper -- aucune hypothèse de forme, valable pour tous les
+    modèles), sur (a) la fenêtre glissante des `window` dernières prédictions
+    résolues et (b) tout l'historique. Le sous-ensemble source='live' est suivi
+    séparément : c'est lui qui valide EN CONDITIONS RÉELLES ce qui a été validé
+    en backtest, et qui détecterait une divergence backtest/live.
+
+    Statut par cellule (fenêtre glissante) :
+      "low"  -- sous-couverture au-delà de 2 écarts-types binomiaux sous 95%
+                (le sens dangereux : bandes trop étroites) ;
+      "wide" -- couverture 100% sur une fenêtre pleine (bandes probablement
+                trop larges, l'excès inverse) ;
+      "ok"   -- sinon.
+    Silencieux ({}) si tracking.db est absent/vide, même logique défensive que
+    collect_sim_trades_daily."""
+    import numpy as np
+    import sqlite3
+
+    out = {}
+    try:
+        con = sqlite3.connect(db_path)
+        try:
+            df = pd.read_sql_query(
+                """
+                SELECT model, asset, horizon, horizon_unit, frequence,
+                       target_date, y_lower, y_upper, y_true, source
+                FROM predictions
+                WHERE y_true IS NOT NULL AND daily_duplicate = 0
+                      AND source IN ('oos', 'live')
+                """,
+                con,
+            )
+        finally:
+            con.close()
+    except Exception as exc:
+        print(f"[generate_dashboard] rolling coverage indisponible ({exc})")
+        return out
+
+    if df.empty:
+        return out
+
+    # horizon_unit peut être NULL sur d'anciennes lignes -- reconstruit depuis
+    # (frequence, horizon), même convention que la migration tracking_db.
+    unit = df["horizon_unit"].copy()
+    fallback = np.where(df["frequence"].fillna("daily").eq("weekly"),
+                        "W+" + df["horizon"].astype(int).astype(str),
+                        "D+" + df["horizon"].astype(int).astype(str))
+    df["horizon_unit"] = unit.fillna(pd.Series(fallback, index=df.index))
+    df["inside"] = ((df["y_true"] >= df["y_lower"]) &
+                    (df["y_true"] <= df["y_upper"])).astype(float)
+
+    for (asset, model, horizon_unit), g in df.groupby(["asset", "model", "horizon_unit"]):
+        g = g.sort_values("target_date")
+        tail = g.tail(window)
+        n_win = int(len(tail))
+        cov_win = float(tail["inside"].mean())
+        live = g[g["source"] == "live"]
+        # seuil binomial 2-sigma sous la cible, borné à 0 pour les tout petits n
+        low_threshold = 0.95 - 2.0 * float(np.sqrt(0.95 * 0.05 / max(n_win, 1)))
+        if cov_win < low_threshold:
+            status = "low"
+        elif cov_win >= 0.999 and n_win >= window:
+            status = "wide"
+        else:
+            status = "ok"
+        out.setdefault(asset, {}).setdefault(model, {})[horizon_unit] = {
+            "n_window": n_win, "cov95_window": _num(cov_win * 100),
+            "n_all": int(len(g)), "cov95_all": _num(float(g["inside"].mean()) * 100),
+            "n_live": int(len(live)),
+            "cov95_live": _num(float(live["inside"].mean()) * 100) if len(live) else None,
+            "last_target_date": str(g["target_date"].iloc[-1]),
+            "status": status,
+        }
+    return out
+
+
 def render_html(run_data: dict, run_root_label: str, external_series: bool = False) -> str:
     """external_series=False (mode --inline) : predictions/prices embarquées dans le
     payload comme avant, page autonome ouvrable en file://. external_series=True (mode
@@ -375,6 +458,8 @@ def render_html(run_data: dict, run_root_label: str, external_series: bool = Fal
         "tc_pipeline": TC_PIPELINE,
         "weekly_kpis": collect_weekly_kpis(),
         "weekly_kpi_models": WEEKLY_KPI_MODELS,
+        "rolling_coverage": collect_rolling_coverage(),
+        "rolling_coverage_window": ROLLING_COVERAGE_WINDOW,
         "external_series": external_series,
     }
     if not external_series:
@@ -545,6 +630,7 @@ tbody tr:hover { background: rgba(128,128,128,0.06); }
 .kpi-row.warn { background: rgba(214,58,58,0.10); border-radius: 4px; margin: 1px -6px; padding: 3px 6px; }
 .kpi-row.warn b { color: #d63a3a; }
 td.warn-cell { background: rgba(214,58,58,0.10); color: #d63a3a; font-weight: 600; border-radius: 4px; }
+td.wide-cell { background: rgba(230,162,60,0.12); color: #b07b1e; font-weight: 600; border-radius: 4px; }
 .kpi-card.validated-ok { background: rgba(27,175,122,0.10); border-color: var(--pos-color); }
 .kpi-card.validated-bad { background: rgba(214,69,80,0.10); border-color: var(--neg-color); }
 @media (prefers-color-scheme: dark) {
@@ -696,6 +782,7 @@ const KPI_DEFINITIONS = {
   weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. C'est le résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm).",
   weeklycov5080: "Couverture 50%/80% (paramétrique) — recalculée en tirant un nuage paramétrique depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. Reconstruction two-piece qui respecte l'asymétrie des bornes stockées (log-espace pour ARIMA-GARCH/Prophet) — exacte pour des bornes symétriques, cf. prob_kpi_common.sample_parametric. APPROXIMATION pour TSDiff (nuage réel non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
   weeklycrps: "CRPS (paramétrique) — score de la distribution complète (précision + incertitude), calculé sur un nuage paramétrique recalculé depuis (prédit, IC95) en respectant l'asymétrie des bornes stockées (two-piece, log-espace pour ARIMA-GARCH/Prophet — plus d'hypothèse de symétrie gaussienne forcée depuis l'adoption skew-t/log). APPROXIMATION pour TSDiff (nuage réel non persisté) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
+  rollcov: "Monitoring de la calibration déployée (adoption σ dynamique du 30-31/07/2026) : pour chaque modèle × horizon, part des prédictions RÉSOLUES dont le vrai prix est tombé dans la bande 95 % stockée — recalculée depuis les bornes, sans hypothèse de forme. Fenêtre = dernières prédictions résolues (défaut 30) ; « live » = sous-ensemble réellement produit en production (source='live'), c'est lui qui confirme (ou non) en conditions réelles ce qui a été validé en backtest. Rouge = sous-couverture au-delà de 2 écarts-types binomiaux sous 95 % (bandes trop étroites — le sens risqué) ; ambre = 100 % sur fenêtre pleine (bandes probablement trop larges). Les premiers jours après déploiement, n_live est faible : les cellules se fiabilisent au fil des résolutions quotidiennes (evaluate_daily).",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, bande gaussienne (même hypothèse que son IC95) pour Naive, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
   mae: "MAE — erreur absolue moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
@@ -879,6 +966,11 @@ function assetPanelSkeleton(a) {
       </div>
       <div class="kpi-cards" id="simtrades-validation-${s}"></div>
     </div>
+
+    <div class="card" id="rollcov-card-${s}" style="display:none;">
+      <h2>Couverture réalisée &mdash; bande 95 % ${infoDot('rollcov')}</h2>
+      <div style="overflow-x:auto;" id="rollcov-table-${s}"></div>
+    </div>
   `;
 }
 
@@ -1058,7 +1150,55 @@ function wireAssetPanel(a) {
 
 function refreshAssetTab(ticker) {
   renderAssetKpis(ticker);
+  renderRollingCoverage(ticker);
   if (assetState[ticker].subtab === 'chart') renderAssetChart(ticker);
+}
+
+// =============================================================================
+// Couverture réalisée glissante (monitoring post-déploiement de la calibration
+// sigma dynamique, 2026-07-31) — cf. collect_rolling_coverage / KPI 'rollcov'.
+// =============================================================================
+
+const ROLLCOV_HORIZON_ORDER = ['D+1', 'D+7', 'W+1', 'W+2', 'W+3'];
+
+function renderRollingCoverage(ticker) {
+  const a = DATA.assets.find(x => x.ticker === ticker);
+  const s = a.short;
+  const card = document.getElementById(`rollcov-card-${s}`);
+  const wrap = document.getElementById(`rollcov-table-${s}`);
+  if (!card || !wrap) return;
+  const byModel = (DATA.rolling_coverage || {})[ticker] || {};
+  const models = DATA.model_order.filter(m => byModel[m]);
+  if (!models.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const units = [...new Set(models.flatMap(m => Object.keys(byModel[m])))]
+    .sort((x, y) => {
+      const ix = ROLLCOV_HORIZON_ORDER.indexOf(x), iy = ROLLCOV_HORIZON_ORDER.indexOf(y);
+      return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy);
+    });
+
+  const W = DATA.rolling_coverage_window;
+  let html = `<table><thead><tr><th>Modèle</th>` +
+    units.map(u => `<th>${u} — ${W} dern. rés.</th>`).join('') +
+    `</tr></thead><tbody>`;
+  models.forEach(m => {
+    html += `<tr><td><b>${m}</b></td>`;
+    units.forEach(u => {
+      const c = byModel[m][u];
+      if (!c) { html += '<td>—</td>'; return; }
+      const cls = c.status === 'low' ? ' class="warn-cell"'
+                : c.status === 'wide' ? ' class="wide-cell"' : '';
+      const live = c.n_live > 0
+        ? `live ${fmt(c.cov95_live, 1)}&nbsp;% (n=${c.n_live})`
+        : 'live —';
+      html += `<td${cls}>${fmt(c.cov95_window, 1)}&nbsp;% <small>(n=${c.n_window})</small>` +
+              `<br><small>total ${fmt(c.cov95_all, 1)}&nbsp;% (n=${c.n_all}) · ${live}</small></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 
 // =============================================================================
