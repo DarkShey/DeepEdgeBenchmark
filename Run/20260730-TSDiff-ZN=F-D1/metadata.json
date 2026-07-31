@@ -1,0 +1,23 @@
+{
+  "asset": "ZN=F",
+  "asset_class": "bond",
+  "frequency": "1d",
+  "window_start": "2023-07-31",
+  "window_end": "2026-07-29",
+  "train_end": "2026-02-12",
+  "run_date": "2026-07-30",
+  "git_commit": "2f79a4eeefe029145777f2608dade9fcbf4122dc",
+  "seed": 42,
+  "lib_versions": {
+    "numpy": "2.2.6",
+    "pandas": "3.0.3",
+    "statsmodels": "0.14.6",
+    "sklearn": "1.9.0",
+    "arch": "8.0.0",
+    "yfinance": "1.5.1",
+    "tensorflow": "2.21.0",
+    "prophet": "1.3.0"
+  },
+  "gate1_reused_from": null,
+  "gate2_reused_from": "20260729"
+}

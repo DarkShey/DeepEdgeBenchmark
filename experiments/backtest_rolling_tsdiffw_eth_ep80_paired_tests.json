@@ -1,0 +1,216 @@
+{
+  "per_asset": {
+    "ETH-USD|W+1|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 18.02572133889625,
+      "ci95_lo": 2.2480328845502777,
+      "ci95_hi": 35.89608515799617,
+      "p_value": 0.0234,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+1|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 12.826561246981985,
+      "ci95_lo": -4.7288221070488445,
+      "ci95_hi": 31.710403851168568,
+      "p_value": 0.1694,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+1|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -416.8794122520026,
+      "ci95_lo": -524.2020885227155,
+      "ci95_hi": -310.69378905186636,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+1|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 14.853123079648741,
+      "ci95_lo": -1.963522602446735,
+      "ci95_hi": 33.38194701655193,
+      "p_value": 0.085,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+1|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -104.7369336725914,
+      "ci95_lo": -161.53887062727247,
+      "ci95_hi": -59.00416253326349,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+2|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 34.56175548564611,
+      "ci95_lo": -5.772030346093861,
+      "ci95_hi": 80.36861860239168,
+      "p_value": 0.0942,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+2|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 34.2373239563403,
+      "ci95_lo": -5.004169339923995,
+      "ci95_hi": 80.4913003790345,
+      "p_value": 0.092,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+2|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -374.2178508016642,
+      "ci95_lo": -495.9829024700545,
+      "ci95_hi": -251.681851404268,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+2|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 34.05453418394954,
+      "ci95_lo": -6.196543620918576,
+      "ci95_hi": 80.36258570123256,
+      "p_value": 0.1026,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+2|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -52.32405622633667,
+      "ci95_lo": -108.19375506555839,
+      "ci95_hi": -2.5928676987581643,
+      "p_value": 0.0406,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+3|TSDiff vs ARIMA-GARCH": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 46.95774567791976,
+      "ci95_lo": -10.244743091281475,
+      "ci95_hi": 110.83438094595785,
+      "p_value": 0.1096,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+3|TSDiff vs SARIMA": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 42.17234461130643,
+      "ci95_lo": -17.585014553779647,
+      "ci95_hi": 109.00577177056503,
+      "p_value": 0.1694,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+3|TSDiff vs Prophet": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -335.92605565791524,
+      "ci95_lo": -473.5880837947034,
+      "ci95_hi": -197.6071734887394,
+      "p_value": 0.0,
+      "significant_at_05": true
+    },
+    "ETH-USD|W+3|TSDiff vs Naive": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": 48.24374128792077,
+      "ci95_lo": -11.04064499019065,
+      "ci95_hi": 114.49820431178499,
+      "p_value": 0.1092,
+      "significant_at_05": false
+    },
+    "ETH-USD|W+3|TSDiff vs LSTM": {
+      "n": 78,
+      "block_length": 3,
+      "effective_n": 26,
+      "mean_diff": -26.677713171771337,
+      "ci95_lo": -99.2473968575897,
+      "ci95_hi": 43.75352900195513,
+      "p_value": 0.4722,
+      "significant_at_05": false
+    }
+  },
+  "pooled": {
+    "W+1|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+1|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+2|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs ARIMA-GARCH": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs SARIMA": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Prophet": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs Naive": {
+      "status": "insufficient_data",
+      "n": 0
+    },
+    "W+3|TSDiff vs LSTM": {
+      "status": "insufficient_data",
+      "n": 0
+    }
+  }
+}

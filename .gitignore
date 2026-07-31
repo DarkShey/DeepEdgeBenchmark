@@ -46,6 +46,11 @@ documentation/Synthese_matrice_v3_17juillet.pdf
 # sert uniquement à la reproductibilité d'un run à l'autre (évite le bruit réseau)
 experiments/.price_cache_d7_w1/
 
+# Checkpoints par (graine, actif) de duel_multiseed.py -- BRIEF_multigraines.md §5
+# ("run reprenable"), régénérables en rejouant le run ; déjà agrégés dans
+# experiments/duel_backtest.json, pas un livrable en soi.
+experiments/checkpoints/
+
 # Rapport HTML régénérable (experiments/generate_dist_options_report.py) -- embarque
 # Cambria/Consolas (polices sous licence Microsoft) en base64 pour un rendu autonome ;
 # jamais versionné pour ne pas redistribuer ces polices, régénérer localement à la place.
