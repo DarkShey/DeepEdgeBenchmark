@@ -113,11 +113,18 @@ def forecast_horizons_sarima(train: pd.Series, horizons: list) -> dict:
 
 # ── Prophet ───────────────────────────────────────────────────────────────────
 def fit_prophet(train: pd.Series):
-    """Fit Prophet une seule fois. Extrait de forecast_horizons_prophet."""
+    """Fit Prophet une seule fois. Extrait de forecast_horizons_prophet.
+
+    Fitté sur le log-prix (pas le prix brut) : sur une série non stationnaire à
+    forte croissance (BTC/ETH), la tendance Prophet (linéaire/logistique) projetée
+    sur le prix brut s'extrapole de façon agressive et dérive -- cf. §1.2 de
+    optimisation_modeles_ia.pdf. forecast_from_fitted_prophet ré-exponentie en
+    sortie ; les deux fonctions vont toujours de pair, ne pas appeler l'une sans
+    l'autre sur le même modèle."""
     import prophet_model
     df_train = pd.DataFrame({
         "ds": pd.to_datetime(train.index),
-        "y": train.astype(float).values.flatten(),
+        "y": np.log(train.astype(float).values.flatten()),
     })
     model = prophet_model.Prophet(
         interval_width=1 - prophet_model.PI_ALPHA,
@@ -127,10 +134,26 @@ def fit_prophet(train: pd.Series):
     return model
 
 
-def forecast_from_fitted_prophet(model, last_date, horizons: list) -> dict:
+def forecast_from_fitted_prophet(model, last_date, horizons: list,
+                                 sigma_scale: float = None) -> dict:
     """Interroge directement les dates futures (jours ouvrés au-delà de last_date)
     sur un modèle déjà fitté — Prophet élargit nativement l'IC avec la distance
-    dans le futur, sans dépendre d'un état interne à mettre à jour."""
+    dans le futur, sans dépendre d'un état interne à mettre à jour.
+
+    `model` est fitté sur le log-prix (fit_prophet ci-dessus) : yhat/yhat_lower/
+    yhat_upper sont ici en échelle log, ré-exponentiés avant retour.
+
+    `sigma_scale` (optionnel, défaut None = pas de correction) : correction
+    multiplicative de largeur, appliquée uniformément à tous les horizons autour
+    de leur propre point prédit -- même paramètre et même raison que
+    `prophet_model.next_step_prophet` : les résidus in-sample sous-estiment
+    l'erreur out-of-sample (cf. docstring de `fit_prophet` ci-dessus), donc cette
+    correction ne peut pas être dérivée du fit lui-même. À fournir par l'appelant
+    depuis ses propres résidus out-of-sample suivis dans le temps (ex.
+    √EWMA(z²) sur les origines déjà réalisées d'un backtest walk-forward, ou
+    depuis tracking.db en production -- intégration pipeline pas encore faite,
+    cf. HANDOFF_sigma_calibration_suivi.md §8.1). None = comportement actuel
+    (log-espace seul, pas encore recalibré en variance)."""
     max_h = max(horizons)
     last_date = pd.to_datetime(last_date)
     future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=max_h)
@@ -140,15 +163,23 @@ def forecast_from_fitted_prophet(model, last_date, horizons: list) -> dict:
     for h in horizons:
         i = h - 1
         row = forecast.iloc[i]
-        results[h] = (float(row["yhat"]), float(row["yhat_lower"]), float(row["yhat_upper"]))
+        yhat = float(row["yhat"])
+        lo, hi = float(row["yhat_lower"]), float(row["yhat_upper"])
+        if sigma_scale is not None:
+            lo = yhat - (yhat - lo) * float(sigma_scale)
+            hi = yhat + (hi - yhat) * float(sigma_scale)
+        results[h] = (float(np.exp(yhat)), float(np.exp(lo)), float(np.exp(hi)))
     return results
 
 
-def forecast_horizons_prophet(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_prophet(train: pd.Series, horizons: list,
+                              sigma_scale: float = None) -> dict:
     """Fit once (fit_prophet) puis forecast (forecast_from_fitted_prophet) — inchangé
-    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
+    `sigma_scale` : voir forecast_from_fitted_prophet."""
     model = fit_prophet(train)
-    return forecast_from_fitted_prophet(model, train.index[-1], horizons)
+    return forecast_from_fitted_prophet(model, train.index[-1], horizons,
+                                        sigma_scale=sigma_scale)
 
 
 # ── LSTM ──────────────────────────────────────────────────────────────────────

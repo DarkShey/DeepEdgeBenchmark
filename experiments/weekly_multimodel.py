@@ -72,6 +72,31 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "models"))
 sys.path.insert(0, str(ROOT / "benchmarks"))
 
+# TEMPORARY, LOCAL-MACHINE-ONLY WORKAROUND (2026-07-28): on this machine, Avast's
+# HTTPS Web Shield intercepts and re-signs all outbound TLS traffic with its own
+# root cert (C:\ProgramData\Avast Software\Avast\wscert.pem). That cert fails
+# strict OpenSSL validation ("Basic Constraints of CA cert not marked critical"),
+# so yfinance's curl_cffi backend can't reach Yahoo Finance at all (SSLError)
+# -- unrelated to this script's logic, confirmed via direct curl_cffi test outside
+# yfinance. Patching curl_cffi.requests.Session.request (the class itself, so it
+# covers every Session yfinance constructs internally, regardless of which of its
+# submodules created it) to default verify=False, scoped to THIS script's process
+# only -- no other file in the repo is touched. Remove this block once Avast's
+# HTTPS scanning is excluded for python.exe/this domain, or its cert is fixed.
+try:
+    from curl_cffi import requests as _curl_cffi_requests
+    _orig_curl_session_request = _curl_cffi_requests.Session.request
+
+    def _curl_session_request_no_verify(self, *args, **kwargs):
+        kwargs.setdefault("verify", False)
+        return _orig_curl_session_request(self, *args, **kwargs)
+
+    _curl_cffi_requests.Session.request = _curl_session_request_no_verify
+    import warnings
+    warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+except ImportError:
+    pass
+
 import tsdiff_model as td                                        # noqa: E402 (fetch_data reused)
 import multi_horizon as mh                                       # noqa: E402
 import sarima_model                                               # noqa: E402
@@ -109,12 +134,25 @@ def forecast_horizons_sarima_weekly(train: pd.Series, horizons: list) -> dict:
     return mh.forecast_from_fitted_sarima(result, horizons)
 
 
-def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list,
+                                     sigma_scale: float = None) -> dict:
     """Prophet on weekly-resampled data -- weekly_seasonality disabled, future dates
-    on W-FRI instead of business days (see module docstring)."""
+    on W-FRI instead of business days (see module docstring).
+
+    Fitted on log-price, not raw price: same drift issue as multi_horizon.py's
+    fit_prophet (see its docstring / optimisation_modeles_ia.pdf §1.2) applies here
+    too -- this is a separate Prophet fit path (regime C, weekly-native), not a
+    caller of multi_horizon.fit_prophet, so it needed its own log/exp fix.
+
+    `sigma_scale` (optional, default None = no correction): same parameter/
+    reasoning as multi_horizon.forecast_from_fitted_prophet -- a multiplicative
+    width correction applied uniformly across horizons, to be supplied by the
+    caller (e.g. an EWMA of realised out-of-sample residuals threaded across the
+    walk-forward origins in run_model_asset's own loop below -- not wired yet,
+    this only adds the hook so it can be without another signature change)."""
     import prophet_model
     df_train = pd.DataFrame({"ds": pd.to_datetime(train.index),
-                             "y": train.astype(float).values.flatten()})
+                             "y": np.log(train.astype(float).values.flatten())})
     model = prophet_model.Prophet(
         interval_width=1 - prophet_model.PI_ALPHA,
         daily_seasonality=False, weekly_seasonality=False, yearly_seasonality=True,
@@ -127,7 +165,12 @@ def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list) -> dict:
     results = {}
     for h in horizons:
         row = forecast.iloc[h - 1]
-        results[h] = (float(row["yhat"]), float(row["yhat_lower"]), float(row["yhat_upper"]))
+        yhat = float(row["yhat"])
+        lo, hi = float(row["yhat_lower"]), float(row["yhat_upper"])
+        if sigma_scale is not None:
+            lo = yhat - (yhat - lo) * float(sigma_scale)
+            hi = yhat + (hi - yhat) * float(sigma_scale)
+        results[h] = (float(np.exp(yhat)), float(np.exp(lo)), float(np.exp(hi)))
     return results
 
 
