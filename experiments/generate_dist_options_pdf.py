@@ -97,15 +97,25 @@ VARIANT_COLOR = {
 VARIANT_ORDER = ["normal", "student_t", "ged", "cqr", "native_ged", "native_skewt"]
 
 
-def bar_chart_drawing(rows, max_val, width=460, bar_h=13, gap=9, left_pad=132):
+AXIS_LABEL_H = 13  # extra strip at the bottom of every bar chart carrying the axis caption
+
+
+def bar_chart_drawing(rows, max_val, width=460, bar_h=13, gap=9, left_pad=132,
+                      axis_label="Erreur de calibration — points de % d'écart à la "
+                                 "couverture visée (0 = parfait, plus court = mieux)"):
     """rows: [(label, value, color_hex), ...]. Horizontal bars, value at tip --
-    same layout logic as the SVG version in generate_dist_options_report.py."""
+    same layout logic as the SVG version in generate_dist_options_report.py.
+    Carries its own axis caption (baked into the image, not just surrounding
+    prose) so the chart is self-explanatory even skimmed on its own."""
     row_h = bar_h + gap
-    height = len(rows) * row_h + 6
+    height = len(rows) * row_h + 6 + AXIS_LABEL_H
     d = Drawing(width, height)
     plot_w = width - left_pad - 46
-    d.add(Line(left_pad, 2, left_pad, height - 2,
+    d.add(Line(left_pad, AXIS_LABEL_H, left_pad, height - 2,
                strokeColor=colors.HexColor("#c7c4b6"), strokeWidth=0.6))
+    if axis_label:
+        d.add(String(left_pad, 2, axis_label, fontName="Times-Italic", fontSize=6.6,
+                     fillColor=colors.HexColor("#86847a")))
     for i, (label, value, color_hex) in enumerate(rows):
         y = height - 4 - (i + 1) * row_h + gap / 2
         bw = max(2, (value / max_val) * plot_w) if max_val > 0 else 2
@@ -242,16 +252,30 @@ story.append(p(
     "Chaque modèle est réévalué via son propre backtest walk-forward existant, "
     "non modifié. La fenêtre de test (2020–2024, 15&nbsp;% en test) est séparée "
     "chronologiquement en une fenêtre de calibration (40&nbsp;%, jamais notée) et une "
-    "fenêtre d'évaluation (60&nbsp;%, seule fenêtre servant au calcul des KPIs). "
-    "<b>Erreur de calibration</b> (MACE stricte) = moyenne, sur les 5 actifs, des écarts "
-    "absolus entre couverture mesurée et cible aux niveaux 50/80/95&nbsp;% — 0 = "
-    "parfaitement calibré, sans possibilité de compensation entre actifs.",
+    "fenêtre d'évaluation (60&nbsp;%, seule fenêtre servant au calcul des KPIs).",
     body_style))
+story.append(Paragraph(
+    "<b>Qu'est-ce que « l'erreur » du tableau et des graphiques&nbsp;?</b> Chaque prévision "
+    "vient avec un intervalle de confiance à 3 niveaux (50&nbsp;%, 80&nbsp;%, 95&nbsp;%) — "
+    "censé contenir le vrai prix 50/80/95&nbsp;% du temps. On mesure combien de fois, en "
+    "pratique, le vrai prix est tombé dans cet intervalle (la <i>couverture</i>), et on "
+    "compare à la cible. <b>« Erreur de calibration »</b> = l'écart moyen, en points de "
+    "pourcentage, entre couverture mesurée et couverture visée, aux 3 niveaux et sur les "
+    "5 actifs — 0 = l'intervalle tient exactement sa promesse. <i>Exemple</i>&nbsp;: une "
+    "erreur de 8 points veut dire qu'en moyenne l'intervalle censé être juste 1 fois sur 2 "
+    "(50&nbsp;%) l'est en réalité 58&nbsp;% ou 42&nbsp;% du temps — trop large ou trop "
+    "étroit, dans un sens ou dans l'autre. Ce n'est <u>pas</u> une erreur de prédiction de "
+    "prix (RMSE) — un modèle peut prédire le prix tout aussi bien avant et après correction, "
+    "seule la fiabilité de son intervalle change (cf. « Pinball rel. » dans les tableaux "
+    "§3, qui lui reflète la qualité de l'intervalle dans son ensemble, largeur et "
+    "position).",
+    callout_style))
 
 # ---- 2. Verdict table ----
 story.append(p("2&nbsp;&nbsp; Verdict par modèle", h1_style))
 
-header = ["Modèle", "Erreur avant", "Meilleure option", "Erreur après", "Δ", "Surcoût", "Verdict"]
+header = ["Modèle", "Erreur calib. avant", "Meilleure option", "Erreur calib. après",
+         "Δ", "Surcoût", "Verdict"]
 rows = [header]
 for model, (best_key, best_label, verdict) in VERDICTS.items():
     m = SUMMARY["models"][model]
@@ -264,12 +288,12 @@ for model, (best_key, best_label, verdict) in VERDICTS.items():
     rows.append([model, fmt(before, 2), best_label, fmt(after, 2),
                 f"{delta_pct:+.0f}%", f"{oh_txt} / {fmt(base_t,0)}s", verdict])
 
-col_widths = [2.3*cm, 1.9*cm, 2.9*cm, 1.9*cm, 1.5*cm, 2.6*cm, 4.1*cm]
+col_widths = [2.3*cm, 2.3*cm, 2.7*cm, 2.3*cm, 1.3*cm, 2.4*cm, 3.7*cm]
 tbl = Table(rows, colWidths=col_widths, repeatRows=1)
 tbl.setStyle(TableStyle([
     ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
     ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-    ("FONTSIZE", (0, 0), (-1, -1), 8.3),
+    ("FONTSIZE", (0, 0), (-1, -1), 8.0),
     ("ALIGN", (1, 0), (4, -1), "CENTER"),
     ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.black),
