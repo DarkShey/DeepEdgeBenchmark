@@ -20,6 +20,8 @@
           "80": 10.06,
           "95": 5.78
         },
+        "mace_strict": 8.07,
+        "mace_loose": 4.56,
         "mean_abs_calibration_error": 4.56,
         "rel_width_mean": {
           "50": 1.0,
@@ -41,6 +43,8 @@
           "80": 9.21,
           "95": 5.33
         },
+        "mace_strict": 6.22,
+        "mace_loose": 1.92,
         "mean_abs_calibration_error": 1.92,
         "rel_width_mean": {
           "50": 0.7968,
@@ -62,6 +66,8 @@
           "80": 11.06,
           "95": 5.39
         },
+        "mace_strict": 7.45,
+        "mace_loose": 1.61,
         "mean_abs_calibration_error": 1.61,
         "rel_width_mean": {
           "50": 0.836,
@@ -83,6 +89,8 @@
           "80": 6.61,
           "95": 3.69
         },
+        "mace_strict": 4.43,
+        "mace_loose": 1.08,
         "mean_abs_calibration_error": 1.08,
         "rel_width_mean": {
           "50": 0.8552,
@@ -107,6 +115,8 @@
           "80": 9.39,
           "95": 8.64
         },
+        "mace_strict": 28.08,
+        "mace_loose": 28.08,
         "mean_abs_calibration_error": 28.08,
         "rel_width_mean": {
           "50": 1.0,
@@ -128,6 +138,8 @@
           "80": 9.38,
           "95": 8.64
         },
+        "mace_strict": 28.18,
+        "mace_loose": 28.18,
         "mean_abs_calibration_error": 28.18,
         "rel_width_mean": {
           "50": 0.9968,
@@ -149,6 +161,8 @@
           "80": 9.76,
           "95": 8.25
         },
+        "mace_strict": 28.29,
+        "mace_loose": 28.29,
         "mean_abs_calibration_error": 28.29,
         "rel_width_mean": {
           "50": 1.0689,
@@ -170,6 +184,8 @@
           "80": 6.27,
           "95": 10.23
         },
+        "mace_strict": 20.67,
+        "mace_loose": 20.59,
         "mean_abs_calibration_error": 20.59,
         "rel_width_mean": {
           "50": 1.3191,
@@ -194,6 +210,8 @@
           "80": 13.55,
           "95": 9.66
         },
+        "mace_strict": 10.96,
+        "mace_loose": 6.77,
         "mean_abs_calibration_error": 6.77,
         "rel_width_mean": {
           "50": 1.0,
@@ -215,6 +233,8 @@
           "80": 10.6,
           "95": 8.72
         },
+        "mace_strict": 12.36,
+        "mace_loose": 11.25,
         "mean_abs_calibration_error": 11.25,
         "rel_width_mean": {
           "50": 0.8511,
@@ -236,6 +256,8 @@
           "80": 12.94,
           "95": 9.13
         },
+        "mace_strict": 12.53,
+        "mace_loose": 9.58,
         "mean_abs_calibration_error": 9.58,
         "rel_width_mean": {
           "50": 0.8657,
@@ -257,6 +279,8 @@
           "80": 9.27,
           "95": 4.46
         },
+        "mace_strict": 8.43,
+        "mace_loose": 6.89,
         "mean_abs_calibration_error": 6.89,
         "rel_width_mean": {
           "50": 1.0013,
@@ -281,6 +305,8 @@
           "80": 11.15,
           "95": 5.93
         },
+        "mace_strict": 9.26,
+        "mace_loose": 5.32,
         "mean_abs_calibration_error": 5.32,
         "rel_width_mean": {
           "50": 1.0,
@@ -302,6 +328,8 @@
           "80": 10.32,
           "95": 5.73
         },
+        "mace_strict": 7.06,
+        "mace_loose": 2.04,
         "mean_abs_calibration_error": 2.04,
         "rel_width_mean": {
           "50": 0.7841,
@@ -323,6 +351,8 @@
           "80": 11.53,
           "95": 5.8
         },
+        "mace_strict": 7.81,
+        "mace_loose": 1.1,
         "mean_abs_calibration_error": 1.1,
         "rel_width_mean": {
           "50": 0.8137,
@@ -344,6 +374,8 @@
           "80": 5.46,
           "95": 3.32
         },
+        "mace_strict": 3.76,
+        "mace_loose": 1.4,
         "mean_abs_calibration_error": 1.4,
         "rel_width_mean": {
           "50": 0.8794,
@@ -368,6 +400,8 @@
           "80": 2.6,
           "95": 1.01
         },
+        "mace_strict": 4.49,
+        "mace_loose": 4.32,
         "mean_abs_calibration_error": 4.32,
         "rel_width_mean": {
           "50": 1.0,
@@ -389,6 +423,8 @@
           "80": 3.92,
           "95": 1.35
         },
+        "mace_strict": 3.27,
+        "mace_loose": 1.32,
         "mean_abs_calibration_error": 1.32,
         "rel_width_mean": {
           "50": 0.8715,
@@ -410,6 +446,8 @@
           "80": 2.87,
           "95": 1.15
         },
+        "mace_strict": 3.6,
+        "mace_loose": 2.34,
         "mean_abs_calibration_error": 2.34,
         "rel_width_mean": {
           "50": 0.9093,
@@ -431,6 +469,8 @@
           "80": 5.83,
           "95": 1.4
         },
+        "mace_strict": 4.27,
+        "mace_loose": 2.8,
         "mean_abs_calibration_error": 2.8,
         "rel_width_mean": {
           "50": 0.9335,
@@ -452,6 +492,8 @@
           "80": 1.97,
           "95": 1.36
         },
+        "mace_strict": 2.51,
+        "mace_loose": 1.54,
         "mean_abs_calibration_error": 1.54,
         "rel_width_mean": {
           "50": 0.8671,
@@ -473,6 +515,8 @@
           "80": 2.75,
           "95": 1.54
         },
+        "mace_strict": 2.52,
+        "mace_loose": 1.29,
         "mean_abs_calibration_error": 1.29,
         "rel_width_mean": {
           "50": 0.8763,
@@ -538,7 +582,9 @@
       "80": 89.65,
       "95": 97.99
     },
-    "mean_abs_calibration_error": 9.229333400000002,
+    "mace_strict": 13.74,
+    "mace_loose": 9.23,
+    "mean_abs_calibration_error": 9.23,
     "mean_train_time_s": 37.6,
     "mean_seed_std_cov50": 3.32,
     "seeds": [
@@ -554,6 +600,8 @@
       "80": 72.95,
       "95": 86.86
     },
+    "mace_strict": 10.96,
+    "mace_loose": 6.77,
     "mean_abs_calibration_error": 6.77
   }
 }

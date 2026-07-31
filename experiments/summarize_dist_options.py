@@ -4,14 +4,29 @@ summarize_dist_options.py — aggregate experiments/all_models_dist_options_resu
 table per (model, variant), for the final cost/benefit report.
 
 Aggregation choice: coverage is already asset-scale-free (a percentage), so
-cov_50/80/95 are averaged directly across assets, alongside mean absolute
-calibration error |cov-target| (one scalar per variant, 0 = perfectly calibrated
-on average). Width/pinball/CRPS are NOT asset-scale-free (BTC prices are ~1e4,
-ZN~=F prices are ~0.2) -- comparing raw values across assets would be dominated
-by BTC, so each is expressed as a RATIO to that (asset, model)'s own `normal`
-baseline before averaging across assets. A ratio < 1 means the option improves on
-today's Gaussian baseline for that KPI; > 1 means it's worse -- this is the
-direct "is it worth it" number the comparison is for.
+cov_50/80/95 are averaged directly across assets. Width/pinball/CRPS are NOT
+asset-scale-free (BTC prices are ~1e4, ZN=F prices are ~0.2) -- comparing raw
+values across assets would be dominated by BTC, so each is expressed as a RATIO
+to that (asset, model)'s own `normal` baseline before averaging across assets. A
+ratio < 1 means the option improves on today's Gaussian baseline for that KPI;
+> 1 means it's worse -- this is the direct "is it worth it" number the
+comparison is for.
+
+MACE (mean absolute calibration error) -- two variants, keep both:
+  - `mace_loose`  : abs(mean_across_assets(coverage) - target). BUGGY as the sole
+    number: this lets errors of opposite sign cancel between assets (BTC
+    over-covers, SPY under-covers -> averages out to "calibrated" when neither
+    asset actually is). This is what earlier versions of this script reported
+    under the plain key `mean_abs_calibration_error`.
+  - `mace_strict` : mean_across_assets(abs(coverage - target)) -- the honest one,
+    no cancellation possible. Flagged by a colleague's independent robustness
+    re-run (HANDOFF_sigma_calibration_suivi.md, 2026-07-30 -- see its §1 warning)
+    after noticing this script's headline numbers were flattering relative to a
+    per-asset breakdown. `mace_strict` is the one to use going forward; `mace_loose`
+    is kept only so old reports referencing it stay reproducible/comparable.
+`mean_abs_calibration_error` is kept as a deprecated alias for `mace_loose`
+(equal value) so any existing consumer of this JSON does not silently break --
+new code should read `mace_strict`.
 """
 
 import json
@@ -61,11 +76,15 @@ def summarize_main():
                 if oh is not None:
                     overhead.append(oh)
 
-            cal_err = float(np.mean([abs(np.mean(cov[lvl]) - lvl) for lvl in LEVELS]))
+            mace_loose = float(np.mean([abs(np.mean(cov[lvl]) - lvl) for lvl in LEVELS]))
+            mace_strict = float(np.mean([np.mean([abs(c - lvl) for c in cov[lvl]])
+                                        for lvl in LEVELS]))
             summary[model][variant] = {
                 "cov_mean": {lvl: round(float(np.mean(cov[lvl])), 2) for lvl in LEVELS},
                 "cov_std_across_assets": {lvl: round(float(np.std(cov[lvl])), 2) for lvl in LEVELS},
-                "mean_abs_calibration_error": round(cal_err, 2),
+                "mace_strict": round(mace_strict, 2),
+                "mace_loose": round(mace_loose, 2),
+                "mean_abs_calibration_error": round(mace_loose, 2),  # deprecated alias, see module docstring
                 "rel_width_mean": {lvl: round(float(np.mean(rel_width[lvl])), 4) for lvl in LEVELS},
                 "rel_pinball_mean": round(float(np.mean(rel_pinball)), 4),
                 "rel_crps_mean": round(float(np.mean(rel_crps)), 4) if rel_crps else None,
@@ -93,11 +112,15 @@ def summarize_mdn():
             "rmse_mean": agg["rmse_eval"]["mean"],
             "train_time_s_mean": round(float(np.mean(data["assets"][a]["train_time_s_per_seed"])), 1),
         }
-    cal_err = float(np.mean([abs(np.mean(cov[lvl]) - lvl) for lvl in LEVELS]))
+    mace_loose = float(np.mean([abs(np.mean(cov[lvl]) - lvl) for lvl in LEVELS]))
+    mace_strict = float(np.mean([np.mean([abs(c - lvl) for c in cov[lvl]])
+                                for lvl in LEVELS]))
     return {
         "per_asset": per_asset,
         "cov_mean": {lvl: round(float(np.mean(cov[lvl])), 2) for lvl in LEVELS},
-        "mean_abs_calibration_error": cal_err,
+        "mace_strict": round(mace_strict, 2),
+        "mace_loose": round(mace_loose, 2),
+        "mean_abs_calibration_error": round(mace_loose, 2),  # deprecated alias, see module docstring
         "mean_train_time_s": round(float(np.mean(train_times)), 1),
         "mean_seed_std_cov50": round(float(np.mean(cov50_stds)), 2),
         "seeds": data["config"]["seeds"],
@@ -118,6 +141,8 @@ def main():
         "lstm_baseline_for_mdn_comparison": {
             "train_time_s": lstm_baseline_train_time,
             "cov_mean": lstm_baseline_normal["cov_mean"],
+            "mace_strict": lstm_baseline_normal["mace_strict"],
+            "mace_loose": lstm_baseline_normal["mace_loose"],
             "mean_abs_calibration_error": lstm_baseline_normal["mean_abs_calibration_error"],
         },
     }
