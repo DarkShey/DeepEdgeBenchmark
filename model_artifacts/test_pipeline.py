@@ -13,6 +13,8 @@ preuve que l'artefact est exploitable pour un déploiement, pas juste un octet v
 # (chargé par pytest avant ce module) — cf. sa docstring pour le détail du bug.
 
 import json
+import math
+import sqlite3
 from pathlib import Path
 
 import numpy as np
@@ -365,7 +367,8 @@ def test_lstm_full_retrain_false_asks_worker_to_skip_training(tmp_path, monkeypa
     captured = {}
 
     def fake_worker(train, validation, out_dir, seed, epochs, max_d7_origins,
-                    all_horizons, gate2_horizons, business_h_days, skip_training):
+                    all_horizons, gate2_horizons, business_h_days, skip_training,
+                    sigma_scale_map=None):
         captured["skip_training"] = skip_training
         captured["gate2_horizons"] = list(gate2_horizons)
         return {"gate1_ok": False, "gate2": {},
@@ -390,3 +393,94 @@ def test_lstm_full_retrain_false_asks_worker_to_skip_training(tmp_path, monkeypa
         metadata = json.loads((out_dir / "metadata.json").read_text())
         assert metadata["gate1_reused_from"] == "20260101"
         assert metadata["gate2_reused_from"] == "20260101"
+
+
+# ── Chantier 1/2 de BRIEF_branchement_prod_calibration_sigma.md : --calibrate-sigma ─────
+
+def test_sigma_adoption_kwargs_on_defers_to_mh_defaults():
+    assert mp._sigma_adoption_kwargs("on") == (None, None)
+
+
+def test_sigma_adoption_kwargs_off_forces_legacy_values():
+    assert mp._sigma_adoption_kwargs("off") == ("normal", False)
+
+
+def test_calibrate_sigma_off_reproduces_symmetric_arima_live_forecast(tmp_path, monkeypatch, synthetic_split):
+    """--calibrate-sigma off doit restaurer la bande symétrique historique (dist normale
+    figée) sur la prévision live -- vérifié sur le champ "forecast" de metrics.json (D1),
+    alimenté par _forecast_all_horizons -> mh.forecast_horizons_arima."""
+    train, validation = synthetic_split
+    monkeypatch.setattr(mp, "RUN_ROOT", tmp_path)
+
+    logs = mp.process_asset_model(
+        "ARIMA-GARCH", "SYN", "test", train, validation,
+        run_date_str="20260101", run_date_iso="2026-01-01",
+        window_start=str(train.index[0].date()), window_end=str(validation.index[-1].date()),
+        seed=0, epochs=None, max_d7_origins=2, horizons=["D1"],
+        run_id="run-off", regime_tag="unknown", db_path=str(tmp_path / "tracking.db"),
+        full_retrain=True, calibrate_sigma="off",
+    )
+    fc = json.loads((Path(logs[0]["dir"]) / "metrics.json").read_text())["forecast"]
+    down = math.log(fc["predicted"]) - math.log(fc["pi_lower"])
+    up = math.log(fc["pi_upper"]) - math.log(fc["predicted"])
+    assert down == pytest.approx(up, rel=1e-6)
+
+
+def test_calibrate_sigma_on_gives_asymmetric_arima_live_forecast(tmp_path, monkeypatch, synthetic_split):
+    """Défaut ("on") : bornes skew-t, donc asymétriques en log-espace -- non-régression
+    inverse du test "off" ci-dessus (les deux ensemble prouvent que le flag CLI atteint
+    bien mh.py, pas seulement que mh.py sait faire les deux)."""
+    train, validation = synthetic_split
+    monkeypatch.setattr(mp, "RUN_ROOT", tmp_path)
+
+    logs = mp.process_asset_model(
+        "ARIMA-GARCH", "SYN", "test", train, validation,
+        run_date_str="20260101", run_date_iso="2026-01-01",
+        window_start=str(train.index[0].date()), window_end=str(validation.index[-1].date()),
+        seed=0, epochs=None, max_d7_origins=2, horizons=["D1"],
+        run_id="run-on", regime_tag="unknown", db_path=str(tmp_path / "tracking.db"),
+        full_retrain=True, calibrate_sigma="on",
+    )
+    fc = json.loads((Path(logs[0]["dir"]) / "metrics.json").read_text())["forecast"]
+    down = math.log(fc["predicted"]) - math.log(fc["pi_lower"])
+    up = math.log(fc["pi_upper"]) - math.log(fc["predicted"])
+    assert down != pytest.approx(up, rel=1e-6)
+
+
+def test_sigma_scale_wiring_widens_only_d1_business_row_in_tracking_db(tmp_path, monkeypatch, synthetic_split):
+    """sigma_scale calculé depuis tracking.db (validation/sigma_scale.py) doit atteindre
+    UNIQUEMENT la ligne business D+1 (horizon=1) écrite par _save_business_predictions --
+    jamais D+7 (horizon=7, périmètre du brief : EWMA non validée au-delà de 1 pas)."""
+    train, validation = synthetic_split
+    monkeypatch.setattr(mp, "RUN_ROOT", tmp_path)
+    db_path = str(tmp_path / "tracking.db")
+
+    monkeypatch.setattr(mp.sigma_scale_mod, "sigma_scale",
+                        lambda model, asset, horizon, as_of, path: 5.0)
+
+    mp.process_asset_model(
+        "SARIMA", "SYN", "test", train, validation,
+        run_date_str="20260101", run_date_iso="2026-01-01",
+        window_start=str(train.index[0].date()), window_end=str(validation.index[-1].date()),
+        seed=0, epochs=None, max_d7_origins=2, horizons=["D1"],
+        run_id="run-scaled", regime_tag="unknown", db_path=db_path,
+        full_retrain=True, calibrate_sigma="on",
+    )
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = {row["horizon"]: row for row in conn.execute(
+        "SELECT horizon, y_pred, y_lower, y_upper FROM predictions WHERE run_id='run-scaled'")}
+    conn.close()
+
+    assert set(rows) == {1, 7}
+    d1 = rows[1]
+    # Recalcule la bande NON corrigée (sigma_scale=1.0) pour comparer les demi-largeurs.
+    train_extended = pd.concat([train, validation])
+    business_lag = 1 if validation.index[-1].date() < pd.Timestamp.now().date() else 0
+    raw = mp._forecast_all_horizons("SARIMA", train_extended, [1 + business_lag], seed=0, epochs=None)
+    _, raw_lo, raw_hi = raw[1 + business_lag]
+    raw_half_lo = d1["y_pred"] - raw_lo
+    raw_half_hi = raw_hi - d1["y_pred"]
+    assert (d1["y_pred"] - d1["y_lower"]) == pytest.approx(raw_half_lo * 5.0, rel=1e-6)
+    assert (d1["y_upper"] - d1["y_pred"]) == pytest.approx(raw_half_hi * 5.0, rel=1e-6)

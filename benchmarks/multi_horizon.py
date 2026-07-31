@@ -13,6 +13,31 @@ dict[int, tuple[float, float, float]]` où les clés sont des horizons en JOURS 
 
 Extensibilité : pour ajouter un nouveau modèle au benchmark, écrire une fonction
 `forecast_horizons_<nom>` suivant ce contrat et l'ajouter à MODEL_ADAPTERS.
+
+Adoptions sigma (BRIEF_branchement_prod_calibration_sigma.md, suite de
+HANDOFF_sigma_calibration_suivi.md §5/§8.2 -- les adoptions étaient déjà en place dans
+models/*.py mais n'étaient JAMAIS exercées ici, donc jamais visibles côté prévision live
+ni côté backtest D+7, cf. BRIEF §0) :
+  - ARIMA-GARCH : `dist` (défaut `arima_model.GARCH_DIST` = "skewt") -- bornes recalculées
+    depuis les quantiles de la loi ajustée (mirror `arima_model._dist_shape`/
+    `_std_quantiles`) au lieu du multiplicateur normal figé `Z_95`. `dist="normal"`
+    reproduit EXACTEMENT (bit-for-bit) l'ancien calcul symétrique `+/- Z_95*sigma`.
+  - Prophet : `log_space` (défaut `prophet_model.LOG_SPACE` = True) -- fit sur log(price),
+    bornes exponentiées (loi lognormale en prix, même spécification que
+    `prophet_model.run_prophet`). `log_space=False` reproduit l'ancien calcul en espace prix.
+  - SARIMA / Naive / LSTM : `sigma_scale` (dict optionnel `{h_days: facteur}`, défaut None)
+    -- correction multiplicative autour du point, mirror `run_sarima`/`run_naive`/`run_lstm`
+    (`lo = point - (point - lo)*corr`, `hi = point + (hi - point)*corr`). Un horizon absent
+    du dict (ou `sigma_scale=None`) n'est PAS corrigé : bornes brutes inchangées, bit-for-bit.
+    Le facteur lui-même (sqrt(EWMA(z^2)) causal depuis tracking.db) est calculé par
+    l'appelant (cf. validation/sigma_scale.py + model_artifacts/pipeline.py), jamais ici --
+    ce module n'a aucun accès à tracking.db.
+
+Réversibilité : tous ces paramètres ont un défaut qui ACTIVE les adoptions (comportement
+prod). `model_artifacts/pipeline.py --calibrate-sigma off` les repasse explicitement à
+leur valeur legacy (dist="normal", log_space=False, sigma_scale=None partout) pour
+restaurer le comportement historique de ce module bit-for-bit (cf. son test de
+non-régression dédié).
 """
 
 import sys
@@ -30,11 +55,31 @@ import naive_model
 # model (caught per-model in run_benchmark.py) instead of crashing this whole module.
 
 
+def _scaled_bounds(point: float, lo_raw: float, hi_raw: float, h: int, sigma_scale: dict):
+    """`lo_raw`/`hi_raw` corrigés multiplicativement par `sigma_scale.get(h)` autour de
+    `point` -- mirror `sarima_model.run_sarima`/`naive_model.run_naive`
+    (`lo = point - (point - lo)*corr`). Renvoie `(lo_raw, hi_raw)` TELS QUELS (aucune
+    arithmétique) si `sigma_scale` est None ou n'a pas d'entrée pour `h` : garantit la
+    reproduction bit-for-bit de l'ancien calcul quand la correction est absente, plutôt
+    qu'un `* 1.0` qui resterait exposé à l'arrondi flottant d'une soustraction-addition."""
+    if sigma_scale is None or h not in sigma_scale:
+        return lo_raw, hi_raw
+    corr = float(sigma_scale[h])
+    lo = point - (point - lo_raw) * corr
+    hi = point + (hi_raw - point) * corr
+    return lo, hi
+
+
 # ── ARIMA-GARCH ───────────────────────────────────────────────────────────────
-def fit_arima(train: pd.Series):
+def fit_arima(train: pd.Series, dist: str = None):
     """Fit ARIMA(order) puis GARCH(1,1) sur ses résidus, une seule fois.
     Extrait de forecast_horizons_arima (même calcul, exposé pour la sérialisation
-    des artefacts modèles — cf. model_artifacts/pipeline.py)."""
+    des artefacts modèles — cf. model_artifacts/pipeline.py).
+
+    `dist` (défaut None -> `arima_model.GARCH_DIST`, adopté "skewt") : loi
+    d'innovation du GARCH, cf. note d'adoption en tête de module. `dist="normal"`
+    reproduit le fit historique de ce module (qui codait `dist="normal"` en dur)."""
+    dist = arima_model.GARCH_DIST if dist is None else dist
     prices = train.astype(float).values
     returns = np.diff(np.log(prices)) * 100.0
 
@@ -44,15 +89,25 @@ def fit_arima(train: pd.Series):
     ).fit()
     resid = np.asarray(arima_res.resid, dtype=float)
     garch_res = arima_model.arch_model(
-        resid, vol="Garch", p=1, q=1, dist="normal", rescale=False
+        resid, vol="Garch", p=1, q=1, dist=dist, rescale=False
     ).fit(disp="off")
     return arima_res, garch_res
 
 
-def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons: list) -> dict:
+def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons: list,
+                               dist: str = None) -> dict:
     """Multi-step via ARIMA.forecast(steps=h) (retours cumulés) + variance GARCH
     cumulée (somme des variances par pas, hypothèse d'indépendance approx.),
-    à partir d'objets déjà fittés (aucun nouveau fit ici)."""
+    à partir d'objets déjà fittés (aucun nouveau fit ici).
+
+    `dist` DOIT être la même valeur que celle passée à `fit_arima` pour ce `garch_res`
+    (résout le multiplicateur de bande, cf. note d'adoption en tête de module) :
+    `dist="normal"` -> bande symétrique `+/- Z_95` calculée EXACTEMENT comme l'ancien
+    code (aucun passage par les quantiles de la loi, donc aucun risque de dérive
+    numérique 1.96 vs norm.ppf(0.975)=1.959964) ; toute autre valeur -> quantiles de
+    la loi réellement ajustée (`arima_model._dist_shape`/`_std_quantiles`), donc bande
+    asymétrique pour skew-t/GED."""
+    dist = arima_model.GARCH_DIST if dist is None else dist
     max_h = max(horizons)
     mean_fc = np.asarray(arima_res.forecast(steps=max_h), dtype=float) / 100.0
     garch_fc = garch_res.forecast(horizon=max_h, reindex=False)
@@ -61,22 +116,31 @@ def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons
     cum_return = np.cumsum(mean_fc)
     cum_sigma = np.sqrt(np.cumsum(var_per_step))
 
+    if dist == "normal":
+        q_lo, q_hi = -arima_model.Z_95, arima_model.Z_95
+    else:
+        dist_obj, shape = arima_model._dist_shape(garch_res)
+        q_lo, q_hi = arima_model._std_quantiles(dist_obj, shape, (0.95,))[0.95]
+
     results = {}
     for h in horizons:
         i = h - 1
         point = last_price * np.exp(cum_return[i])
-        lo = last_price * np.exp(cum_return[i] - arima_model.Z_95 * cum_sigma[i])
-        hi = last_price * np.exp(cum_return[i] + arima_model.Z_95 * cum_sigma[i])
+        lo = last_price * np.exp(cum_return[i] + cum_sigma[i] * q_lo)
+        hi = last_price * np.exp(cum_return[i] + cum_sigma[i] * q_hi)
         results[h] = (float(point), float(lo), float(hi))
     return results
 
 
-def forecast_horizons_arima(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_arima(train: pd.Series, horizons: list, dist: str = None) -> dict:
     """Fit once (fit_arima) puis forecast (forecast_from_fitted_arima) — inchangé
-    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
-    arima_res, garch_res = fit_arima(train)
+    pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
+    Résout `dist` une seule fois ici pour garantir que fit et forecast utilisent
+    exactement la même loi (cf. docstring de forecast_from_fitted_arima)."""
+    dist = arima_model.GARCH_DIST if dist is None else dist
+    arima_res, garch_res = fit_arima(train, dist=dist)
     last_price = train.astype(float).values[-1]
-    return forecast_from_fitted_arima(arima_res, garch_res, last_price, horizons)
+    return forecast_from_fitted_arima(arima_res, garch_res, last_price, horizons, dist=dist)
 
 
 # ── SARIMA ────────────────────────────────────────────────────────────────────
@@ -89,9 +153,11 @@ def fit_sarima(train: pd.Series):
     ).fit(disp=False)
 
 
-def forecast_from_fitted_sarima(result, horizons: list) -> dict:
+def forecast_from_fitted_sarima(result, horizons: list, sigma_scale: dict = None) -> dict:
     """Multi-step natif : SARIMAX.get_forecast(steps=h) donne predicted_mean et
-    conf_int() pour chaque pas 1..h en un seul appel, à partir d'un résultat déjà fitté."""
+    conf_int() pour chaque pas 1..h en un seul appel, à partir d'un résultat déjà fitté.
+
+    `sigma_scale` : cf. note d'adoption en tête de module (_scaled_bounds)."""
     max_h = max(horizons)
     fc = result.get_forecast(steps=max_h)
     pred_mean = np.asarray(fc.predicted_mean, dtype=float)
@@ -100,31 +166,32 @@ def forecast_from_fitted_sarima(result, horizons: list) -> dict:
     results = {}
     for h in horizons:
         i = h - 1
-        results[h] = (float(pred_mean[i]), float(ci[i, 0]), float(ci[i, 1]))
+        point = float(pred_mean[i])
+        lo_raw, hi_raw = float(ci[i, 0]), float(ci[i, 1])
+        lo, hi = _scaled_bounds(point, lo_raw, hi_raw, h, sigma_scale)
+        results[h] = (point, lo, hi)
     return results
 
 
-def forecast_horizons_sarima(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_sarima(train: pd.Series, horizons: list, sigma_scale: dict = None) -> dict:
     """Fit once (fit_sarima) puis forecast (forecast_from_fitted_sarima) — inchangé
     pour les appelants existants, juste réorganisé en 2 fonctions réutilisables."""
     result = fit_sarima(train)
-    return forecast_from_fitted_sarima(result, horizons)
+    return forecast_from_fitted_sarima(result, horizons, sigma_scale=sigma_scale)
 
 
 # ── Prophet ───────────────────────────────────────────────────────────────────
-def fit_prophet(train: pd.Series):
+def fit_prophet(train: pd.Series, log_space: bool = None):
     """Fit Prophet une seule fois. Extrait de forecast_horizons_prophet.
 
-    Fitté sur le log-prix (pas le prix brut) : sur une série non stationnaire à
-    forte croissance (BTC/ETH), la tendance Prophet (linéaire/logistique) projetée
-    sur le prix brut s'extrapole de façon agressive et dérive -- cf. §1.2 de
-    optimisation_modeles_ia.pdf. forecast_from_fitted_prophet ré-exponentie en
-    sortie ; les deux fonctions vont toujours de pair, ne pas appeler l'une sans
-    l'autre sur le même modèle."""
+    `log_space` (défaut None -> `prophet_model.LOG_SPACE`, adopté True) : fit sur
+    log(price) au lieu du prix brut, cf. note d'adoption en tête de module."""
     import prophet_model
+    log_space = prophet_model.LOG_SPACE if log_space is None else log_space
+    y = train.astype(float).values.flatten()
     df_train = pd.DataFrame({
         "ds": pd.to_datetime(train.index),
-        "y": np.log(train.astype(float).values.flatten()),
+        "y": np.log(y) if log_space else y,
     })
     model = prophet_model.Prophet(
         interval_width=1 - prophet_model.PI_ALPHA,
@@ -135,25 +202,19 @@ def fit_prophet(train: pd.Series):
 
 
 def forecast_from_fitted_prophet(model, last_date, horizons: list,
-                                 sigma_scale: float = None) -> dict:
+                                 log_space: bool = None, sigma_scale: dict = None) -> dict:
     """Interroge directement les dates futures (jours ouvrés au-delà de last_date)
     sur un modèle déjà fitté — Prophet élargit nativement l'IC avec la distance
     dans le futur, sans dépendre d'un état interne à mettre à jour.
 
-    `model` est fitté sur le log-prix (fit_prophet ci-dessus) : yhat/yhat_lower/
-    yhat_upper sont ici en échelle log, ré-exponentiés avant retour.
-
-    `sigma_scale` (optionnel, défaut None = pas de correction) : correction
-    multiplicative de largeur, appliquée uniformément à tous les horizons autour
-    de leur propre point prédit -- même paramètre et même raison que
-    `prophet_model.next_step_prophet` : les résidus in-sample sous-estiment
-    l'erreur out-of-sample (cf. docstring de `fit_prophet` ci-dessus), donc cette
-    correction ne peut pas être dérivée du fit lui-même. À fournir par l'appelant
-    depuis ses propres résidus out-of-sample suivis dans le temps (ex.
-    √EWMA(z²) sur les origines déjà réalisées d'un backtest walk-forward, ou
-    depuis tracking.db en production -- intégration pipeline pas encore faite,
-    cf. HANDOFF_sigma_calibration_suivi.md §8.1). None = comportement actuel
-    (log-espace seul, pas encore recalibré en variance)."""
+    `log_space` DOIT être la même valeur que celle passée à `fit_prophet` pour ce
+    `model` (résout l'exponentiation des bornes, sinon `yhat`/`yhat_lower/upper`
+    sont en espace log alors qu'on les traiterait comme des prix). `sigma_scale`
+    (dict optionnel `{h_days: facteur}`) : correction EWMA appliquée EN ESPACE DE
+    FIT (log si log_space, mirror `prophet_model.next_step_prophet`/`run_prophet`)
+    avant l'exponentiation -- pas après, l'ordre change le résultat."""
+    import prophet_model
+    log_space = prophet_model.LOG_SPACE if log_space is None else log_space
     max_h = max(horizons)
     last_date = pd.to_datetime(last_date)
     future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=max_h)
@@ -164,22 +225,26 @@ def forecast_from_fitted_prophet(model, last_date, horizons: list,
         i = h - 1
         row = forecast.iloc[i]
         yhat = float(row["yhat"])
-        lo, hi = float(row["yhat_lower"]), float(row["yhat_upper"])
-        if sigma_scale is not None:
-            lo = yhat - (yhat - lo) * float(sigma_scale)
-            hi = yhat + (hi - yhat) * float(sigma_scale)
-        results[h] = (float(np.exp(yhat)), float(np.exp(lo)), float(np.exp(hi)))
+        lo, hi = _scaled_bounds(yhat, float(row["yhat_lower"]), float(row["yhat_upper"]),
+                                h, sigma_scale)
+        if log_space:
+            results[h] = (float(np.exp(yhat)), float(np.exp(lo)), float(np.exp(hi)))
+        else:
+            results[h] = (yhat, lo, hi)
     return results
 
 
 def forecast_horizons_prophet(train: pd.Series, horizons: list,
-                              sigma_scale: float = None) -> dict:
+                              log_space: bool = None, sigma_scale: dict = None) -> dict:
     """Fit once (fit_prophet) puis forecast (forecast_from_fitted_prophet) — inchangé
     pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
-    `sigma_scale` : voir forecast_from_fitted_prophet."""
-    model = fit_prophet(train)
+    Résout `log_space` une seule fois ici pour garantir que fit et forecast utilisent
+    exactement le même espace (cf. docstring de forecast_from_fitted_prophet)."""
+    import prophet_model
+    log_space = prophet_model.LOG_SPACE if log_space is None else log_space
+    model = fit_prophet(train, log_space=log_space)
     return forecast_from_fitted_prophet(model, train.index[-1], horizons,
-                                        sigma_scale=sigma_scale)
+                                        log_space=log_space, sigma_scale=sigma_scale)
 
 
 # ── LSTM ──────────────────────────────────────────────────────────────────────
@@ -222,14 +287,15 @@ def fit_lstm(train: pd.Series, epochs: int = None, seed: int = None, seq_len: in
 
 
 def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list,
-                              seq_len: int = None) -> dict:
+                              seq_len: int = None, sigma_scale: dict = None) -> dict:
     """Un seul rollout récursif de max(horizons) pas à partir d'objets déjà fittés :
     le réseau se ré-alimente de ses propres prédictions (jamais du vrai futur,
     contrainte point-in-time). L'IC s'élargit en sqrt(h) à partir de l'écart-type
     des résidus d'entraînement (même convention que next_step_lstm).
 
     `seq_len` : DOIT être la même valeur que celle passée à `fit_lstm` pour ce
-    `model` (défaut `lstm_model.SEQ_LEN`, comportement daily inchangé)."""
+    `model` (défaut `lstm_model.SEQ_LEN`, comportement daily inchangé). `sigma_scale`
+    : cf. note d'adoption en tête de module (_scaled_bounds)."""
     import lstm_model
     seq_len = lstm_model.SEQ_LEN if seq_len is None else seq_len
     max_h = max(horizons)
@@ -250,30 +316,38 @@ def forecast_from_fitted_lstm(model, scaler, std: float, scaled, horizons: list,
         i = h - 1
         point = float(rollout_prices[i])
         sigma_h = std * np.sqrt(h)
-        results[h] = (point, point - 1.96 * sigma_h, point + 1.96 * sigma_h)
+        lo_raw, hi_raw = point - 1.96 * sigma_h, point + 1.96 * sigma_h
+        lo, hi = _scaled_bounds(point, lo_raw, hi_raw, h, sigma_scale)
+        results[h] = (point, lo, hi)
     return results
 
 
 def forecast_horizons_lstm(train: pd.Series, horizons: list, epochs: int = None,
-                           seed: int = None, seq_len: int = None) -> dict:
+                           seed: int = None, seq_len: int = None,
+                           sigma_scale: dict = None) -> dict:
     """Fit once (fit_lstm) puis forecast (forecast_from_fitted_lstm) — inchangé
     pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
     `seq_len=None` -> défaut `lstm_model.SEQ_LEN`, comportement daily inchangé."""
     model, scaler, std, scaled = fit_lstm(train, epochs=epochs, seed=seed, seq_len=seq_len)
-    return forecast_from_fitted_lstm(model, scaler, std, scaled, horizons, seq_len=seq_len)
+    return forecast_from_fitted_lstm(model, scaler, std, scaled, horizons, seq_len=seq_len,
+                                     sigma_scale=sigma_scale)
 
 
 # ── Naive ─────────────────────────────────────────────────────────────────────
-def forecast_horizons_naive(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_naive(train: pd.Series, horizons: list, sigma_scale: dict = None) -> dict:
     """Persistence stricte (Point 0 du brief) : point_h = dernier_prix, exactement ;
     IC95 = dernier_prix ± 1.96·σ·sqrt(h), σ = écart-type des variations 1 jour du train
-    (échelle marche aléatoire, même convention que les autres modèles)."""
+    (échelle marche aléatoire, même convention que les autres modèles).
+
+    `sigma_scale` : cf. note d'adoption en tête de module (_scaled_bounds)."""
     last_price = float(train.iloc[-1])
     sigma = naive_model.train_sigma(train)
     results = {}
     for h in horizons:
         half = naive_model.Z_95 * sigma * np.sqrt(h)
-        results[h] = (last_price, last_price - half, last_price + half)
+        lo_raw, hi_raw = last_price - half, last_price + half
+        lo, hi = _scaled_bounds(last_price, lo_raw, hi_raw, h, sigma_scale)
+        results[h] = (last_price, lo, hi)
     return results
 
 

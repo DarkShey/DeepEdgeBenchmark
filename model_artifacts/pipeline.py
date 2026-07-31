@@ -94,6 +94,7 @@ from benchmarks.regime_overlay import fit_predict_regime
 
 from validation import tracking_db as td
 from validation import verdict_rules
+from validation import sigma_scale as sigma_scale_mod
 
 from model_artifacts import crps_kpis
 
@@ -126,6 +127,24 @@ TRAIN_RATIO = 0.85
 WINDOW_YEARS = 3
 DEFAULT_SEED = 42
 MAX_D7_ROLLING_ORIGINS = 10   # borne le coût du refit répété (cf. docstring module)
+
+# Chantier 1c de BRIEF_branchement_prod_calibration_sigma.md : "on" (défaut) branche les
+# adoptions sigma de models/*.py sur benchmarks/multi_horizon.py (skew-t ARIMA-GARCH,
+# log-espace Prophet, correction EWMA sigma_scale SARIMA/Prophet/Naive/LSTM depuis
+# tracking.db) -- "off" (CLI --calibrate-sigma off) restaure le comportement historique
+# de mh.py bit-for-bit (cf. _sigma_adoption_kwargs, docstring de benchmarks/multi_horizon.py).
+DEFAULT_CALIBRATE_SIGMA = "on"
+
+
+def _sigma_adoption_kwargs(calibrate_sigma: str) -> tuple:
+    """(dist, log_space) à passer à _forecast_horizon/_forecast_all_horizons pour ce
+    réglage de --calibrate-sigma : (None, None) laisse benchmarks/multi_horizon.py
+    appliquer ses propres défauts adoptés (skew-t / log-espace, résolus depuis
+    arima_model.GARCH_DIST / prophet_model.LOG_SPACE) ; "off" les repasse explicitement
+    à leur valeur legacy (dist normale, prix), pour la réversibilité bit-for-bit du flag."""
+    if calibrate_sigma == "off":
+        return "normal", False
+    return None, None
 
 
 # ── Utilitaires ────────────────────────────────────────────────────────────────
@@ -183,8 +202,11 @@ def get_lib_versions() -> dict:
 # extrait sans changement de comportement) — aucune logique de modélisation ici.
 
 def _arima_fit(train, seed=None, epochs=None):
-    arima_res, garch_res = mh.fit_arima(train)
-    return {"arima_res": arima_res, "garch_res": garch_res, "last_price": float(train.iloc[-1])}
+    import arima_model
+    dist = arima_model.GARCH_DIST
+    arima_res, garch_res = mh.fit_arima(train, dist=dist)
+    return {"arima_res": arima_res, "garch_res": garch_res, "last_price": float(train.iloc[-1]),
+            "dist": dist}
 
 
 def _arima_quality_ok(fitted) -> bool:
@@ -195,7 +217,8 @@ def _arima_quality_ok(fitted) -> bool:
 
 def _arima_serialize(fitted, out_dir: Path):
     with open(out_dir / "model.pkl", "wb") as f:
-        pickle.dump({"arima_res": fitted["arima_res"], "garch_res": fitted["garch_res"]}, f)
+        pickle.dump({"arima_res": fitted["arima_res"], "garch_res": fitted["garch_res"],
+                    "dist": fitted.get("dist")}, f)
     pd.DataFrame({"resid": np.asarray(fitted["arima_res"].resid, dtype=float)}).to_parquet(
         out_dir / "residuals.parquet"
     )
@@ -204,14 +227,15 @@ def _arima_serialize(fitted, out_dir: Path):
 def _arima_hyperparams(fitted) -> dict:
     import arima_model
     return {
-        "order": list(arima_model.ARIMA_ORDER), "garch_p": 1, "garch_q": 1, "garch_dist": "normal",
+        "order": list(arima_model.ARIMA_ORDER), "garch_p": 1, "garch_q": 1,
+        "garch_dist": fitted.get("dist", arima_model.GARCH_DIST),
         "aic": _num(fitted["arima_res"].aic), "bic": _num(fitted["arima_res"].bic),
     }
 
 
 def _arima_forecast(fitted, horizons):
     return mh.forecast_from_fitted_arima(fitted["arima_res"], fitted["garch_res"],
-                                         fitted["last_price"], horizons)
+                                         fitted["last_price"], horizons, dist=fitted.get("dist"))
 
 
 def _sarima_fit(train, seed=None, epochs=None):
@@ -321,7 +345,7 @@ def _reload_arima(out_dir: Path, train: pd.Series):
     with open(out_dir / "model.pkl", "rb") as f:
         bundle = pickle.load(f)
     return {"arima_res": bundle["arima_res"], "garch_res": bundle["garch_res"],
-            "last_price": float(train.iloc[-1])}
+            "last_price": float(train.iloc[-1]), "dist": bundle.get("dist")}
 
 
 def _reload_sarima(out_dir: Path, train: pd.Series):
@@ -541,7 +565,15 @@ def _run_model_d1(model_key: str, train: pd.Series, validation: pd.Series, seed,
 
 def _compute_metrics_for(model_key: str, actual, predicted, pi_lower, pi_upper) -> dict:
     """compute_metrics est identique dans les 4 modules + naive_model — on prend
-    celui du modèle concerné plutôt que d'en réimplémenter un."""
+    celui du modèle concerné plutôt que d'en réimplémenter un.
+
+    ARIMA-GARCH fait exception (bug pré-existant au commit cd59c9d, vérifié hors
+    périmètre de ce brief -- `git show HEAD:model_artifacts/pipeline.py` a exactement
+    le même appel avant toute modification ici -- corrigé au passage pour une suite
+    verte, cf. test_gate2_passes_and_metrics_have_expected_keys[D7-ARIMA-GARCH]) : sa
+    signature est `compute_metrics(actual, predicted, pi_bounds={level: (lo, hi)}, ...)`,
+    pas `pi_lower=`/`pi_upper=` comme les 5 autres modules -- l'appeler avec
+    `pi_lower=`/`pi_upper=` levait TypeError."""
     import importlib
     module_name = {
         "ARIMA-GARCH": "arima_model", "SARIMA": "sarima_model",
@@ -549,53 +581,73 @@ def _compute_metrics_for(model_key: str, actual, predicted, pi_lower, pi_upper) 
         "TSDiff": "tsdiff_model",
     }[model_key]
     mod = importlib.import_module(module_name)
+    if model_key == "ARIMA-GARCH":
+        return mod.compute_metrics(actual, predicted, pi_bounds={0.95: (pi_lower, pi_upper)})
     return mod.compute_metrics(actual, predicted, pi_lower=pi_lower, pi_upper=pi_upper)
 
 
-def _forecast_horizon(model_key: str, train_extended: pd.Series, h_days: int, seed, epochs):
+def _forecast_horizon(model_key: str, train_extended: pd.Series, h_days: int, seed, epochs,
+                      dist=None, log_space=None, sigma_scale: dict = None):
+    """`dist`/`log_space` : cf. _sigma_adoption_kwargs (None, None laisse mh.py adopter
+    ses propres défauts). `sigma_scale` (dict {h_days: facteur}) : jamais fourni par
+    _run_model_d7_rolling (le seul appelant actuel) -- la correction EWMA n'a été
+    validée qu'en 1-pas (D+1), cf. §Périmètre de BRIEF_branchement_prod_calibration_sigma.md."""
     if model_key == "ARIMA-GARCH":
-        return mh.forecast_horizons_arima(train_extended, [h_days])[h_days]
+        return mh.forecast_horizons_arima(train_extended, [h_days], dist=dist)[h_days]
     if model_key == "SARIMA":
-        return mh.forecast_horizons_sarima(train_extended, [h_days])[h_days]
+        return mh.forecast_horizons_sarima(train_extended, [h_days], sigma_scale=sigma_scale)[h_days]
     if model_key == "Prophet":
-        return mh.forecast_horizons_prophet(train_extended, [h_days])[h_days]
+        return mh.forecast_horizons_prophet(train_extended, [h_days], log_space=log_space,
+                                            sigma_scale=sigma_scale)[h_days]
     if model_key == "LSTM":
-        return mh.forecast_horizons_lstm(train_extended, [h_days], epochs=epochs, seed=seed)[h_days]
+        return mh.forecast_horizons_lstm(train_extended, [h_days], epochs=epochs, seed=seed,
+                                         sigma_scale=sigma_scale)[h_days]
     if model_key == "Naive":
-        return mh.forecast_horizons_naive(train_extended, [h_days])[h_days]
+        return mh.forecast_horizons_naive(train_extended, [h_days], sigma_scale=sigma_scale)[h_days]
     if model_key == "TSDiff":
         return mh.forecast_horizons_tsdiff(train_extended, [h_days], seed=seed)[h_days]
     raise ValueError(model_key)
 
 
-def _forecast_all_horizons(model_key: str, train_extended: pd.Series, horizons_days: list, seed, epochs) -> dict:
+def _forecast_all_horizons(model_key: str, train_extended: pd.Series, horizons_days: list, seed, epochs,
+                           dist=None, log_space=None, sigma_scale: dict = None) -> dict:
     """Comme _forecast_horizon mais pour plusieurs horizons en un seul fit (contrat
     forecast_horizons_<model> : fit once puis prévoit tous les horizons demandés) —
     utilisé pour la prévision live (hors-échantillon, au-delà de window_end), fittée
     une fois par (modèle, actif) et réutilisée pour D1 et D7 (cf. Gate 1 qui fait de
-    même via copy_serialized_artifacts)."""
+    même via copy_serialized_artifacts).
+
+    `dist`/`log_space`/`sigma_scale` : cf. _forecast_horizon / _sigma_adoption_kwargs."""
     if model_key == "ARIMA-GARCH":
-        return mh.forecast_horizons_arima(train_extended, horizons_days)
+        return mh.forecast_horizons_arima(train_extended, horizons_days, dist=dist)
     if model_key == "SARIMA":
-        return mh.forecast_horizons_sarima(train_extended, horizons_days)
+        return mh.forecast_horizons_sarima(train_extended, horizons_days, sigma_scale=sigma_scale)
     if model_key == "Prophet":
-        return mh.forecast_horizons_prophet(train_extended, horizons_days)
+        return mh.forecast_horizons_prophet(train_extended, horizons_days, log_space=log_space,
+                                            sigma_scale=sigma_scale)
     if model_key == "LSTM":
-        return mh.forecast_horizons_lstm(train_extended, horizons_days, epochs=epochs, seed=seed)
+        return mh.forecast_horizons_lstm(train_extended, horizons_days, epochs=epochs, seed=seed,
+                                         sigma_scale=sigma_scale)
     if model_key == "Naive":
-        return mh.forecast_horizons_naive(train_extended, horizons_days)
+        return mh.forecast_horizons_naive(train_extended, horizons_days, sigma_scale=sigma_scale)
     if model_key == "TSDiff":
         return mh.forecast_horizons_tsdiff(train_extended, horizons_days, seed=seed)
     raise ValueError(model_key)
 
 
 def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Series,
-                          h_days: int, seed, epochs, max_origins: int) -> dict:
+                          h_days: int, seed, epochs, max_origins: int,
+                          dist=None, log_space=None) -> dict:
     """D+7 (ou plus généralement h_days > 1) : aucune API d'état incrémental commune
     aux 4 modèles (Prophet/LSTM n'en ont pas) -> évaluation par origines glissantes,
     chaque origine ré-appelant forecast_horizons_<model> tel quel (refit inclus,
     exactement le comportement déjà existant de cette fonction). max_origins borne
-    le coût total (limitation documentée, cf. docstring de module)."""
+    le coût total (limitation documentée, cf. docstring de module).
+
+    `dist`/`log_space` : cf. _sigma_adoption_kwargs -- les adoptions distributionnelles
+    (skew-t ARIMA-GARCH, log-espace Prophet) sont indépendantes de l'horizon (§Périmètre
+    du brief), donc appliquées ici aussi par défaut (None, None). JAMAIS de sigma_scale
+    ici : la correction EWMA n'a été validée qu'en 1-pas (D+1), cf. _forecast_horizon."""
     n_val = len(validation)
     max_origin = n_val - h_days
     if max_origin < 1:
@@ -609,7 +661,8 @@ def _run_model_d7_rolling(model_key: str, train: pd.Series, validation: pd.Serie
         extended_train = pd.concat([train, validation.iloc[:origin]]) if origin > 0 else train
         target_idx = origin + h_days - 1
         actual = float(validation.iloc[target_idx])
-        point, lo, hi = _forecast_horizon(model_key, extended_train, h_days, seed, epochs)
+        point, lo, hi = _forecast_horizon(model_key, extended_train, h_days, seed, epochs,
+                                          dist=dist, log_space=log_space)
         dates.append(validation.index[target_idx])
         actuals.append(actual); preds.append(point); los.append(lo); his.append(hi)
         # dernier prix observé à l'origine — la prévision naïve (marche aléatoire)
@@ -697,13 +750,20 @@ def _gate2_metrics_ok(payload: dict) -> bool:
 
 def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.Series,
                    horizon_label: str, seed=None, epochs=None,
-                   max_d7_origins: int = MAX_D7_ROLLING_ORIGINS):
+                   max_d7_origins: int = MAX_D7_ROLLING_ORIGINS,
+                   calibrate_sigma: str = DEFAULT_CALIBRATE_SIGMA):
     """Gate 2 : évalue sur les 15% de fin, retourne (payload, gate2_ok, series). payload
     et series sont None si le calcul a levé une exception. `series` (dict avec
     dates/actual/predicted/pi_lower/pi_upper, alignés point à point) alimente
     write_predictions_parquet — pour D1 c'est le validation set complet (walk-forward
-    1-step), pour D7 c'est un point par origine glissante (cf. _run_model_d7_rolling)."""
+    1-step), pour D7 c'est un point par origine glissante (cf. _run_model_d7_rolling).
+
+    `calibrate_sigma` ("on" défaut / "off") : D1 passe par _run_model_d1 -> run_<model> de
+    models/*.py, déjà adopté indépendamment de ce flag (commit 4888afe, hors périmètre de
+    ce flag) ; seul D7 (mh.py via _run_model_d7_rolling) y est sensible, cf.
+    _sigma_adoption_kwargs."""
     h_days = HORIZON_TRADING_DAYS[horizon_label]
+    dist_kw, log_space_kw = _sigma_adoption_kwargs(calibrate_sigma)
     try:
         if horizon_label == "D1":
             result = _run_model_d1(model_key, train, validation, seed, epochs)
@@ -717,7 +777,8 @@ def evaluate_gate2(model_key: str, asset: str, train: pd.Series, validation: pd.
             # référence naïve des métriques de skill (Point 1 du brief)
             prev_arr = [float(train.iloc[-1])] + actual_arr[:-1]
         else:
-            result = _run_model_d7_rolling(model_key, train, validation, h_days, seed, epochs, max_d7_origins)
+            result = _run_model_d7_rolling(model_key, train, validation, h_days, seed, epochs,
+                                           max_d7_origins, dist=dist_kw, log_space=log_space_kw)
             n_val = result.pop("_n_val")
             dates = result.pop("_dates")
             actual_arr = result.pop("_actuals")
@@ -854,7 +915,8 @@ def _model_unit_test_results(model_key: str) -> dict:
 
 def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path, seed, epochs,
                          max_d7_origins: int, all_horizons: list, gate2_horizons: list,
-                         business_h_days: set, skip_training: bool) -> dict:
+                         business_h_days: set, skip_training: bool,
+                         sigma_scale_map: dict = None) -> dict:
     """LSTM tourne dans un sous-processus neuf et isolé (model_artifacts/lstm_worker.py),
     jamais dans CE process : ce module importe benchmarks.multi_horizon (donc
     arima_model/regime_overlay) sans condition dès son chargement (cf. import plus haut),
@@ -869,7 +931,12 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
     `gate2_horizons` peut être un sous-ensemble (les horizons dont Gate2 n'est PAS
     réutilisable depuis un run antérieur, cf. process_asset_model) -- vide si tout est
     réutilisable. `skip_training` saute le fit Gate1 du worker (cf. lstm_worker.py
-    --skip-training) sans toucher gate2_horizons ni la prévision live, indépendants."""
+    --skip-training) sans toucher gate2_horizons ni la prévision live, indépendants.
+
+    `sigma_scale_map` (dict optionnel {h_days: facteur}, Chantier 1b du brief
+    branchement-prod) : n'affecte QUE la prévision live du worker (jamais Gate2 D1/D7,
+    cf. lstm_worker._forecast_from_fitted_lstm/_d7_rolling_origins, qui ne la reçoivent
+    jamais) -- sérialisé en JSON pour traverser la frontière subprocess."""
     with tempfile.TemporaryDirectory() as tmp:
         data_pickle = Path(tmp) / "data.pkl"
         result_json = Path(tmp) / "result.json"
@@ -891,6 +958,8 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
             cmd += ["--epochs", str(epochs)]
         if skip_training:
             cmd += ["--skip-training"]
+        if sigma_scale_map:
+            cmd += ["--sigma-scale-json", json.dumps(sigma_scale_map)]
         subprocess.run(cmd, cwd=REPO_ROOT, check=True)
         result = json.loads(result_json.read_text())
         # Clés JSON toujours strings -- reconverties en int (h_days) pour matcher
@@ -989,7 +1058,8 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                         validation: pd.Series, run_date_str: str, run_date_iso: str,
                         window_start: str, window_end: str, seed: int, epochs,
                         max_d7_origins: int, horizons: list, run_id: str, regime_tag: str,
-                        db_path: str, full_retrain: bool = False) -> list:
+                        db_path: str, full_retrain: bool = False,
+                        calibrate_sigma: str = DEFAULT_CALIBRATE_SIGMA) -> list:
     """Gate 1 une fois (sauf Naive, rien à entraîner) puis Gate 2 par horizon.
     Retourne la liste des logs (un par horizon).
 
@@ -998,7 +1068,12 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     quels, cf. find_reusable_run_dir/reuse_gate2_payload) -- seule la prévision live
     (hors-échantillon) reste toujours recalculée. Bascule automatiquement sur un calcul
     complet, combinaison par combinaison et horizon par horizon, si aucun run antérieur
-    n'a les artefacts nécessaires (premier run, ou historique incomplet)."""
+    n'a les artefacts nécessaires (premier run, ou historique incomplet).
+
+    `calibrate_sigma` ("on" défaut / "off", Chantier 1 de BRIEF_branchement_prod_calibration_sigma.md) :
+    branche les adoptions sigma de models/*.py sur la prévision live (mh.py, cf.
+    _sigma_adoption_kwargs) et sur Gate2 D7 (evaluate_gate2) -- "off" restaure le
+    comportement historique de ces deux chemins bit-for-bit."""
     train_end = str(train.index[-1].date())
     logs = []
 
@@ -1026,6 +1101,21 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         for horizon_label in horizons
     }
 
+    # sigma_scale (Chantier 1b, BRIEF_branchement_prod_calibration_sigma.md) : correction
+    # EWMA causale sqrt(EWMA(z^2)) depuis tracking.db, calculée UNE SEULE FOIS ici (donc
+    # avec le même cutoff_date="fin de validation" pour Gate2/live -- pas de refetch par
+    # horizon) et appliquée UNIQUEMENT à l'horizon D+1 business (jamais D+7, cf.
+    # §Périmètre du brief : la correction EWMA n'a été validée qu'en 1-pas). Hors
+    # ARIMA-GARCH (sigma dynamique déjà natif via GARCH, jamais cette correction, cf.
+    # HANDOFF §5) et hors TSDiff (échantillonnage natif) -- les deux seuls modèles du
+    # registre qui n'acceptent pas `sigma_scale=` côté mh.py.
+    d1_h_days = 1 + business_lag
+    sigma_scale_map = None
+    if calibrate_sigma == "on" and model_key in ("SARIMA", "Prophet", "Naive", "LSTM"):
+        cutoff_date_str = str(validation.index[-1].date())
+        scale = sigma_scale_mod.sigma_scale(model_key, ticker, 1, cutoff_date_str, db_path)
+        sigma_scale_map = {d1_h_days: scale}
+
     lstm_worker_result = None
     gate1_reused = False
     if model_key == "LSTM":
@@ -1033,7 +1123,8 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         gate2_worker_horizons = [h for h in horizons if gate2_reused_dirs.get(h) is None]
         lstm_worker_result = _run_lstm_via_worker(train, validation, first_out_dir, seed, epochs,
                                                   max_d7_origins, horizons, gate2_worker_horizons,
-                                                  business_h_days, skip_lstm_training)
+                                                  business_h_days, skip_lstm_training,
+                                                  sigma_scale_map=sigma_scale_map)
         if skip_lstm_training:
             copy_serialized_artifacts(gate1_reused_dir, first_out_dir, model_key)
             gate1_ok, gate1_reused = True, True
@@ -1074,8 +1165,11 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
         # déjà calculée par le worker (voir --live-horizons dans _run_lstm_via_worker).
         forecasts_by_h = lstm_worker_result.get("live_forecast", {}) if lstm_worker_result else {}
     else:
+        dist_kw, log_space_kw = _sigma_adoption_kwargs(calibrate_sigma)
         try:
-            forecasts_by_h = _forecast_all_horizons(model_key, full_series, h_days_list, seed, epochs)
+            forecasts_by_h = _forecast_all_horizons(model_key, full_series, h_days_list, seed, epochs,
+                                                     dist=dist_kw, log_space=log_space_kw,
+                                                     sigma_scale=sigma_scale_map)
         except Exception as exc:
             forecasts_by_h = {}
             print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
@@ -1117,7 +1211,8 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                     print(f"    [Gate2 FAIL] LSTM {horizon_label} : {g2.get('error')}")
             else:
                 payload, gate2_ok, series = evaluate_gate2(model_key, ticker, train, validation, horizon_label,
-                                                           seed=seed, epochs=epochs, max_d7_origins=max_d7_origins)
+                                                           seed=seed, epochs=epochs, max_d7_origins=max_d7_origins,
+                                                           calibrate_sigma=calibrate_sigma)
         if gate2_ok:
             # Prévision hors-échantillon (au-delà de last_date, la dernière clôture connue)
             # repliée directement dans metrics.json plutôt que dans un forecast.json séparé
@@ -1162,10 +1257,13 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
 
 def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DEFAULT_SEED,
                  epochs=None, max_d7_origins=MAX_D7_ROLLING_ORIGINS, run_id=None,
-                 db_path=DEFAULT_DB_PATH, full_retrain: bool = False) -> list:
+                 db_path=DEFAULT_DB_PATH, full_retrain: bool = False,
+                 calibrate_sigma: str = DEFAULT_CALIBRATE_SIGMA) -> list:
     """`full_retrain=False` (défaut) : cf. process_asset_model -- Gate1/Gate2 réutilisent un
     run antérieur exploitable au lieu d'être recalculés, seule la prévision live tourne
-    systématiquement. `full_retrain=True` : comportement historique, tout est recalculé."""
+    systématiquement. `full_retrain=True` : comportement historique, tout est recalculé.
+
+    `calibrate_sigma` : cf. process_asset_model / _sigma_adoption_kwargs."""
     models = models or MODELS
     assets = assets or ASSETS
     horizons = horizons or list(HORIZON_TRADING_DAYS)
@@ -1205,7 +1303,8 @@ def run_pipeline(models=None, assets=None, horizons=None, run_date=None, seed=DE
             logs = process_asset_model(model_key, ticker, asset_class, train, validation,
                                        run_date_str, run_date_iso, window_start, window_end,
                                        seed, epochs, max_d7_origins, horizons, run_id,
-                                       regime_tag, db_path, full_retrain=full_retrain)
+                                       regime_tag, db_path, full_retrain=full_retrain,
+                                       calibrate_sigma=calibrate_sigma)
             all_logs.extend(logs)
 
     export_business_validation(run_id, db_path=db_path, run_dir_root=RUN_ROOT)
@@ -1250,6 +1349,13 @@ def main():
                         "live (hors-échantillon) tourne toujours. Bascule automatiquement sur un "
                         "calcul complet, combinaison par combinaison, si aucun run antérieur "
                         "n'a les artefacts nécessaires (ex. tout premier run).")
+    p.add_argument("--calibrate-sigma", choices=["on", "off"], default=DEFAULT_CALIBRATE_SIGMA,
+                   help="'on' (défaut) : branche les adoptions sigma de models/*.py (skew-t "
+                        "ARIMA-GARCH, log-espace Prophet, correction EWMA sigma_scale depuis "
+                        "tracking.db pour SARIMA/Prophet/Naive/LSTM en D+1 uniquement) sur la "
+                        "prévision live et sur Gate2 D7 -- cf. BRIEF_branchement_prod_calibration_sigma.md. "
+                        "'off' restaure le comportement historique de benchmarks/multi_horizon.py "
+                        "bit-for-bit (dist normale, prix, aucune correction).")
     args = p.parse_args()
     run_date = datetime.strptime(args.run_date, "%Y-%m-%d") if args.run_date else None
 
@@ -1264,7 +1370,8 @@ def main():
         if args.run_date: common += ["--run-date", args.run_date]
         if args.full_retrain: common += ["--full-retrain"]
         common += ["--seed", str(args.seed), "--max-d7-origins", str(args.max_d7_origins),
-                  "--run-id", run_id, "--db-path", args.db_path]
+                  "--run-id", run_id, "--db-path", args.db_path,
+                  "--calibrate-sigma", args.calibrate_sigma]
 
         print(f"=== Sous-processus 1/2 : {', '.join(_MODELS_BEFORE_LSTM)} ===")
         subprocess.run([sys.executable, "-m", "model_artifacts.pipeline",
@@ -1284,7 +1391,8 @@ def main():
 
     logs = run_pipeline(models=models, assets=assets, horizons=horizons, run_date=run_date,
                         seed=args.seed, epochs=args.epochs, max_d7_origins=args.max_d7_origins,
-                        run_id=args.run_id, db_path=args.db_path, full_retrain=args.full_retrain)
+                        run_id=args.run_id, db_path=args.db_path, full_retrain=args.full_retrain,
+                        calibrate_sigma=args.calibrate_sigma)
 
     n_gate1_pass = sum(1 for l in logs if l["gate1"])
     n_gate2_pass = sum(1 for l in logs if l["gate2"])

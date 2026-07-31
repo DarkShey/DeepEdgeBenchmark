@@ -103,8 +103,13 @@ def _fit_lstm(train, epochs=None, seed=None):
     return model, scaler, std, scaled
 
 
-def _forecast_from_fitted_lstm(model, scaler, std, scaled, horizons):
-    """Dupliqué de benchmarks/multi_horizon.py::forecast_from_fitted_lstm — même raison."""
+def _forecast_from_fitted_lstm(model, scaler, std, scaled, horizons, sigma_scale=None):
+    """Dupliqué de benchmarks/multi_horizon.py::forecast_from_fitted_lstm — même raison.
+
+    `sigma_scale` (dict optionnel {h_days: facteur}, Chantier 1b de
+    BRIEF_branchement_prod_calibration_sigma.md) : correction multiplicative autour du
+    point, mirror mh.forecast_from_fitted_lstm/_scaled_bounds -- un horizon absent du
+    dict (ou sigma_scale=None) n'est PAS corrigé, bornes brutes inchangées."""
     import lstm_model
     seq_len = lstm_model.SEQ_LEN
     max_h = max(horizons)
@@ -125,7 +130,8 @@ def _forecast_from_fitted_lstm(model, scaler, std, scaled, horizons):
         i = h - 1
         point = float(rollout_prices[i])
         sigma_h = std * np.sqrt(h)
-        results[h] = (point, point - 1.96 * sigma_h, point + 1.96 * sigma_h)
+        corr = 1.0 if sigma_scale is None else float(sigma_scale.get(h, 1.0))
+        results[h] = (point, point - 1.96 * sigma_h * corr, point + 1.96 * sigma_h * corr)
     return results
 
 
@@ -185,6 +191,11 @@ def main():
                         "train+validation combinés -- cf. process_asset_model/_forecast_all_horizons "
                         "de pipeline.py, qui ne peut pas appeler mh.forecast_horizons_lstm dans son "
                         "propre process (même deadlock que Gate1/Gate2, cf. docstring de module)")
+    p.add_argument("--sigma-scale-json", default=None,
+                   help="JSON {h_days: facteur} (Chantier 1b BRIEF_branchement_prod_calibration_sigma.md) "
+                        "-- correction EWMA appliquée UNIQUEMENT à la prévision live "
+                        "(--live-horizons), jamais à Gate2 D1/D7. Absent = pas de correction "
+                        "(comportement historique).")
     p.add_argument("--skip-training", action="store_true",
                    help="saute le fit Gate1 (85% train, sérialisation) -- cf. pipeline.py "
                         "--full-retrain=False : le process parent recopie alors model.h5/scaler.pkl "
@@ -244,10 +255,14 @@ def main():
     result["live_forecast"] = {}
     if args.live_horizons:
         h_days_list = [int(h) for h in args.live_horizons.split(",")]
+        sigma_scale = None
+        if args.sigma_scale_json:
+            sigma_scale = {int(k): float(v) for k, v in json.loads(args.sigma_scale_json).items()}
         try:
             full_series = pd.concat([train, validation])
             model, scaler, std, scaled = _fit_lstm(full_series, epochs=args.epochs, seed=args.seed)
-            forecasts = _forecast_from_fitted_lstm(model, scaler, std, scaled, h_days_list)
+            forecasts = _forecast_from_fitted_lstm(model, scaler, std, scaled, h_days_list,
+                                                   sigma_scale=sigma_scale)
             result["live_forecast"] = {
                 str(h): [float(point), float(lo), float(hi)]
                 for h, (point, lo, hi) in forecasts.items()
