@@ -1,0 +1,851 @@
+{
+  "config": {
+    "ewma_lambda": 0.94,
+    "z_measured_on": "raw band",
+    "resolution": "date-causal (target_date <= cutoff_date)"
+  },
+  "cells": [
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 95.6,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 94.4,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 90.0,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 88.9,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 83.3,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 86.7,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "SPY",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 96.7,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "SPY",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 94.4,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 94.4,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "TLT",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 96.7,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "TLT",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 95.6,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ZN=F",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "ARIMA-GARCH",
+      "asset": "ZN=F",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 96.7,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "LSTM",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 75.6,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "LSTM",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 80.0,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "LSTM",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 82.2,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "LSTM",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 82.2,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "LSTM",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 90.0,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "LSTM",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 94.4,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "LSTM",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 73.3,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 63.3,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "LSTM",
+      "asset": "SPY",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 84.4,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "LSTM",
+      "asset": "SPY",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 87.8,
+      "cov95_ewma": 87.8,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "LSTM",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "LSTM",
+      "asset": "TLT",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 100.0,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "LSTM",
+      "asset": "TLT",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 100.0,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "LSTM",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "LSTM",
+      "asset": "ZN=F",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "LSTM",
+      "asset": "ZN=F",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "Naive",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 74.4,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 86.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 73.3,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "Naive",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 68.9,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "Naive",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 82.2,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 83.3,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "Naive",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 85.6,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "Naive",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 81.1,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "Naive",
+      "asset": "SPY",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 81.1,
+      "cov95_ewma": 91.1,
+      "cov95_raw_last30": 76.7,
+      "cov95_ewma_last30": 86.7
+    },
+    {
+      "model": "Naive",
+      "asset": "SPY",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 78.9,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "Naive",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "TLT",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "TLT",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "Naive",
+      "asset": "ZN=F",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Naive",
+      "asset": "ZN=F",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 42.2,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 0.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 41.1,
+      "cov95_ewma": 87.8,
+      "cov95_raw_last30": 0.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 38.9,
+      "cov95_ewma": 86.7,
+      "cov95_raw_last30": 0.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 95.6,
+      "cov95_ewma": 98.9,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 93.3,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 92.2,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 75.6,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 76.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Prophet",
+      "asset": "SPY",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 74.4,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 76.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Prophet",
+      "asset": "SPY",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 72.2,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "Prophet",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "TLT",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "TLT",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 95.6,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 100.0
+    },
+    {
+      "model": "Prophet",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "Prophet",
+      "asset": "ZN=F",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "Prophet",
+      "asset": "ZN=F",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 94.4,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "SARIMA",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 74.4,
+      "cov95_ewma": 88.9,
+      "cov95_raw_last30": 86.7,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 74.4,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "SARIMA",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 73.3,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 76.7,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 83.3,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 82.2,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 85.6,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 93.3,
+      "cov95_ewma_last30": 96.7
+    },
+    {
+      "model": "SARIMA",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 82.2,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 80.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "SPY",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 80.0,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "SPY",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 76.7,
+      "cov95_ewma": 90.0,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 83.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "TLT",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "SARIMA",
+      "asset": "TLT",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "n": 90,
+      "cov95_raw": 97.8,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 90.0
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ZN=F",
+      "horizon_unit": "W+2",
+      "n": 90,
+      "cov95_raw": 100.0,
+      "cov95_ewma": 97.8,
+      "cov95_raw_last30": 100.0,
+      "cov95_ewma_last30": 93.3
+    },
+    {
+      "model": "SARIMA",
+      "asset": "ZN=F",
+      "horizon_unit": "W+3",
+      "n": 90,
+      "cov95_raw": 98.9,
+      "cov95_ewma": 96.7,
+      "cov95_raw_last30": 96.7,
+      "cov95_ewma_last30": 90.0
+    }
+  ],
+  "summary": {
+    "ARIMA-GARCH/W+1": {
+      "cov95_raw": 95.1,
+      "cov95_ewma": 93.7,
+      "cov95_raw_last30": 96.0,
+      "cov95_ewma_last30": 93.3
+    },
+    "ARIMA-GARCH/W+2": {
+      "cov95_raw": 95.4,
+      "cov95_ewma": 93.1,
+      "cov95_raw_last30": 94.0,
+      "cov95_ewma_last30": 88.7
+    },
+    "ARIMA-GARCH/W+3": {
+      "cov95_raw": 93.5,
+      "cov95_ewma": 91.8,
+      "cov95_raw_last30": 92.0,
+      "cov95_ewma_last30": 86.7
+    },
+    "LSTM/W+1": {
+      "cov95_raw": 86.0,
+      "cov95_ewma": 93.1,
+      "cov95_raw_last30": 88.7,
+      "cov95_ewma_last30": 91.3
+    },
+    "LSTM/W+2": {
+      "cov95_raw": 90.9,
+      "cov95_ewma": 94.4,
+      "cov95_raw_last30": 92.0,
+      "cov95_ewma_last30": 92.0
+    },
+    "LSTM/W+3": {
+      "cov95_raw": 92.9,
+      "cov95_ewma": 93.6,
+      "cov95_raw_last30": 95.3,
+      "cov95_ewma_last30": 91.3
+    },
+    "Naive/W+1": {
+      "cov95_raw": 86.9,
+      "cov95_ewma": 92.2,
+      "cov95_raw_last30": 92.0,
+      "cov95_ewma_last30": 92.0
+    },
+    "Naive/W+2": {
+      "cov95_raw": 87.5,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 90.0,
+      "cov95_ewma_last30": 92.0
+    },
+    "Naive/W+3": {
+      "cov95_raw": 86.5,
+      "cov95_ewma": 92.9,
+      "cov95_raw_last30": 88.7,
+      "cov95_ewma_last30": 90.7
+    },
+    "Prophet/W+1": {
+      "cov95_raw": 82.2,
+      "cov95_ewma": 94.2,
+      "cov95_raw_last30": 74.7,
+      "cov95_ewma_last30": 98.0
+    },
+    "Prophet/W+2": {
+      "cov95_raw": 81.3,
+      "cov95_ewma": 92.9,
+      "cov95_raw_last30": 73.3,
+      "cov95_ewma_last30": 97.3
+    },
+    "Prophet/W+3": {
+      "cov95_raw": 79.5,
+      "cov95_ewma": 92.9,
+      "cov95_raw_last30": 72.7,
+      "cov95_ewma_last30": 98.7
+    },
+    "SARIMA/W+1": {
+      "cov95_raw": 87.3,
+      "cov95_ewma": 92.9,
+      "cov95_raw_last30": 92.0,
+      "cov95_ewma_last30": 92.6
+    },
+    "SARIMA/W+2": {
+      "cov95_raw": 87.3,
+      "cov95_ewma": 92.9,
+      "cov95_raw_last30": 89.3,
+      "cov95_ewma_last30": 90.7
+    },
+    "SARIMA/W+3": {
+      "cov95_raw": 86.9,
+      "cov95_ewma": 93.3,
+      "cov95_raw_last30": 88.0,
+      "cov95_ewma_last30": 90.7
+    }
+  }
+}

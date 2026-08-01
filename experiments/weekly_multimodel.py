@@ -105,6 +105,22 @@ from weekly_headtohead import ASSETS, HORIZON_LABELS, build_weekly  # noqa: E402
 from epoch_sweep import three_way_split, week_targets, DEFAULT_N_VAL, DEFAULT_N_TEST  # noqa: E402
 
 MODELS = ("ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive")
+
+# ── Calibration sigma du chemin hebdo (adoptée 2026-07-31) ────────────────────
+# Même correction EWMA causale que le D+1/D+7 live (validation/sigma_scale.py,
+# pipeline SIGMA_SCALE_HORIZONS), appliquée ici DANS le walk-forward : à chaque
+# origine, la demi-largeur de bande de W+j est multipliée par sqrt(EWMA(z^2)) des
+# résidus standardisés DÉJÀ RÉSOLUS (z de l'origine k, horizon W+j, n'entre dans
+# l'état qu'à l'origine k+j -- lag de résolution, zéro fuite). Application en
+# ESPACE PRIX autour du point (mh._scaled_bounds), sur la bande brute du modèle :
+# c'est exactement le mécanisme validé post-hoc sur les lignes weekly stockées
+# (experiments/weekly_sigma_scale_validation.py : Prophet 79-82 -> 93-94 % de
+# couverture 95, cellules récentes BTC 0 % -> 98 % ; Naive/SARIMA/LSTM +5-7 pts ;
+# ARIMA-GARCH exclu comme partout, son sigma GARCH est déjà dynamique).
+# --calibrate-sigma off restaure le comportement historique bit-for-bit.
+SIGMA_SCALE_MODELS = ("SARIMA", "Prophet", "Naive", "LSTM")
+EWMA_LAMBDA = 0.94
+_Z975 = 1.959963984540054
 LSTM_SEED = 42
 
 # LSTM régime C (BRIEF_lstm_weekly_retune.md) : SEQ_LEN choisi par actif sur le bloc de
@@ -123,19 +139,25 @@ def load_lstm_weekly_seq_len(path=LSTM_WEEKLY_SWEEP_FILE) -> dict:
     return json.loads(Path(path).read_text())["selected_seq_len"]
 
 
-def forecast_horizons_sarima_weekly(train: pd.Series, horizons: list) -> dict:
+def forecast_horizons_sarima_weekly(train: pd.Series, horizons: list,
+                                    sigma_scale: dict = None) -> dict:
     """SARIMA on weekly-resampled data -- seasonal_order disabled (see module
-    docstring): reduces to plain ARIMA(1,1,1) on weekly closes."""
+    docstring): reduces to plain ARIMA(1,1,1) on weekly closes.
+
+    `sigma_scale` ({h_weeks: facteur}, optionnel) : hook homogène avec mh.* pour
+    les appelants externes. Le walk-forward de ce module (run_model_asset)
+    n'utilise PAS ce hook : il applique la correction centralement en espace
+    prix, cf. la note SIGMA_SCALE_MODELS."""
     history = train.astype(float).values.tolist()
     result = sarima_model.SARIMAX(
         history, order=sarima_model.ORDER, seasonal_order=(0, 0, 0, 0),
         enforce_stationarity=False, enforce_invertibility=False,
     ).fit(disp=False)
-    return mh.forecast_from_fitted_sarima(result, horizons)
+    return mh.forecast_from_fitted_sarima(result, horizons, sigma_scale=sigma_scale)
 
 
 def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list,
-                                     sigma_scale: float = None) -> dict:
+                                     sigma_scale: dict = None) -> dict:
     """Prophet on weekly-resampled data -- weekly_seasonality disabled, future dates
     on W-FRI instead of business days (see module docstring).
 
@@ -144,12 +166,13 @@ def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list,
     too -- this is a separate Prophet fit path (regime C, weekly-native), not a
     caller of multi_horizon.fit_prophet, so it needed its own log/exp fix.
 
-    `sigma_scale` (optional, default None = no correction): same parameter/
-    reasoning as multi_horizon.forecast_from_fitted_prophet -- a multiplicative
-    width correction applied uniformly across horizons, to be supplied by the
-    caller (e.g. an EWMA of realised out-of-sample residuals threaded across the
-    walk-forward origins in run_model_asset's own loop below -- not wired yet,
-    this only adds the hook so it can be without another signature change)."""
+    `sigma_scale` ({h_weeks: facteur}, optionnel -- dict par horizon depuis
+    2026-07-31, aligné sur mh.forecast_from_fitted_prophet qui a fait le même
+    changement scalaire->dict à e0ee61c) : correction appliquée en ESPACE LOG
+    avant exponentiation (mh._scaled_bounds), même convention que mh. Le
+    walk-forward de ce module (run_model_asset) n'utilise PAS ce hook : il
+    applique la correction centralement en espace prix, cf. la note
+    SIGMA_SCALE_MODELS."""
     import prophet_model
     df_train = pd.DataFrame({"ds": pd.to_datetime(train.index),
                              "y": np.log(train.astype(float).values.flatten())})
@@ -166,10 +189,8 @@ def forecast_horizons_prophet_weekly(train: pd.Series, horizons: list,
     for h in horizons:
         row = forecast.iloc[h - 1]
         yhat = float(row["yhat"])
-        lo, hi = float(row["yhat_lower"]), float(row["yhat_upper"])
-        if sigma_scale is not None:
-            lo = yhat - (yhat - lo) * float(sigma_scale)
-            hi = yhat + (hi - yhat) * float(sigma_scale)
+        lo, hi = mh._scaled_bounds(yhat, float(row["yhat_lower"]),
+                                   float(row["yhat_upper"]), h, sigma_scale)
         results[h] = (float(np.exp(yhat)), float(np.exp(lo)), float(np.exp(hi)))
     return results
 
@@ -192,12 +213,21 @@ REGIME_C_FORECAST = {
 
 def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
                     n_val: int, n_test: int, start: str, end: str,
-                    lstm_weekly_seq_len: dict = None) -> dict:
+                    lstm_weekly_seq_len: dict = None,
+                    calibrate_sigma: str = "on") -> dict:
     """regime: 'B' (daily-trained, multi-step) or 'C' (weekly-native).
     `lstm_weekly_seq_len` : {asset_short: SEQ_LEN*}, requis seulement pour
     model_name="LSTM" + regime="C" (cf. BRIEF_lstm_weekly_retune.md) -- construit le
     partial forecast_horizons_lstm avec le SEQ_LEN retenu POUR CET ACTIF, au lieu du
     défaut daily partagé par tous les autres modèles/régime B.
+
+    `calibrate_sigma` ("on" défaut, adopté 2026-07-31 -- cf. SIGMA_SCALE_MODELS) :
+    correction EWMA causale des bandes pour SARIMA/Prophet/Naive/LSTM, appliquée
+    en espace prix par-dessus la bande brute du modèle. L'état par horizon W+j
+    n'ingère le z d'une origine k qu'à l'origine k+j (lag de résolution) ; la
+    toute première origine sort donc toujours la bande brute (état neutre 1.0).
+    Chaque record porte le facteur appliqué (champ "sigma_scale", 1.0 = brut).
+    "off" : bandes brutes historiques, bit-for-bit.
     Returns {"records": [...], "n_failed": int, "T0": str}."""
     daily = td.fetch_data(ticker, start, end)
     weekly, weekly_dates = build_weekly(daily)
@@ -214,6 +244,12 @@ def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
         forecast_fn = (REGIME_C_FORECAST if regime == "C" else REGIME_B_FORECAST)[model_name]
     records, n_failed = [], 0
 
+    # État EWMA par horizon (cf. note SIGMA_SCALE_MODELS) + z² en attente de
+    # résolution : (origine_de_résolution, w_label, z2).
+    calibrate = calibrate_sigma == "on" and model_name in SIGMA_SCALE_MODELS
+    s2 = {w: 1.0 for w in HORIZON_LABELS}
+    pending = []
+
     for k, m in enumerate(test_pos):
         origin_date, daily_pos, target_dates, daily_horizons = week_targets(weekly_dates, daily, m)
         last_price = float(weekly.iloc[m])
@@ -226,6 +262,11 @@ def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
             train_series = daily.iloc[:daily_pos + 1]
             horizons = daily_horizons
 
+        if calibrate:   # ingérer les z² résolus AVANT de prévoir cette origine
+            for resolve_at, w_label, z2 in [p for p in pending if p[0] <= k]:
+                s2[w_label] = EWMA_LAMBDA * s2[w_label] + (1 - EWMA_LAMBDA) * z2
+            pending = [p for p in pending if p[0] > k]
+
         try:
             result = forecast_fn(train_series, horizons)
         except Exception as exc:
@@ -236,8 +277,18 @@ def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
 
         for wi, w_label in enumerate(HORIZON_LABELS):
             h = horizons[wi]
-            point, lo, hi = result[h]
+            point, lo_raw, hi_raw = result[h]
             actual = actuals[wi]
+            scale = float(np.sqrt(s2[w_label])) if calibrate else 1.0
+            lo, hi = mh._scaled_bounds(point, lo_raw, hi_raw, h,
+                                       {h: scale} if calibrate else None)
+            if calibrate:
+                # z² mesuré sur la bande BRUTE (sigma propre du modèle), jamais la
+                # corrigée -- sinon la boucle se mesurerait elle-même et convergerait
+                # vers une sous-correction (point fixe en racine quatrième).
+                sigma_own = max((hi_raw - lo_raw) / (2.0 * _Z975), 1e-12)
+                z2_new = ((actual - float(point)) / sigma_own) ** 2
+                pending.append((k + wi + 1, w_label, z2_new))
             records.append({
                 "asset": asset_short, "horizon": w_label, "model": model_name, "regime": regime,
                 "origin": k, "origin_date": str(origin_date.date()),
@@ -245,6 +296,7 @@ def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
                 "daily_steps": h if regime == "B" else None,
                 "last_close": last_price, "actual": actual,
                 "point": float(point), "lower": float(lo), "upper": float(hi),
+                "sigma_scale": round(scale, 6),
             })
 
     return {"records": records, "n_failed": n_failed, "T0": str(T0_date.date())}
@@ -265,6 +317,10 @@ def main() -> None:
                                        / "weekly_multimodel_results.json"))
     p.add_argument("--lstm-sweep-file", default=str(LSTM_WEEKLY_SWEEP_FILE),
                    help="SEQ_LEN* par actif pour LSTM régime C (experiments/lstm_weekly_sweep.py)")
+    p.add_argument("--calibrate-sigma", choices=["on", "off"], default="on",
+                   help="correction EWMA causale des bandes (SARIMA/Prophet/Naive/"
+                        "LSTM, cf. SIGMA_SCALE_MODELS) ; off = bandes brutes "
+                        "historiques bit-for-bit")
     args = p.parse_args()
     end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
 
@@ -282,7 +338,8 @@ def main() -> None:
                 print(f"[{model_name}/{asset}/{regime}] running {args.n_test} test origins ...")
                 res = run_model_asset(model_name, asset, ASSETS[asset], regime,
                                       args.n_val, args.n_test, args.start, end,
-                                      lstm_weekly_seq_len=lstm_weekly_seq_len)
+                                      lstm_weekly_seq_len=lstm_weekly_seq_len,
+                                      calibrate_sigma=args.calibrate_sigma)
                 elapsed_cell = time.time() - t_cell
                 all_records.extend(res["records"])
                 meta[f"{model_name}|{asset}|{regime}"] = {
