@@ -75,10 +75,17 @@ p.ex. `validation/sigma_scale.py`, réutilisée par `pipeline._forecast_horizon`
   7-pas dédié.
 - **MISE À JOUR 2026-07-31** : le backtest 7-pas dédié a été fait
   (`experiments/d7_sigma_scale_validation.py`, W1 × 5 actifs, correction causale avec lag
-  de résolution 7 j). Verdict : D+7 **activé** pour SARIMA (MACE 6,3→4,7), Prophet
-  (34,1→9,4) et Naive (7,3→4,5) ; **LSTM exclu du D+7** (gain moyen 11,3→7,8 mais
-  dégradation sévère sur SPY 5,0→9,5 — garde-fou par actif à concevoir avant activation).
-  Câblé dans `pipeline.py` (sigma_scale_map étendu à `7+business_lag`), toujours
+  de résolution 7 j). Verdict initial : D+7 activé pour SARIMA (MACE 6,3→4,7), Prophet
+  (34,1→9,4) et Naive (7,3→4,5) ; LSTM d'abord exclu (dégradation sévère sur SPY 5,0→9,5).
+- **MISE À JOUR 2026-07-31 (suite) — garde-fou λ et activation LSTM** : l'analyse de
+  garde-fou (`experiments/d7_guard_analysis.py`) a identifié la cause de l'échec SPY :
+  les origines quotidiennes d'horizon 7 j se **chevauchent de 6 j**, leurs z² sont
+  autocorrélés, et λ=0,94 par origine sur-réagit. Le correctif structurel — **λ D+7 =
+  0,94^(1/7)** (0,94 par observation indépendante) — répare SPY (9,6→1,4) et améliore
+  aussi SARIMA (4,7→2,9) et Naive (4,5→2,8). **LSTM rejoint donc le D+7** (MACE moyenne
+  5,4). Exception documentée : **Prophet garde λ=0,94 en D+7** (σ brut massivement
+  décalibré sur ZN/TLT — la vitesse d'adaptation prime, 9,4 vs 12,7 en λ lent).
+  Câblé dans `pipeline.py` (`SIGMA_SCALE_HORIZONS`, `_sigma_scale_lambda`), toujours
   réversible via `--calibrate-sigma off`.
 
 ### Chantier 2 — Tests

@@ -152,18 +152,34 @@ def _sigma_adoption_kwargs(calibrate_sigma: str) -> tuple:
 # figurent jamais -- les deux seuls modèles du registre qui n'acceptent pas
 # `sigma_scale=` côté mh.py.
 #   D+1 : SARIMA / Prophet / Naive / LSTM (validation 1-pas, brief §Périmètre).
-#   D+7 : SARIMA / Prophet / Naive -- activé 2026-07-31 après le backtest 7-pas
-#         dédié exigé par le brief (experiments/d7_sigma_scale_validation.py, W1
-#         5 actifs, correction causale avec lag de résolution 7 j : MACE stricte
-#         Prophet 34,1->9,4, Naive 7,3->4,5, SARIMA 6,3->4,7). LSTM est EXCLU du
-#         D+7 : gain moyen (11,3->7,8) mais dégradation sévère sur SPY (5,0->9,5,
-#         cov95 99->83) -- garde-fou par actif à concevoir avant activation.
+#   D+7 : les 4 modèles -- activé 2026-07-31 après le backtest 7-pas dédié exigé
+#         par le brief (experiments/d7_sigma_scale_validation.py) puis l'analyse
+#         de garde-fou (experiments/d7_guard_analysis.py). Le lambda D+7 est
+#         AJUSTÉ AU RECOUVREMENT : des origines quotidiennes d'horizon 7 j se
+#         chevauchent de 6 j, leurs z² sont autocorrélés -- un lambda de 0,94
+#         PAR OBSERVATION INDÉPENDANTE correspond à 0,94^(1/7) par origine.
+#         C'est ce garde-fou qui répare la pathologie LSTM/SPY (MACE 9,6->1,4,
+#         la raison de l'exclusion initiale du LSTM) et améliore aussi SARIMA
+#         (4,7->2,9) et Naive (4,5->2,8). Exception documentée : Prophet reste
+#         à 0,94 en D+7 -- son sigma brut est si massivement décalibré (MACE
+#         54-56 sur ZN/TLT) que la vitesse d'adaptation prime sur le lissage
+#         (9,4 vs 12,7 avec le lambda lent).
 SIGMA_SCALE_HORIZONS = {
     "SARIMA": (1, 7),
     "Prophet": (1, 7),
     "Naive": (1, 7),
-    "LSTM": (1,),
+    "LSTM": (1, 7),
 }
+D1_EWMA_LAMBDA = 0.94                       # cadence quotidienne, pas de recouvrement
+D7_EWMA_LAMBDA_DEFAULT = 0.94 ** (1.0 / 7)  # 0,94 par observation indépendante
+D7_EWMA_LAMBDA = {"Prophet": 0.94}          # exception, cf. note ci-dessus
+
+
+def _sigma_scale_lambda(model_key: str, h: int) -> float:
+    """Lambda EWMA pour (modèle, horizon en jours de trading)."""
+    if h <= 1:
+        return D1_EWMA_LAMBDA
+    return D7_EWMA_LAMBDA.get(model_key, D7_EWMA_LAMBDA_DEFAULT)
 
 
 def _build_sigma_scale_map(model_key: str, ticker: str, cutoff_date_str: str,
@@ -173,12 +189,14 @@ def _build_sigma_scale_map(model_key: str, ticker: str, cutoff_date_str: str,
     ne s'applique pas (flag off / modèle hors périmètre). Un facteur par horizon,
     lu de tracking.db via validation/sigma_scale.py -- seules les prédictions
     RÉSOLUES (y_true IS NOT NULL, cutoff < as_of) alimentent l'EWMA, donc le lag
-    de résolution D+7 du backtest de validation est reproduit tel quel."""
+    de résolution D+7 du backtest de validation est reproduit tel quel. Le lambda
+    par horizon vient de _sigma_scale_lambda (garde-fou de recouvrement D+7)."""
     if calibrate_sigma != "on" or model_key not in SIGMA_SCALE_HORIZONS:
         return None
     return {
         h + business_lag: sigma_scale_mod.sigma_scale(
-            model_key, ticker, h, cutoff_date_str, db_path)
+            model_key, ticker, h, cutoff_date_str, db_path,
+            lam=_sigma_scale_lambda(model_key, h))
         for h in SIGMA_SCALE_HORIZONS[model_key]
     }
 

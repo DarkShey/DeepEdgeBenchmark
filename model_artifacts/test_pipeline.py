@@ -448,14 +448,14 @@ def test_calibrate_sigma_on_gives_asymmetric_arima_live_forecast(tmp_path, monke
 
 
 def test_build_sigma_scale_map_horizons_per_model(monkeypatch):
-    """Périmètre par modèle du D+7 (activé 2026-07-31 après le backtest 7-pas dédié,
-    experiments/d7_sigma_scale_validation.py) : SARIMA/Prophet/Naive reçoivent D+1 ET
-    D+7 ; LSTM reste D+1 seulement (dégradation SPY au backtest) ; ARIMA-GARCH/TSDiff
-    jamais ; flag off -> None."""
+    """Périmètre du D+7 (activé 2026-07-31 : backtest 7-pas dédié puis analyse de
+    garde-fou, experiments/d7_{sigma_scale_validation,guard_analysis}.py) : les 4
+    modèles reçoivent D+1 ET D+7 (LSTM inclus depuis le garde-fou lambda) ;
+    ARIMA-GARCH/TSDiff jamais ; flag off -> None."""
     calls = []
 
-    def fake_scale(model, asset, horizon, as_of, path):
-        calls.append((model, horizon))
+    def fake_scale(model, asset, horizon, as_of, path, lam=0.94):
+        calls.append((model, horizon, round(lam, 6)))
         return float(10 + horizon)
 
     monkeypatch.setattr(mp.sigma_scale_mod, "sigma_scale", fake_scale)
@@ -468,12 +468,24 @@ def test_build_sigma_scale_map_horizons_per_model(monkeypatch):
     assert mp._build_sigma_scale_map("Naive", "SYN", "2026-01-01", "db", 0, "on") == \
         {1: 11.0, 7: 17.0}
     assert mp._build_sigma_scale_map("LSTM", "SYN", "2026-01-01", "db", 0, "on") == \
-        {1: 11.0}
+        {1: 11.0, 7: 17.0}
     assert mp._build_sigma_scale_map("ARIMA-GARCH", "SYN", "2026-01-01", "db", 0, "on") is None
     assert mp._build_sigma_scale_map("TSDiff", "SYN", "2026-01-01", "db", 0, "on") is None
     assert mp._build_sigma_scale_map("SARIMA", "SYN", "2026-01-01", "db", 0, "off") is None
-    # chaque facteur est bien demandé à validation/sigma_scale.py avec SON horizon
-    assert ("SARIMA", 1) in calls and ("SARIMA", 7) in calls and ("LSTM", 7) not in calls
+    # chaque facteur est demandé avec SON horizon et SON lambda : 0,94 en D+1 ;
+    # en D+7, lambda ajusté au recouvrement (0,94^(1/7)) sauf Prophet (0,94).
+    lam_adj = round(0.94 ** (1.0 / 7), 6)
+    assert ("SARIMA", 1, 0.94) in calls and ("SARIMA", 7, lam_adj) in calls
+    assert ("LSTM", 7, lam_adj) in calls
+    assert ("Prophet", 7, 0.94) in calls
+
+
+def test_sigma_scale_lambda_routing():
+    lam_adj = 0.94 ** (1.0 / 7)
+    assert mp._sigma_scale_lambda("SARIMA", 1) == 0.94
+    assert mp._sigma_scale_lambda("LSTM", 7) == pytest.approx(lam_adj)
+    assert mp._sigma_scale_lambda("Naive", 7) == pytest.approx(lam_adj)
+    assert mp._sigma_scale_lambda("Prophet", 7) == 0.94
 
 
 def test_sigma_scale_wiring_scales_d1_and_d7_business_rows_in_tracking_db(tmp_path, monkeypatch, synthetic_split):
@@ -486,7 +498,7 @@ def test_sigma_scale_wiring_scales_d1_and_d7_business_rows_in_tracking_db(tmp_pa
     db_path = str(tmp_path / "tracking.db")
 
     monkeypatch.setattr(mp.sigma_scale_mod, "sigma_scale",
-                        lambda model, asset, horizon, as_of, path: 5.0)
+                        lambda model, asset, horizon, as_of, path, lam=0.94: 5.0)
 
     mp.process_asset_model(
         "SARIMA", "SYN", "test", train, validation,
