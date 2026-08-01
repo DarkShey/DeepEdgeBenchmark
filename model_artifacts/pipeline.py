@@ -1024,7 +1024,8 @@ def _run_lstm_via_worker(train: pd.Series, validation: pd.Series, out_dir: Path,
 
 def _save_business_predictions(run_id: str, model_key: str, ticker: str, asset_class: str,
                                regime_tag: str, full_series: pd.Series, forecasts_by_h: dict,
-                               db_path: str, business_lag: int) -> None:
+                               db_path: str, business_lag: int,
+                               sigma_scale_map: dict = None) -> None:
     """Persiste la prévision live à horizon=1 et horizon=7 jours de bourse dans
     tracking.db (contrat BRIEF_tracking_db.md §3, Partie B) -- même dict forecasts_by_h
     que celui republié dans metrics.json (clé "forecast") pour le Gate2 horizon_label,
@@ -1037,7 +1038,13 @@ def _save_business_predictions(run_id: str, model_key: str, ticker: str, asset_c
     horizon de 1 jour de bourse à partir de là tombe sur AUJOURD'HUI, pas demain (bug
     constaté le 2026-07-09). business_lag (calculé une fois dans process_asset_model,
     partagé avec le worker LSTM) compense cet écart, ajouté à l'horizon business avant
-    de chercher la prévision correspondante dans forecasts_by_h."""
+    de chercher la prévision correspondante dans forecasts_by_h.
+
+    `sigma_scale_map` ({h_jours_business_effectif: facteur}, le même dict que celui
+    appliqué par mh._scaled_bounds) : le facteur du jour est persisté avec chaque ligne
+    (colonne `sigma_scale_applied`) pour que validation/sigma_scale.py retrouve le z
+    BRUT -- sans lui, la boucle EWMA live se mesurerait elle-même et convergerait vers
+    une sous-correction structurelle (NOTE_feedback_sigma_scale_live.md)."""
     cutoff_date = full_series.index[-1].date()
     last_close = float(full_series.iloc[-1])
     now = datetime.now()
@@ -1063,6 +1070,7 @@ def _save_business_predictions(run_id: str, model_key: str, ticker: str, asset_c
             "y_lower": float(lo),
             "y_upper": float(hi),
             "created_at": now.isoformat(timespec="seconds"),
+            "sigma_scale_applied": float((sigma_scale_map or {}).get(effective_h, 1.0)),
         }
         record["verdict_integrite"] = verdict_rules.check_integrity(record)
         record["verdict_plausibilite"] = (
@@ -1222,7 +1230,8 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
             print(f"  [{model_key:<12} {ticker:<8}] Prévision live     : ECHEC ({exc})")
 
     _save_business_predictions(run_id, model_key, ticker, asset_class, regime_tag,
-                               full_series, forecasts_by_h, db_path, business_lag)
+                               full_series, forecasts_by_h, db_path, business_lag,
+                               sigma_scale_map=sigma_scale_map)
 
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)

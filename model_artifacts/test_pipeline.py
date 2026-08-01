@@ -512,10 +512,15 @@ def test_sigma_scale_wiring_scales_d1_and_d7_business_rows_in_tracking_db(tmp_pa
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     rows = {row["horizon"]: row for row in conn.execute(
-        "SELECT horizon, y_pred, y_lower, y_upper FROM predictions WHERE run_id='run-scaled'")}
+        "SELECT horizon, y_pred, y_lower, y_upper, sigma_scale_applied "
+        "FROM predictions WHERE run_id='run-scaled'")}
     conn.close()
 
     assert set(rows) == {1, 7}
+    # le facteur appliqué est persisté avec chaque ligne (dé-biaisage de la boucle
+    # EWMA live, NOTE_feedback_sigma_scale_live.md)
+    assert rows[1]["sigma_scale_applied"] == pytest.approx(5.0)
+    assert rows[7]["sigma_scale_applied"] == pytest.approx(5.0)
     # Recalcule les bandes NON corrigées (sigma_scale=1.0) pour comparer les demi-largeurs.
     train_extended = pd.concat([train, validation])
     business_lag = 1 if validation.index[-1].date() < pd.Timestamp.now().date() else 0

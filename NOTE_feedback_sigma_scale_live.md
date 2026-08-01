@@ -1,5 +1,11 @@
 # Note — biais de rétroaction dans la boucle sigma_scale live (pour Maeva)
 
+> **STATUT 2026-07-31 : corrigé** — le correctif proposé ci-dessous est implémenté
+> (colonne `sigma_scale_applied` + migration idempotente dans `tracking_db.py`,
+> facteur écrit par `_save_business_predictions`, dé-biaisage z_brut = z_observé ×
+> facteur dans `sigma_scale.py`, tests dans `test_sigma_scale.py`/`test_pipeline.py`).
+> La note est conservée pour l'explication du mécanisme.
+
 **Date : 2026-07-31. Contexte** : en câblant l'alimentation du chemin hebdomadaire
 (`weekly_multimodel.run_model_asset`), j'ai dû choisir sur quelle bande mesurer le z
 de l'EWMA — et ce choix a révélé un biais dans la boucle live D+1/D+7 existante.

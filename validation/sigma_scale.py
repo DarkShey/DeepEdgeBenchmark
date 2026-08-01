@@ -24,6 +24,14 @@ Causalité stricte : seules les lignes dont `cutoff_date` est STRICTEMENT antér
 `as_of_cutoff_date` (la date de la NOUVELLE prévision à calibrer) entrent dans l'état
 EWMA -- aucune ligne dont l'origine est postérieure ou égale ne peut fuiter dans le
 calcul, quel que soit le moment où `y_true` a été résolu (cf. evaluate_pending).
+
+Dé-biaisage (2026-07-31, NOTE_feedback_sigma_scale_live.md) : les bornes stockées
+depuis l'activation live sont DÉJÀ corrigées par le facteur du jour -- mesurer z
+dessus reviendrait à mesurer la boucle elle-même (sigma_stocké = facteur * sigma_brut,
+point fixe s2* = sqrt(E[z_brut^2]) au lieu de E[z_brut^2] : sous-correction en racine
+quatrième à l'équilibre). Le z BRUT est retrouvé exactement via la colonne
+`sigma_scale_applied` écrite avec chaque prédiction : z_brut = z_observé * facteur
+(1.0 sur toutes les lignes pré-activation, donc aucun changement rétroactif).
 """
 
 import sqlite3
@@ -44,7 +52,7 @@ def _load_causal_rows(model: str, asset: str, horizon: int, as_of_cutoff_date: s
     try:
         cur = con.execute(
             """
-            SELECT cutoff_date, y_pred, y_lower, y_upper, y_true
+            SELECT cutoff_date, y_pred, y_lower, y_upper, y_true, sigma_scale_applied
             FROM predictions
             WHERE model = ? AND asset = ? AND horizon = ?
                   AND frequence = 'daily' AND horizon_type = 'daily'
@@ -80,8 +88,11 @@ def sigma_scale(model: str, asset: str, horizon: int, as_of_cutoff_date: str,
     td.init_db(db_path)
     rows = _load_causal_rows(model, asset, horizon, as_of_cutoff_date, db_path)
     s2 = 1.0
-    for _cutoff_date, y_pred, y_lower, y_upper, y_true in rows:
-        sigma_own = max((y_upper - y_lower) / (2.0 * _Z975), 1e-12)
-        z = (y_true - y_pred) / sigma_own
+    for _cutoff_date, y_pred, y_lower, y_upper, y_true, scale_applied in rows:
+        sigma_stored = max((y_upper - y_lower) / (2.0 * _Z975), 1e-12)
+        # z BRUT : sigma_stocké = facteur_appliqué * sigma_brut, donc
+        # z_brut = (y_true - y_pred)/sigma_brut = z_observé * facteur_appliqué
+        # (cf. dé-biaisage en tête de module ; facteur 1.0 = ligne non corrigée).
+        z = (y_true - y_pred) / sigma_stored * float(scale_applied or 1.0)
         s2 = lam * s2 + (1 - lam) * z * z
     return float(np.sqrt(s2))

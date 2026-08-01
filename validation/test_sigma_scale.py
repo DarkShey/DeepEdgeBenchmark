@@ -128,3 +128,40 @@ def test_sigma_scale_widens_after_a_miscalibrated_realized_prediction(tmp_path):
     _insert_realized(db_path, "2026-07-10", "2026-07-11", y_true=300.0)   # très loin de y_pred=100
     scale = ss.sigma_scale("SARIMA", "BTC-USD", 1, "2026-07-15", db_path)
     assert scale > 1.5   # z large -> EWMA(z^2) > 1 -> sqrt > 1 (élargit la bande)
+
+
+# ── dé-biaisage sigma_scale_applied (NOTE_feedback_sigma_scale_live.md) ────────
+
+def test_sigma_scale_debiases_with_applied_factor(tmp_path):
+    """Une ligne écrite avec des bornes DÉJÀ corrigées (facteur f) doit produire le
+    même état EWMA qu'une ligne brute : z_brut = z_observé * f. On insère deux bases
+    jumelles -- bornes brutes vs bornes élargies x2 avec sigma_scale_applied=2.0 --
+    et on vérifie que sigma_scale() rend exactement le même facteur."""
+    raw_db = str(tmp_path / "raw.db")
+    corr_db = str(tmp_path / "corr.db")
+    # brute : bande [95,105], y_true=104 -> z_brut = 4/2.551 ≈ 1.568
+    _insert_realized(raw_db, "2026-07-10", "2026-07-11", y_true=104.0)
+    # corrigée x2 : bande [90,110] autour du même point, facteur tracé = 2.0
+    _insert_realized(corr_db, "2026-07-10", "2026-07-11", y_true=104.0,
+                     y_lower=90.0, y_upper=110.0, sigma_scale_applied=2.0)
+
+    s_raw = ss.sigma_scale("SARIMA", "BTC-USD", 1, "2026-07-15", raw_db)
+    s_corr = ss.sigma_scale("SARIMA", "BTC-USD", 1, "2026-07-15", corr_db)
+    assert s_corr == pytest.approx(s_raw, rel=1e-12)
+    assert s_raw > 1.0   # z > 1 -> élargissement (les deux bases le voient pareil)
+
+
+def test_save_prediction_defaults_applied_factor_to_one(tmp_path):
+    """Appelants non calibrés inchangés : sans champ sigma_scale_applied dans le
+    record, la colonne vaut 1.0 (bande brute) ; avec, la valeur est persistée."""
+    import sqlite3
+    db_path = str(tmp_path / "tracking.db")
+    _insert_realized(db_path, "2026-07-10", "2026-07-11", y_true=100.0)
+    _insert_realized(db_path, "2026-07-11", "2026-07-12", y_true=100.0,
+                     sigma_scale_applied=1.7)
+    con = sqlite3.connect(db_path)
+    vals = dict(con.execute(
+        "SELECT cutoff_date, sigma_scale_applied FROM predictions").fetchall())
+    con.close()
+    assert vals["2026-07-10"] == 1.0
+    assert vals["2026-07-11"] == pytest.approx(1.7)

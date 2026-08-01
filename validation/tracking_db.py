@@ -126,6 +126,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
                 source                TEXT NOT NULL DEFAULT 'live',
                 daily_duplicate       INTEGER NOT NULL DEFAULT 0,
                 real_flag             TEXT NOT NULL DEFAULT 'oos',
+                sigma_scale_applied   REAL NOT NULL DEFAULT 1.0,
                 UNIQUE (tc_id, model, cutoff_date)
             )
         """)
@@ -133,6 +134,7 @@ def init_db(db_path=DEFAULT_DB_PATH) -> None:
         _migrate_predictions_add_daily_duplicate(conn)
         _migrate_predictions_add_frequency_horizon(conn)
         _migrate_predictions_add_real_flag(conn)
+        _migrate_predictions_add_sigma_scale_applied(conn)
         # Idempotence des lignes OOS : tc_id y est NULL, donc hors de portée du
         # UNIQUE(tc_id, model, cutoff_date) ci-dessus (SQLite traite chaque NULL comme
         # distinct). Index partiel dédié, n'affecte jamais les lignes source='live'.
@@ -307,6 +309,24 @@ def _migrate_predictions_add_frequency_horizon(conn) -> None:
     """)
 
 
+def _migrate_predictions_add_sigma_scale_applied(conn) -> None:
+    """Ajout idempotent de `sigma_scale_applied` (NOTE_feedback_sigma_scale_live.md) :
+    le facteur multiplicatif EWMA appliqué aux bornes AU MOMENT de la prédiction
+    (1.0 = bande brute du modèle). Sans lui, la boucle de calibration live se mesure
+    elle-même (z calculé sur des bornes déjà corrigées) et converge vers une
+    sous-correction structurelle (point fixe en racine quatrième) ; avec lui,
+    validation/sigma_scale.py retrouve le z BRUT : z_brut = z_observé × facteur.
+
+    DEFAULT 1.0 : correct pour toutes les lignes antérieures à l'activation live du
+    2026-07-31 (bornes brutes). Les quelques lignes corrigées écrites entre
+    l'activation et cette migration portent un facteur inconnu traité comme 1.0 --
+    ce résidu est vite éteint par l'EWMA (poids (1-lambda) par observation)."""
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(predictions)")}
+    if cols and "sigma_scale_applied" not in cols:
+        conn.execute("ALTER TABLE predictions ADD COLUMN sigma_scale_applied "
+                     "REAL NOT NULL DEFAULT 1.0")
+
+
 def _migrate_predictions_add_real_flag(conn) -> None:
     """Ajout idempotent de `real_flag` ('live'/'oos', vraie vs fausse prédiction, cf.
     docstring de compute_real_flag) sur une base existante. Colonne nullable ajoutée
@@ -370,6 +390,11 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
     horizon_type = record.get("horizon_type", "daily")
     horizon_unit = record.get("horizon_unit") or (
         f"{'W' if horizon_type == 'weekly' else 'D'}+{record['horizon']}")
+    # Facteur de calibration appliqué aux bornes (cf. _migrate_predictions_add_
+    # sigma_scale_applied) : absent de RECORD_FIELDS pour la même raison que
+    # frequence/horizon_type -- les appelants non calibrés n'ont pas à changer,
+    # 1.0 = bande brute est correct pour eux.
+    sigma_scale_applied = float(record.get("sigma_scale_applied", 1.0))
     # real_flag calculé en défense en profondeur (pas seulement via la migration lazy
     # de init_db()) : un lecteur peut interroger predictions juste après cet insert,
     # avant le prochain appel à init_db() qui backfillerait sinon la ligne.
@@ -377,12 +402,13 @@ def save_prediction(record: dict, db_path=DEFAULT_DB_PATH) -> bool:
 
     conn = _connect(db_path)
     try:
-        insert_fields = RECORD_FIELDS + ("frequence", "horizon_type", "horizon_unit", "real_flag")
+        insert_fields = RECORD_FIELDS + ("frequence", "horizon_type", "horizon_unit",
+                                         "real_flag", "sigma_scale_applied")
         placeholders = ", ".join(f":{f}" for f in insert_fields)
         columns = ", ".join(insert_fields)
         params = {f: record[f] for f in RECORD_FIELDS}
         params.update(frequence=frequence, horizon_type=horizon_type, horizon_unit=horizon_unit,
-                     real_flag=real_flag)
+                     real_flag=real_flag, sigma_scale_applied=sigma_scale_applied)
         cur = conn.execute(
             f"INSERT OR IGNORE INTO predictions ({columns}) VALUES ({placeholders})",
             params,
