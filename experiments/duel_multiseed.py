@@ -86,16 +86,51 @@ def load_or_run_asset(seed: int, asset_code: str, ticker: str, args) -> tuple:
     return records, meta
 
 
+# ── NsDiff, opt-in (--include-nsdiff) -- own checkpoint namespace (distinct
+# filename suffix) so re-running with/without the flag never reads a stale/
+# mismatched checkpoint for the other mode (brief §4.4: default duel output
+# stays byte-for-byte identical when the flag is absent). ─────────────────────
+
+def checkpoint_path_nsdiff(seed: int, asset_code: str) -> Path:
+    return CHECKPOINT_DIR / f"seed{seed}_{asset_code}_nsdiff.json"
+
+
+def load_or_run_asset_nsdiff(seed: int, asset_code: str, ticker: str, args) -> tuple:
+    path = checkpoint_path_nsdiff(seed, asset_code)
+    if path.exists():
+        data = json.loads(path.read_text())
+        print(f"[seed={seed}][{asset_code}] NsDiff loaded from checkpoint ({path.name})")
+        return data["records"], data["meta"]
+    records, meta = db.run_nsdiff_records(asset_code, ticker, args)
+    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"records": records, "meta": meta}, default=str))
+    print(f"[seed={seed}][{asset_code}] NsDiff checkpoint saved -> {path.name}")
+    return records, meta
+
+
 def run_one_seed(seed: int, args) -> tuple:
-    """Full duel (all assets) at one seed. Returns (df, all_meta, analysis)."""
+    """Full duel (all assets) at one seed. Returns (df, all_meta, analysis).
+    When args.include_nsdiff (opt-in, default False/absent): every source of
+    NsDiff stochasticity (init/train/sample) is re-armed by the same
+    `args.seed`/`args.seed + k` convention as every other model here (cf.
+    nsdiff_model.set_seed calls inside db.run_nsdiff_records), so looping this
+    function over seeds covers NsDiff exactly like it already covers TSDiff/
+    the classics -- nothing else needed for the multi-seed loop itself."""
     args.seed = seed
     all_records, all_meta = [], {}
     for asset_code in args.assets:
         records, meta = load_or_run_asset(seed, asset_code, ASSETS[asset_code], args)
         all_records.extend(records)
         all_meta[asset_code] = meta
+    if getattr(args, "include_nsdiff", False):
+        for asset_code in args.assets:
+            ns_records, ns_meta = load_or_run_asset_nsdiff(seed, asset_code, ASSETS[asset_code], args)
+            all_records.extend(ns_records)
+            all_meta[asset_code].update(ns_meta)
     df = pd.DataFrame(all_records)
-    analysis = db.build_grid_analysis(df, all_meta, args)
+    analysis = (db.build_grid_analysis_with_nsdiff(df, all_meta, args)
+                if getattr(args, "include_nsdiff", False)
+                else db.build_grid_analysis(df, all_meta, args))
     return df, all_meta, analysis
 
 
@@ -294,6 +329,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--end", default=None)
     p.add_argument("--scale-start", default="2015-01-01")
     p.add_argument("--skip-global", action="store_true", help="skip the global-training comparison")
+    p.add_argument("--include-nsdiff", action="store_true",
+                   help="opt-in: add NsDiff to every seed's duel, same convention as "
+                        "duel_backtest.py --include-nsdiff. Default off -- output unchanged.")
     p.add_argument("--out", default=str(Path(__file__).resolve().parent / "duel_backtest.json"))
     return p
 
@@ -374,6 +412,13 @@ def main() -> None:
         "Naive": {"data_window": f"{args.start} -> {args.end}", "m": args.m_samples,
                  "hpo": "aucun", "n_seeds": len(args.seeds)},
     }
+    if args.include_nsdiff:
+        budgets["NsDiff (par actif)"] = {
+            "epochs": f"budget fixe declare (db.NSDIFF_EPOCHS_W={db.NSDIFF_EPOCHS_W}), "
+                     "non selectionne sur validation/test (brief §4.4)",
+            "data_window": f"{args.start} -> {args.end}", "m": args.m_samples,
+            "hpo": "aucun (budget fixe)", "n_seeds": len(args.seeds),
+        }
 
     payload = {
         "config": {

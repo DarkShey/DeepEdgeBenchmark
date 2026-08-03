@@ -77,6 +77,8 @@ for p in (ROOT, ROOT / "models", ROOT / "experiments"):
         sys.path.insert(0, str(p))
 
 import tsdiff_model as td                                        # noqa: E402
+import nsdiff_model as nm                                         # noqa: E402
+import nsdiff_weekly as nw                                        # noqa: E402
 import epoch_sweep as es                                         # noqa: E402
 import duel_sampling_adapters as dsa                              # noqa: E402
 from weekly_headtohead import ASSETS, HORIZON_WEEKLY, build_weekly, standardized_returns  # noqa: E402
@@ -94,6 +96,17 @@ HORIZONS = ("W1", "W2", "W3")
 H_BY_HORIZON = {"W1": 1, "W2": 2, "W3": 3}
 BENCHMARK_FOR_SPA = "ARIMA-GARCH"
 PAIRS = tuple((("TSDiff", c) for c in CLASSICS))
+
+# ── NsDiff, opt-in (--include-nsdiff, brief BRIEF_integration_nsdiff.md §4.4) ───
+# Default duel (flag absent) never touches these -- MODELS/PAIRS/output above
+# stay byte-for-byte identical to the current 6-model duel.
+MODELS_WITH_NSDIFF = MODELS + ("NsDiff",)
+PAIRS_WITH_NSDIFF = PAIRS + tuple(("NsDiff", c) for c in CLASSICS) + (("TSDiff", "NsDiff"),)
+NSDIFF_EPOCHS_W = 40   # fixed, DECLARED epoch budget (brief §4.4 sanctions this in place of
+                       # a validation sweep when reusing epoch_sweep's TSDiff-W-specific
+                       # checkpointing machinery for a second model is out of scope here) --
+                       # anchored at the lowest candidate of --tsdiff-epoch-candidates
+                       # (default 40/60/80), never selected on val_pos or test_pos.
 
 
 def select_garch_spec(asset_code: str, train_daily: pd.Series, daily: pd.Series,
@@ -238,6 +251,69 @@ def run_asset_duel(asset_code: str, ticker: str, args) -> tuple:
     return records, meta
 
 
+def run_nsdiff_records(asset_code: str, ticker: str, args) -> tuple:
+    """NsDiff arm of the duel, opt-in (--include-nsdiff). Recomputes the same
+    (daily, weekly, origins) as run_asset_duel -- deterministic given
+    (ticker, args.n_val, args.n_test, args.embargo), no randomness involved, so
+    this is guaranteed to line up with the SAME T0/val_pos/test_pos the 6-model
+    arm used, without needing to thread extra state between the two. Fits
+    nsdiff_weekly ONCE at T0 (frozen-at-T0 rule, same as every other model in
+    this duel) via nsdiff_weekly.fit_weekly (mirrors td.fit_tsdiff at line ~156
+    above), then samples `args.m_samples` trajectories per test origin via
+    nsdiff_weekly.forecast_from_fitted_weekly (mirrors td.forecast_from_fitted
+    at line ~197 above) -- same `m`, same per-origin seed convention
+    (args.seed + k) as every other model here."""
+    daily = td.fetch_data(ticker, args.start, args.end)
+    weekly, weekly_dates = build_weekly(daily)
+    train_end_pos, val_pos, test_pos = build_common_origins(
+        weekly, args.n_val, args.n_test, embargo=args.embargo)
+    T0_date = weekly_dates.iloc[train_end_pos]
+    train_weekly = weekly.iloc[:train_end_pos + 1]
+
+    t0 = time.time()
+    nm.set_seed(args.seed)
+    model_ns, _, mu_ns, sd_ns, _ = nw.fit_weekly(train_weekly, horizon=HORIZON_WEEKLY,
+                                                 epochs=NSDIFF_EPOCHS_W)
+    weekly_z_ns = standardized_returns(weekly, mu_ns, sd_ns)
+    print(f"[{asset_code}] NsDiff-W fit in {time.time() - t0:.0f}s "
+          f"(epochs={NSDIFF_EPOCHS_W}, fixed/declared -- not validation-swept)")
+
+    records = []
+    t0 = time.time()
+    for k, m_pos in enumerate(test_pos):
+        origin_date, _, target_dates, _ = es.week_targets(weekly_dates, daily, m_pos)
+        last_price = float(weekly.iloc[m_pos])
+        actuals = [float(weekly.iloc[m_pos + h]) for h in (1, 2, 3)]
+
+        seed_k = args.seed + k
+        nm.set_seed(seed_k)
+        lookback_z = weekly_z_ns[:m_pos][-model_ns.seq_len:]
+        samples_ns = nw.forecast_from_fitted_weekly(
+            model_ns, mu_ns, sd_ns, lookback_z, last_price,
+            weeks=(1, 2, 3), n_samples=args.m_samples)
+
+        for wi, h_label in enumerate(HORIZONS):
+            actual = actuals[wi]
+            samples = samples_ns[wi + 1]["samples"]
+            records.append({
+                "asset": ticker, "asset_code": asset_code, "horizon": h_label,
+                "model": "NsDiff", "origin": k, "origin_date": str(origin_date.date()),
+                "target_date": str(target_dates[wi].date()), "actual": actual,
+                "point": float(np.mean(samples)),
+                "crps": crps_fair(samples, actual),
+                "crps_empirical": crps_empirical(samples, actual),
+            })
+        if (k + 1) % max(1, len(test_pos) // 5) == 0 or k == len(test_pos) - 1:
+            print(f"[{asset_code}] NsDiff test origin {k + 1}/{len(test_pos)} "
+                 f"({origin_date.date()}) done ({time.time() - t0:.0f}s elapsed)")
+
+    meta = {
+        "epochs_nsdiff_w": NSDIFF_EPOCHS_W,
+        "nsdiff_epoch_selection": "fixed budget, declared (not validation- or test-swept)",
+    }
+    return records, meta
+
+
 def build_grid_analysis(df: pd.DataFrame, all_meta: dict, args) -> dict:
     tickers = sorted(df["asset"].unique())
 
@@ -314,6 +390,85 @@ def build_grid_analysis(df: pd.DataFrame, all_meta: dict, args) -> dict:
     }
 
 
+def build_grid_analysis_with_nsdiff(df: pd.DataFrame, all_meta: dict, args) -> dict:
+    """Opt-in mirror of build_grid_analysis (line-for-line identical) with
+    MODELS/PAIRS swapped for MODELS_WITH_NSDIFF/PAIRS_WITH_NSDIFF -- kept as a
+    separate function, rather than adding parameters to build_grid_analysis,
+    so the default (--include-nsdiff absent) call path is untouched byte-for-
+    byte (brief §1: no existing signature changes). Only reached from main()
+    when args.include_nsdiff is True."""
+    tickers = sorted(df["asset"].unique())
+
+    cell_results = pairwise_crps_tests(df, list(PAIRS_WITH_NSDIFF), H_BY_HORIZON)
+    holm_by_pair = {}
+    for a, b in PAIRS_WITH_NSDIFF:
+        pair_label = f"{a} vs {b}"
+        adj = holm_correct_grid(cell_results, tickers, list(HORIZONS), pair_label)
+        holm_by_pair[pair_label] = adj
+        for key, p_holm in adj.items():
+            cell_results[key]["p_value_bootstrap_holm"] = p_holm
+            cell_results[key]["significant_after_holm"] = bool(p_holm < 0.05)
+
+    earliest_test_start = min(meta["test_origins"][0] for meta in all_meta.values())
+    scales = compute_asset_scales(args.scale_start, earliest_test_start)
+
+    pooled = {}
+    for a, b in PAIRS_WITH_NSDIFF:
+        pooled[f"{a} vs {b}"] = {}
+        for h_label, h_val in H_BY_HORIZON.items():
+            df_h = df[df["horizon"] == h_label]
+            pooled[f"{a} vs {b}"][h_label] = pooled_pair_verdict(df_h, (a, b), scales, h=h_val)
+
+    cw_results = {}
+    for ticker in tickers:
+        for h_label, h_val in H_BY_HORIZON.items():
+            sub = df[(df["asset"] == ticker) & (df["horizon"] == h_label)]
+            piv_actual = sub.pivot_table(index="origin", columns="model", values="actual").sort_index()
+            piv_point = sub.pivot_table(index="origin", columns="model", values="point").sort_index()
+            if "Naive" not in piv_point.columns:
+                continue
+            naive_point = piv_point["Naive"].values
+            actual_vals = piv_actual.iloc[:, 0].values
+            for model_name in MODELS_WITH_NSDIFF:
+                if model_name == "Naive" or model_name not in piv_point.columns:
+                    continue
+                cw_results[f"{ticker}|{h_label}|{model_name} vs Naive"] = clark_west_test(
+                    actual_vals, naive_point, piv_point[model_name].values, h=h_val)
+
+    mcs_results, spa_results = {}, {}
+    for ticker in tickers:
+        for h_label in HORIZONS:
+            sub = df[(df["asset"] == ticker) & (df["horizon"] == h_label)]
+            piv = sub.pivot_table(index="origin", columns="model", values="crps").sort_index().dropna()
+            key = f"{ticker}|{h_label}"
+            if len(piv) < 8 or piv.shape[1] < 2:
+                mcs_results[key] = {"status": "insufficient_data", "n": int(len(piv))}
+                spa_results[key] = {"status": "insufficient_data", "n": int(len(piv))}
+                continue
+            mcs_results[key] = model_confidence_set(piv, alpha=0.05, block_length=3,
+                                                     n_boot=args.n_boot, seed=args.seed)
+            if BENCHMARK_FOR_SPA in piv.columns:
+                bench = piv[BENCHMARK_FOR_SPA].values
+                others = {m: piv[m].values for m in piv.columns if m != BENCHMARK_FOR_SPA}
+                spa_results[key] = spa_test(bench, others, block_length=3,
+                                            n_boot=args.n_boot, seed=args.seed)
+            else:
+                spa_results[key] = {"status": "benchmark_missing"}
+
+    crps_summary = (df.groupby(["asset", "horizon", "model"])["crps"].mean()
+                    .reset_index().to_dict(orient="records"))
+
+    return {
+        "asset_scales_mase": scales, "scale_window": [args.scale_start, earliest_test_start],
+        "crps_fair_mean_by_cell": crps_summary,
+        "pairwise_vs_diffusion": cell_results,
+        "pooled_pair_verdict_by_horizon": pooled,
+        "clark_west_vs_naive": cw_results,
+        "model_confidence_set": mcs_results,
+        "spa_vs_garch": spa_results,
+    }
+
+
 def print_summary_table(df: pd.DataFrame, mcs_results: dict) -> None:
     print(f"\n{'Actif':<9}{'Horizon':<8}{'Modele':<14}{'CRPS_fair':>11}{'MCS':>6}")
     print("-" * 48)
@@ -343,6 +498,10 @@ def main() -> None:
     p.add_argument("--start", default="2015-01-01")
     p.add_argument("--end", default=None)
     p.add_argument("--scale-start", default="2015-01-01")
+    p.add_argument("--include-nsdiff", action="store_true",
+                   help="opt-in: add NsDiff (+ the TSDiff-vs-NsDiff pair) to the duel "
+                        "(BRIEF_integration_nsdiff.md §4.4). Default off -- MODELS/PAIRS/"
+                        "output identical to the current 6-model duel, byte-for-byte.")
     p.add_argument("--out", default=str(Path(__file__).resolve().parent / "duel_backtest.json"))
     args = p.parse_args()
     args.end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
@@ -354,8 +513,15 @@ def main() -> None:
         all_records.extend(records)
         all_meta[asset_code] = meta
 
+    if args.include_nsdiff:
+        for asset_code in args.assets:
+            ns_records, ns_meta = run_nsdiff_records(asset_code, ASSETS[asset_code], args)
+            all_records.extend(ns_records)
+            all_meta[asset_code].update(ns_meta)
+
     df = pd.DataFrame(all_records)
-    analysis = build_grid_analysis(df, all_meta, args)
+    analysis = (build_grid_analysis_with_nsdiff(df, all_meta, args) if args.include_nsdiff
+                else build_grid_analysis(df, all_meta, args))
     elapsed = time.time() - t_start
 
     payload = {
@@ -383,6 +549,9 @@ def main() -> None:
         "records": all_records,
         **analysis,
     }
+    if args.include_nsdiff:
+        payload["config"]["include_nsdiff"] = True
+        payload["config"]["nsdiff_epochs_w"] = NSDIFF_EPOCHS_W
     Path(args.out).write_text(json.dumps(payload, indent=2, default=str))
     print(f"\nSaved -> {args.out}  ({elapsed / 60:.1f} min)")
     print_summary_table(df, analysis["model_confidence_set"])
