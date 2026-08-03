@@ -50,6 +50,10 @@ experiments/.price_cache_d7_w1/
 # ("run reprenable"), régénérables en rejouant le run ; déjà agrégés dans
 # experiments/duel_backtest.json, pas un livrable en soi.
 experiments/checkpoints/
+# Idem pour les checkpoints NsDiff, isolés du dossier ci-dessus (BRIEF_integration_nsdiff.md
+# §4.4 / BRIEF_nsdiff_epoch_sweep.md) -- déjà agrégés dans experiments/duel_backtest_nsdiff*.json.
+experiments/checkpoints_nsdiff/
+experiments/checkpoints_nsdiff_swept/
 
 # Rapport HTML régénérable (experiments/generate_dist_options_report.py) -- embarque
 # Cambria/Consolas (polices sous licence Microsoft) en base64 pour un rendu autonome ;
