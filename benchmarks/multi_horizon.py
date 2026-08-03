@@ -391,6 +391,48 @@ def forecast_horizons_tsdiff(train: pd.Series, horizons: list, epochs: int = Non
     return results
 
 
+# ── NsDiff (diffusion, LSNM+UANS port, cf. models/nsdiff_model.py) ──────────────
+def forecast_horizons_nsdiff(train: pd.Series, horizons: list, epochs: int = None,
+                             seed: int = None) -> dict:
+    """Calqué ligne à ligne sur forecast_horizons_tsdiff ci-dessus : fit le
+    denoiser NsDiff une fois sur les log-returns du train, puis échantillonne N
+    chemins de retours (ancestral, cf. nsdiff_model.py) et lit le prix à chaque
+    horizon depuis le retour cumulé des `h` premiers pas. Point = moyenne du
+    nuage d'échantillons ; IC95 = quantiles 2.5/97.5 (distribution prédictive du
+    modèle). L'horizon généré (nsdiff_model.HORIZON) borne l'horizon
+    exploitable -- au-delà, on plafonne."""
+    import nsdiff_model as nd
+    if seed is not None:
+        nd.set_seed(seed)
+    ep = nd.EPOCHS if epochs is None else epochs
+
+    prices = train.values.astype(float)
+    r = nd._log_returns(prices)
+    mu, sd = float(r.mean()), float(r.std())
+    sd = sd if sd > 1e-8 else 1.0
+    z = (r - mu) / sd
+
+    H_win, T_win = nd._make_windows(z, nd.SEQ_LEN, nd.HORIZON)
+    if len(H_win) == 0:
+        raise ValueError("not enough return history to build NsDiff training windows.")
+
+    model = nd.NsDiff()
+    model.train(H_win, T_win, epochs=ep)
+    paths = model.sample_paths(z[-nd.SEQ_LEN:].astype(np.float32),
+                               n_samples=nd.N_SAMPLES)   # [N, HORIZON] std step-returns
+
+    last_price = float(prices[-1])
+    results = {}
+    for h in horizons:
+        hh = min(int(h), nd.HORIZON)                      # model generates HORIZON steps
+        cum_r = paths[:, :hh].sum(axis=1) * sd + hh * mu   # de-standardized cumulative log-return
+        price_samples = last_price * np.exp(cum_r)
+        results[h] = (float(np.mean(price_samples)),
+                      float(np.quantile(price_samples, 0.025)),
+                      float(np.quantile(price_samples, 0.975)))
+    return results
+
+
 # ── Registre des modèles (point d'extension) ─────────────────────────────────
 MODEL_ADAPTERS = {
     "ARIMA-GARCH": forecast_horizons_arima,
@@ -399,4 +441,5 @@ MODEL_ADAPTERS = {
     "LSTM":        forecast_horizons_lstm,
     "Naive":       forecast_horizons_naive,
     "TSDiff":      forecast_horizons_tsdiff,
+    "NsDiff":      forecast_horizons_nsdiff,
 }
