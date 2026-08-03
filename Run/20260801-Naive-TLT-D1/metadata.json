@@ -1,0 +1,23 @@
+{
+  "asset": "TLT",
+  "asset_class": "bond",
+  "frequency": "1d",
+  "window_start": "2023-08-01",
+  "window_end": "2026-07-31",
+  "train_end": "2026-02-18",
+  "run_date": "2026-08-01",
+  "git_commit": "d8c4bbaeb6bfbd7079576d2e442c65a712c1eae4",
+  "seed": 42,
+  "lib_versions": {
+    "numpy": "2.2.6",
+    "pandas": "3.0.3",
+    "statsmodels": "0.14.6",
+    "sklearn": "1.9.0",
+    "arch": "8.0.0",
+    "yfinance": "1.5.1",
+    "tensorflow": "2.21.0",
+    "prophet": "1.3.0"
+  },
+  "gate1_reused_from": null,
+  "gate2_reused_from": "20260731"
+}
