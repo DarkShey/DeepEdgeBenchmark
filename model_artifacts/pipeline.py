@@ -106,10 +106,10 @@ from honest_eval import metrics as hm
 RUN_ROOT = REPO_ROOT / "Run"
 DEFAULT_DB_PATH = "validation/tracking.db"
 
-MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
+MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff", "NsDiff"]
 MODEL_FOLDER_NAME = {
     "ARIMA-GARCH": "ARIMA", "SARIMA": "SARIMA", "Prophet": "Prophet",
-    "LSTM": "LSTM", "Naive": "Naive", "TSDiff": "TSDiff",
+    "LSTM": "LSTM", "Naive": "Naive", "TSDiff": "TSDiff", "NsDiff": "NsDiff",
 }
 # D+1/D+7 en jours de TRADING (backtest Gate2) ; D+7 ~ 1 semaine calendaire ~ 5 jours
 # de trading -- distinct de BUSINESS_HORIZONS_TRADING_DAYS plus bas (contrat tracking.db).
@@ -148,9 +148,10 @@ def _sigma_adoption_kwargs(calibrate_sigma: str) -> tuple:
 
 
 # Modèles recevant la correction EWMA par horizon business (jours de trading).
-# ARIMA-GARCH (sigma GARCH déjà dynamique) et TSDiff (échantillonnage natif) n'y
-# figurent jamais -- les deux seuls modèles du registre qui n'acceptent pas
-# `sigma_scale=` côté mh.py.
+# ARIMA-GARCH (sigma GARCH déjà dynamique) et TSDiff/NsDiff (échantillonnage natif) n'y
+# figurent jamais -- les seuls modèles du registre qui n'acceptent pas
+# `sigma_scale=` côté mh.py (NsDiff ajouté au même titre que TSDiff : sa propre
+# distribution prédictive n'a pas besoin d'une correction externe).
 #   D+1 : SARIMA / Prophet / Naive / LSTM (validation 1-pas, brief §Périmètre).
 #   D+7 : les 4 modèles -- activé 2026-07-31 après le backtest 7-pas dédié exigé
 #         par le brief (experiments/d7_sigma_scale_validation.py) puis l'analyse
@@ -611,6 +612,10 @@ def _run_model_d1(model_key: str, train: pd.Series, validation: pd.Series, seed,
         import tsdiff_model
         tsdiff_model.set_seed(seed or tsdiff_model.DEFAULT_SEED)
         result = tsdiff_model.run_tsdiff(train, validation, keep_samples=True)
+    elif model_key == "NsDiff":
+        import nsdiff_model
+        nsdiff_model.set_seed(seed or nsdiff_model.DEFAULT_SEED)
+        result = nsdiff_model.run_nsdiff(train, validation, keep_samples=True)
     else:
         raise ValueError(model_key)
     result["crps"] = crps_kpis.crps_from_step_ensembles(result.pop("ensemble", None), result["actual"])
@@ -632,7 +637,7 @@ def _compute_metrics_for(model_key: str, actual, predicted, pi_lower, pi_upper) 
     module_name = {
         "ARIMA-GARCH": "arima_model", "SARIMA": "sarima_model",
         "Prophet": "prophet_model", "LSTM": "lstm_model", "Naive": "naive_model",
-        "TSDiff": "tsdiff_model",
+        "TSDiff": "tsdiff_model", "NsDiff": "nsdiff_model",
     }[model_key]
     mod = importlib.import_module(module_name)
     if model_key == "ARIMA-GARCH":
@@ -660,6 +665,8 @@ def _forecast_horizon(model_key: str, train_extended: pd.Series, h_days: int, se
         return mh.forecast_horizons_naive(train_extended, [h_days], sigma_scale=sigma_scale)[h_days]
     if model_key == "TSDiff":
         return mh.forecast_horizons_tsdiff(train_extended, [h_days], seed=seed)[h_days]
+    if model_key == "NsDiff":
+        return mh.forecast_horizons_nsdiff(train_extended, [h_days], seed=seed)[h_days]
     raise ValueError(model_key)
 
 
@@ -686,6 +693,8 @@ def _forecast_all_horizons(model_key: str, train_extended: pd.Series, horizons_d
         return mh.forecast_horizons_naive(train_extended, horizons_days, sigma_scale=sigma_scale)
     if model_key == "TSDiff":
         return mh.forecast_horizons_tsdiff(train_extended, horizons_days, seed=seed)
+    if model_key == "NsDiff":
+        return mh.forecast_horizons_nsdiff(train_extended, horizons_days, seed=seed)
     raise ValueError(model_key)
 
 
@@ -907,6 +916,7 @@ MODEL_TEST_FILTER = {
                       # test_models_common.py (noms contenant "lstm" mais hors fixture paramétrée)
     "Naive": "naive_model",  # models/test_naive_model.py — audit persistence stricte (Point 0)
     "TSDiff": "tsdiff_model",  # models/test_tsdiff_model.py — port diffusion (DEITA)
+    "NsDiff": "nsdiff_model",  # models/test_nsdiff_model.py — port diffusion (wwy155/NsDiff)
 }
 
 _unit_test_cache = {}
@@ -1192,10 +1202,10 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
                 print(f"    [Gate1 FAIL] LSTM : {lstm_worker_result.get('gate1_error')}")
     else:
         fitted, gate1_ok = None, True
-        # Naive n'a rien à entraîner ; TSDiff (port diffusion léger) suit le même patron —
-        # pas d'artefact Gate 1 sérialisé, l'entraînement réel a lieu en Gate 2 (run_tsdiff)
-        # et en prévision live (forecast_horizons_tsdiff).
-        if model_key not in ("Naive", "TSDiff"):
+        # Naive n'a rien à entraîner ; TSDiff/NsDiff (ports diffusion légers) suivent le même
+        # patron — pas d'artefact Gate 1 sérialisé, l'entraînement réel a lieu en Gate 2
+        # (run_tsdiff/run_nsdiff) et en prévision live (forecast_horizons_tsdiff/_nsdiff).
+        if model_key not in ("Naive", "TSDiff", "NsDiff"):
             if gate1_reused_dir is not None:
                 copy_serialized_artifacts(gate1_reused_dir, first_out_dir, model_key)
                 gate1_ok, gate1_reused = True, True
@@ -1236,7 +1246,7 @@ def process_asset_model(model_key: str, ticker: str, asset_class: str, train: pd
     for horizon_label in horizons:
         out_dir = combo_dir(run_date_str, MODEL_FOLDER_NAME[model_key], ticker, horizon_label)
         out_dir.mkdir(parents=True, exist_ok=True)
-        if model_key not in ("Naive", "TSDiff") and gate1_ok and out_dir != first_out_dir:
+        if model_key not in ("Naive", "TSDiff", "NsDiff") and gate1_ok and out_dir != first_out_dir:
             copy_serialized_artifacts(first_out_dir, out_dir, model_key)
 
         # cf. --full-retrain=False : recopie metrics.json (hors "forecast")+predictions.parquet
