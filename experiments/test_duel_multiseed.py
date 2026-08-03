@@ -136,3 +136,44 @@ def test_load_or_run_asset_computes_and_saves_checkpoint_when_absent(tmp_path, m
     records2, meta2 = dms.load_or_run_asset(9, "BTC", "BTC-USD", args=None)
     assert calls == []
     assert records2 == records
+
+
+# ── NsDiff epoch sweep (BRIEF_nsdiff_epoch_sweep.md) — additive, opt-in ──────
+
+def test_build_arg_parser_nsdiff_defaults():
+    """New flags exist with the documented defaults; --include-nsdiff itself
+    defaults to False (unchanged)."""
+    args = dms.build_arg_parser().parse_args([])
+    assert args.include_nsdiff is False
+    assert args.nsdiff_fixed_epochs is None
+    assert args.nsdiff_epoch_candidates == [40, 60, 80]
+    assert args.nsdiff_hp_samples == 100
+
+
+def test_run_one_seed_without_include_nsdiff_never_touches_nsdiff_path(monkeypatch):
+    """The new NsDiff-sweep flags/plumbing must have zero effect on a run
+    without --include-nsdiff (brief §5's second required test) -- proven by
+    making the NsDiff code path raise if it is EVER reached, with `args`
+    carrying no `include_nsdiff` attribute at all (the getattr(..., False)
+    fallback exercised by a bare args namespace, same as argparse's own
+    store_true default of False)."""
+    monkeypatch.setattr(dms, "load_or_run_asset",
+                        lambda seed, asset_code, ticker, args: ([{"crps": 1.0}], {"m": 1}))
+
+    def _boom_nsdiff(*a, **kw):
+        raise AssertionError("load_or_run_asset_nsdiff must NOT be called without --include-nsdiff")
+
+    def _boom_analysis(*a, **kw):
+        raise AssertionError("build_grid_analysis_with_nsdiff must NOT be used without --include-nsdiff")
+
+    monkeypatch.setattr(dms, "load_or_run_asset_nsdiff", _boom_nsdiff)
+    monkeypatch.setattr(dms.db, "build_grid_analysis", lambda df, meta, args: {"ok": True})
+    monkeypatch.setattr(dms.db, "build_grid_analysis_with_nsdiff", _boom_analysis)
+
+    class Args:
+        assets = ["SPY"]
+
+    args = Args()   # deliberately no `include_nsdiff` attribute at all
+    df, all_meta, analysis = dms.run_one_seed(1, args)
+    assert analysis == {"ok": True}
+    assert all_meta == {"SPY": {"m": 1}}

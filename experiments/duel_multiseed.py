@@ -332,6 +332,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--include-nsdiff", action="store_true",
                    help="opt-in: add NsDiff to every seed's duel, same convention as "
                         "duel_backtest.py --include-nsdiff. Default off -- output unchanged.")
+    p.add_argument("--nsdiff-epoch-candidates", nargs="+", type=int, default=[40, 60, 80],
+                   help="NsDiff-W epoch candidates for the validation-only sweep, per seed x "
+                        "asset (mirrors --tsdiff-epoch-candidates). Only used under "
+                        "--include-nsdiff without --nsdiff-fixed-epochs "
+                        "(BRIEF_nsdiff_epoch_sweep.md).")
+    p.add_argument("--nsdiff-hp-samples", type=int, default=100,
+                   help="sample count for NsDiff-W epoch selection only (validation block), "
+                        "separate from --m-samples (mirrors --tsdiff-hp-samples). Only used "
+                        "under --include-nsdiff without --nsdiff-fixed-epochs.")
+    p.add_argument("--nsdiff-fixed-epochs", type=int, default=None,
+                   help="escape hatch: skip the validation sweep and fit NsDiff-W with this "
+                        "fixed epoch count for every seed x asset (reproduces the pre-sweep "
+                        "duel_backtest_nsdiff.json behavior). Only used under --include-nsdiff.")
     p.add_argument("--out", default=str(Path(__file__).resolve().parent / "duel_backtest.json"))
     return p
 
@@ -413,11 +426,20 @@ def main() -> None:
                  "hpo": "aucun", "n_seeds": len(args.seeds)},
     }
     if args.include_nsdiff:
+        if args.nsdiff_fixed_epochs is not None:
+            nsdiff_epochs_desc = (f"budget fixe (--nsdiff-fixed-epochs {args.nsdiff_fixed_epochs}), "
+                                  "non selectionne sur validation/test (echappatoire, "
+                                  "BRIEF_nsdiff_epoch_sweep.md §3.4)")
+            nsdiff_hpo_desc = "aucun (budget fixe)"
+        else:
+            nsdiff_epochs_desc = (f"candidats {args.nsdiff_epoch_candidates}, selection sur "
+                                  "validation par graine x actif (verrou E1), "
+                                  f"hp_samples={args.nsdiff_hp_samples}")
+            nsdiff_hpo_desc = "epoques (validation uniquement)"
         budgets["NsDiff (par actif)"] = {
-            "epochs": f"budget fixe declare (db.NSDIFF_EPOCHS_W={db.NSDIFF_EPOCHS_W}), "
-                     "non selectionne sur validation/test (brief §4.4)",
+            "epochs": nsdiff_epochs_desc,
             "data_window": f"{args.start} -> {args.end}", "m": args.m_samples,
-            "hpo": "aucun (budget fixe)", "n_seeds": len(args.seeds),
+            "hpo": nsdiff_hpo_desc, "n_seeds": len(args.seeds),
         }
 
     payload = {
