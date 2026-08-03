@@ -102,11 +102,13 @@ PAIRS = tuple((("TSDiff", c) for c in CLASSICS))
 # stay byte-for-byte identical to the current 6-model duel.
 MODELS_WITH_NSDIFF = MODELS + ("NsDiff",)
 PAIRS_WITH_NSDIFF = PAIRS + tuple(("NsDiff", c) for c in CLASSICS) + (("TSDiff", "NsDiff"),)
-NSDIFF_EPOCHS_W = 40   # fixed, DECLARED epoch budget (brief §4.4 sanctions this in place of
-                       # a validation sweep when reusing epoch_sweep's TSDiff-W-specific
-                       # checkpointing machinery for a second model is out of scope here) --
-                       # anchored at the lowest candidate of --tsdiff-epoch-candidates
-                       # (default 40/60/80), never selected on val_pos or test_pos.
+# NSDIFF_EPOCHS_W: the fixed epoch budget used by the ORIGINAL NsDiff arm
+# (experiments/duel_backtest_nsdiff.json, BRIEF_integration_nsdiff.md §4.4, before
+# the validation sweep below existed). Kept only as a documented historical
+# reference / suggested value for the --nsdiff-fixed-epochs escape hatch
+# (BRIEF_nsdiff_epoch_sweep.md) -- no longer read by run_nsdiff_records, which now
+# defaults to a validation-only sweep (see epoch_sweep._sweep_one_model_nsdiff).
+NSDIFF_EPOCHS_W = 40
 
 
 def select_garch_spec(asset_code: str, train_daily: pd.Series, daily: pd.Series,
@@ -262,7 +264,17 @@ def run_nsdiff_records(asset_code: str, ticker: str, args) -> tuple:
     above), then samples `args.m_samples` trajectories per test origin via
     nsdiff_weekly.forecast_from_fitted_weekly (mirrors td.forecast_from_fitted
     at line ~197 above) -- same `m`, same per-origin seed convention
-    (args.seed + k) as every other model here."""
+    (args.seed + k) as every other model here.
+
+    Epoch count for NsDiff-W (BRIEF_nsdiff_epoch_sweep.md): mirrors the TSDiff-W
+    block just above -- `args.nsdiff_fixed_epochs` (escape hatch, default None)
+    bypasses the sweep and reproduces the pre-sweep fixed-budget behavior
+    (NSDIFF_EPOCHS_W historically); otherwise a validation-only sweep
+    (`epoch_sweep._sweep_one_model_nsdiff` / `select_epochs`, verrou E1, never
+    touches test_pos) selects epochs from `args.nsdiff_epoch_candidates` using
+    `args.nsdiff_hp_samples` trajectories (separate from the `m=args.m_samples`
+    used for final scoring below, exactly like TSDiff-W's own
+    `--tsdiff-hp-samples` vs `--m-samples` separation)."""
     daily = td.fetch_data(ticker, args.start, args.end)
     weekly, weekly_dates = build_weekly(daily)
     train_end_pos, val_pos, test_pos = build_common_origins(
@@ -270,13 +282,40 @@ def run_nsdiff_records(asset_code: str, ticker: str, args) -> tuple:
     T0_date = weekly_dates.iloc[train_end_pos]
     train_weekly = weekly.iloc[:train_end_pos + 1]
 
+    fixed_epochs = getattr(args, "nsdiff_fixed_epochs", None)
+    if fixed_epochs is not None:
+        epochs_ns = int(fixed_epochs)
+        epoch_meta = {
+            "epochs_nsdiff_w": epochs_ns,
+            "nsdiff_epoch_selection": f"fixed override (--nsdiff-fixed-epochs {epochs_ns}), "
+                                     "not validation-swept (escape hatch, brief "
+                                     "BRIEF_nsdiff_epoch_sweep.md §3.4).",
+        }
+        print(f"[{asset_code}] NsDiff-W epochs={epochs_ns} (--nsdiff-fixed-epochs escape hatch)")
+    else:
+        candidates = getattr(args, "nsdiff_epoch_candidates", None) or [40, 60, 80]
+        hp_samples = getattr(args, "nsdiff_hp_samples", None) or 100
+        t0 = time.time()
+        sweep_records = es._sweep_one_model_nsdiff(
+            asset_code, train_weekly, HORIZON_WEEKLY, weekly, args.seed,
+            candidates, val_pos, weekly, hp_samples)
+        sel = es.select_epochs(sweep_records)[f"{asset_code}|NsDiff-W"]
+        epochs_ns = sel["epochs"]
+        epoch_meta = {
+            "epochs_nsdiff_w": epochs_ns,
+            "nsdiff_epoch_selection": f"validation sweep (verrou E1), candidates="
+                                     f"{list(candidates)}, hp_samples={hp_samples}",
+            "nsdiff_epoch_val_scores": {r["epochs"]: r["crps_val"] for r in sweep_records},
+        }
+        print(f"[{asset_code}] NsDiff-W epochs*={epochs_ns} (val-selected, "
+              f"{time.time() - t0:.0f}s)")
+
     t0 = time.time()
     nm.set_seed(args.seed)
     model_ns, _, mu_ns, sd_ns, _ = nw.fit_weekly(train_weekly, horizon=HORIZON_WEEKLY,
-                                                 epochs=NSDIFF_EPOCHS_W)
+                                                 epochs=epochs_ns)
     weekly_z_ns = standardized_returns(weekly, mu_ns, sd_ns)
-    print(f"[{asset_code}] NsDiff-W fit in {time.time() - t0:.0f}s "
-          f"(epochs={NSDIFF_EPOCHS_W}, fixed/declared -- not validation-swept)")
+    print(f"[{asset_code}] NsDiff-W fit in {time.time() - t0:.0f}s (epochs={epochs_ns})")
 
     records = []
     t0 = time.time()
@@ -307,11 +346,7 @@ def run_nsdiff_records(asset_code: str, ticker: str, args) -> tuple:
             print(f"[{asset_code}] NsDiff test origin {k + 1}/{len(test_pos)} "
                  f"({origin_date.date()}) done ({time.time() - t0:.0f}s elapsed)")
 
-    meta = {
-        "epochs_nsdiff_w": NSDIFF_EPOCHS_W,
-        "nsdiff_epoch_selection": "fixed budget, declared (not validation- or test-swept)",
-    }
-    return records, meta
+    return records, epoch_meta
 
 
 def build_grid_analysis(df: pd.DataFrame, all_meta: dict, args) -> dict:
@@ -502,6 +537,20 @@ def main() -> None:
                    help="opt-in: add NsDiff (+ the TSDiff-vs-NsDiff pair) to the duel "
                         "(BRIEF_integration_nsdiff.md §4.4). Default off -- MODELS/PAIRS/"
                         "output identical to the current 6-model duel, byte-for-byte.")
+    p.add_argument("--nsdiff-epoch-candidates", nargs="+", type=int, default=[40, 60, 80],
+                   help="NsDiff-W epoch candidates for the validation-only sweep (mirrors "
+                        "--tsdiff-epoch-candidates). Only used under --include-nsdiff, and "
+                        "only when --nsdiff-fixed-epochs is not given (BRIEF_nsdiff_epoch_"
+                        "sweep.md).")
+    p.add_argument("--nsdiff-hp-samples", type=int, default=100,
+                   help="sample count for NsDiff-W epoch selection only (validation block), "
+                        "separate from --m-samples (mirrors --tsdiff-hp-samples). Only used "
+                        "under --include-nsdiff without --nsdiff-fixed-epochs.")
+    p.add_argument("--nsdiff-fixed-epochs", type=int, default=None,
+                   help="escape hatch: skip the validation sweep and fit NsDiff-W with this "
+                        "fixed epoch count instead (reproduces the pre-sweep behavior of "
+                        "experiments/duel_backtest_nsdiff.json, NSDIFF_EPOCHS_W=40). Only "
+                        "used under --include-nsdiff.")
     p.add_argument("--out", default=str(Path(__file__).resolve().parent / "duel_backtest.json"))
     args = p.parse_args()
     args.end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
@@ -551,7 +600,13 @@ def main() -> None:
     }
     if args.include_nsdiff:
         payload["config"]["include_nsdiff"] = True
-        payload["config"]["nsdiff_epochs_w"] = NSDIFF_EPOCHS_W
+        if args.nsdiff_fixed_epochs is not None:
+            payload["config"]["nsdiff_epoch_selection"] = (
+                f"fixed override: {args.nsdiff_fixed_epochs} epochs (--nsdiff-fixed-epochs)")
+        else:
+            payload["config"]["nsdiff_epoch_selection"] = "validation sweep (verrou E1)"
+            payload["config"]["nsdiff_epoch_candidates"] = args.nsdiff_epoch_candidates
+            payload["config"]["nsdiff_hp_samples"] = args.nsdiff_hp_samples
     Path(args.out).write_text(json.dumps(payload, indent=2, default=str))
     print(f"\nSaved -> {args.out}  ({elapsed / 60:.1f} min)")
     print_summary_table(df, analysis["model_confidence_set"])
