@@ -11,6 +11,7 @@ import pytest
 
 import epoch_sweep as es
 import tsdiff_model as td
+import nsdiff_model as nm
 
 
 def _synthetic_daily(n_days=900, seed=0) -> pd.Series:
@@ -129,3 +130,102 @@ def test_sweep_asset_records_cover_every_candidate_and_model(patched_fetch):
         assert 0.0 <= r["cov95_val"] <= 1.0
         assert r["crps_val"] >= 0.0
         assert r["rel_std_pct_val"] >= 0.0
+
+
+# ── NsDiff-W sweep (BRIEF_nsdiff_epoch_sweep.md) — sibling of the TSDiff tests
+# above, same guardrails: incremental training, val-only selection (verrou E1).
+# The TSDiff-branch tests above are untouched, proving _sweep_one_model's own
+# TSDiff path was not modified by adding the NsDiff sibling.
+
+def test_fit_checkpoints_nsdiff_yields_cumulative_epochs_same_mu_sd():
+    daily = _synthetic_daily()
+    train = daily.iloc[:400]
+    nm.set_seed(0)
+    seen_epochs, mus, sds = [], [], []
+    for epochs, model, mu, sd in es.fit_checkpoints_nsdiff(
+            train, horizon=3, candidates=[2, 4, 6],
+            hidden_mean=8, hidden_sigma=8, hidden_denoise=8, seq_len=26):
+        seen_epochs.append(epochs)
+        mus.append(mu)
+        sds.append(sd)
+        assert isinstance(model, nm.NsDiff)
+    assert seen_epochs == [2, 4, 6]
+    assert len(set(mus)) == 1
+    assert len(set(sds)) == 1
+
+
+def test_fit_checkpoints_nsdiff_trains_incrementally_not_from_scratch():
+    """Same optimization as fit_checkpoints (TSDiff): the model object yielded at
+    each checkpoint is the SAME object (weights + optimizer state carried over),
+    not a fresh NsDiff -- NsDiff.train() never recreates self.opt (cf.
+    nsdiff_model.py), so this incremental scheme is valid for it too."""
+    daily = _synthetic_daily()
+    train = daily.iloc[:400]
+    nm.set_seed(0)
+    models = [model for _, model, _, _ in
+             es.fit_checkpoints_nsdiff(train, horizon=3, candidates=[2, 4],
+                                       hidden_mean=8, hidden_sigma=8,
+                                       hidden_denoise=8, seq_len=26)]
+    assert models[0] is models[1]
+
+
+def test_select_epochs_reused_unchanged_for_nsdiff_w():
+    """select_epochs is reused as-is (brief §3.2: "réutilise select_epochs tel
+    quel") -- proven by feeding it NsDiff-W records with no changes to the
+    function at all, same argmin-CRPS-on-val contract as TSDiff-W."""
+    records = [
+        {"asset": "SPY", "model": "NsDiff-W", "epochs": 40, "crps_val": 5.0,
+         "cov95_val": 0.5, "rel_std_pct_val": 1.0},
+        {"asset": "SPY", "model": "NsDiff-W", "epochs": 60, "crps_val": 3.0,
+         "cov95_val": 0.6, "rel_std_pct_val": 0.8},
+        {"asset": "SPY", "model": "NsDiff-W", "epochs": 80, "crps_val": 4.0,
+         "cov95_val": 0.5, "rel_std_pct_val": 0.9},
+    ]
+    selected = es.select_epochs(records)
+    assert selected["SPY|NsDiff-W"]["epochs"] == 60
+
+
+def test_sweep_one_model_nsdiff_never_reads_test_block():
+    """Verrou E1, the non-negotiable contract of BRIEF_nsdiff_epoch_sweep.md §2:
+    truncate `weekly` to end exactly at the last validation target (i.e. delete
+    every row the test block would need) and check the val CRPS scores are
+    BIT-IDENTICAL to those computed from the full series (which does contain the
+    test block). If `_sweep_one_model_nsdiff` ever read a test-block row, the
+    truncated call would either crash (index out of bounds) or produce different
+    scores -- neither happens, proving only val_pos-indexed rows are read.
+
+    Uses duel_origins.build_common_origins (the origin builder duel_backtest.py
+    actually calls before handing val_pos to _sweep_one_model_nsdiff), not
+    epoch_sweep.three_way_split directly -- only build_common_origins' embargo
+    guarantees val_pos[-1] + 3 < test_pos[0] (three_way_split alone leaves them
+    adjacent, since embargo=0 is its default from run_nsdiff_records's point of
+    view -- the embargo is duel_origins' job, cf. its own docstring)."""
+    from duel_origins import build_common_origins
+    daily = _synthetic_daily(n_days=900, seed=3)
+    weekly, weekly_dates = es.build_weekly(daily)
+    train_end, val_pos, test_pos = build_common_origins(weekly, n_val=4, n_test=10)
+    train_weekly = weekly.iloc[:train_end + 1]
+
+    # Last row _sweep_one_model_nsdiff could possibly touch: val_pos[-1] + 3
+    # (the W3 target of the last validation origin). build_common_origins' embargo
+    # is sized so this lands EXACTLY on test_pos[0] (the first test origin's own
+    # conditioning price, not one of test's own forecast targets) -- truncating
+    # there keeps everything val_pos needs while removing every one of test_pos'
+    # own targets (test_pos[i] + {1,2,3} for every i), all of which are strictly
+    # beyond test_pos[0] and therefore gone from the truncated series entirely.
+    last_needed = val_pos[-1] + 3
+    assert last_needed == test_pos[0]         # sanity: the embargo's exact boundary
+    assert last_needed < test_pos[0] + 1      # test_pos[0]'s OWN W1 target is excluded
+    weekly_truncated = weekly.iloc[:last_needed + 1]
+
+    nm.set_seed(0)
+    records_full = es._sweep_one_model_nsdiff(
+        "TEST", train_weekly, 3, weekly, 0, [2, 4], val_pos, weekly, n_samples=6)
+
+    nm.set_seed(0)
+    records_truncated = es._sweep_one_model_nsdiff(
+        "TEST", train_weekly, 3, weekly_truncated, 0, [2, 4], val_pos,
+        weekly_truncated, n_samples=6)
+
+    assert [r["crps_val"] for r in records_full] == [r["crps_val"] for r in records_truncated]
+    assert [r["cov95_val"] for r in records_full] == [r["cov95_val"] for r in records_truncated]

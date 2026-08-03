@@ -45,6 +45,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "models"))
 import tsdiff_model as td                                     # noqa: E402
+import nsdiff_model as nm                                     # noqa: E402
+import nsdiff_weekly as nw                                    # noqa: E402
 
 from crps_metrics import crps_empirical                        # noqa: E402
 from weekly_headtohead import (                                # noqa: E402
@@ -148,6 +150,84 @@ def _sweep_one_model(asset: str, model_type: str, train_series: pd.Series, horiz
         }
         results.append(rec)
         print(f"[{asset}] {model_type:<9} epochs={epochs:<4} "
+              f"CRPS_val={rec['crps_val']:9.4f}  Cov95_val={rec['cov95_val']:.2f}  "
+              f"rel_std%={rec['rel_std_pct_val']:.3f}")
+    return results
+
+
+def fit_checkpoints_nsdiff(train: pd.Series, horizon: int, candidates,
+                           hidden_mean=nm.HIDDEN_MEAN, hidden_sigma=nm.HIDDEN_SIGMA,
+                           hidden_denoise=nm.HIDDEN_DENOISE, sigma_kernel=nm.SIGMA_KERNEL,
+                           k_denoise=nm.K_DENOISE, seq_len=nw.SEQ_LEN_W, batch_size=nm.BATCH_SIZE):
+    """NsDiff analogue of `fit_checkpoints` (TSDiff) -- same incremental-training
+    trick (BRIEF_nsdiff_epoch_sweep.md §3.3, declared choice): `nsdiff_model.NsDiff`
+    holds its optimizer on the instance (`self.opt`, built once in `__init__`) and
+    never resets it inside `.train()`, so repeated calls with `epochs=target-done`
+    resume optimization from the current weights exactly like `tsdiff_model.TSDiff`
+    does (no EMA to reconcile here -- NsDiff's official training loop has none, cf.
+    nsdiff_model.py's own architecture-decision docstring). One entrainement per
+    (asset, seed) for the whole candidate ladder, not N independent from-scratch
+    fits."""
+    train_p = train.values.astype(float)
+    r = nm._log_returns(train_p)
+    mu, sd = float(r.mean()), float(r.std())
+    sd = sd if sd > 1e-8 else 1.0
+    z = (r - mu) / sd
+    H_win, T_win = nm._make_windows(z, seq_len, horizon)
+    if len(H_win) == 0:
+        raise ValueError("not enough return history to build training windows.")
+    model = nm.NsDiff(seq_len, horizon, hidden_mean, hidden_sigma, hidden_denoise,
+                      sigma_kernel, T=k_denoise)
+    done = 0
+    for target in sorted(candidates):
+        model.train(H_win, T_win, epochs=target - done, batch_size=batch_size)
+        done = target
+        yield target, model, mu, sd
+
+
+def _sweep_one_model_nsdiff(asset: str, train_series: pd.Series, horizon: int,
+                            full_series: pd.Series, seed: int, candidates, val_pos: list,
+                            weekly: pd.Series, n_samples: int) -> list:
+    """NsDiff-W sibling of `_sweep_one_model` (TSDiff-W) -- NOT a modification of
+    that function (its TSDiff branch is untouched, cf. BRIEF_nsdiff_epoch_sweep.md
+    §3.2's "interdiction de modifier la branche TSDiff autrement que par un
+    paramètre optionnel"; here we add a wholly separate function instead). Same
+    val-only selection contract (verrou E1): every score below is computed from
+    `val_pos`-indexed origins of `weekly` only -- `test_pos` is never passed in
+    and never referenced anywhere in this module. Feeds the SAME `select_epochs`
+    (unchanged, reused as-is) via the same record shape (`asset`, `model`,
+    `epochs`, `crps_val`, `cov95_val`, `rel_std_pct_val`, `n_val_origins`).
+
+    NsDiff-W has no daily variant (unlike TSDiff-W/TSDiff-D) and no per-origin
+    daily-horizon lookup, so it needs neither the weekly/daily branching nor the
+    `weekly_dates`/`daily` arguments `_sweep_one_model` takes -- horizons are
+    always the weekly [1, 2, 3]."""
+    results = []
+    nm.set_seed(seed)
+    for epochs, model, mu, sd in fit_checkpoints_nsdiff(train_series, horizon, candidates):
+        buf = standardized_returns(full_series, mu, sd)
+        crps_vals, cov_flags, rel_stds = [], [], []
+        for k, m in enumerate(val_pos):
+            last_price = float(weekly.iloc[m])
+            nm.set_seed(seed + k)
+            lookback_z = buf[:m][-model.seq_len:]
+            samples_by_h = nw.forecast_from_fitted_weekly(
+                model, mu, sd, lookback_z, last_price, weeks=(1, 2, 3), n_samples=n_samples)
+            for wi in range(3):
+                samples = samples_by_h[wi + 1]["samples"]
+                actual = float(weekly.iloc[m + wi + 1])
+                crps_vals.append(crps_empirical(samples, actual))
+                lo, hi = np.quantile(samples, [0.025, 0.975])
+                cov_flags.append(bool(lo <= actual <= hi))
+                rel_stds.append(float(samples.std() / last_price * 100))
+
+        rec = {
+            "asset": asset, "model": "NsDiff-W", "epochs": epochs,
+            "crps_val": float(np.mean(crps_vals)), "cov95_val": float(np.mean(cov_flags)),
+            "rel_std_pct_val": float(np.mean(rel_stds)), "n_val_origins": len(val_pos),
+        }
+        results.append(rec)
+        print(f"[{asset}] NsDiff-W  epochs={epochs:<4} "
               f"CRPS_val={rec['crps_val']:9.4f}  Cov95_val={rec['cov95_val']:.2f}  "
               f"rel_std%={rec['rel_std_pct_val']:.3f}")
     return results
