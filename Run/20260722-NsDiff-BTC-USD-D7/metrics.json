@@ -1,0 +1,35 @@
+{
+  "RMSE": 3146.3451,
+  "MAE": 2586.2613,
+  "MAPE": 3.7,
+  "directional_accuracy": 88.89,
+  "pi_coverage_95": 80.0,
+  "pi_width_min": 6113.425781,
+  "pi_width_mean": 14424.049219,
+  "pi_width_max": 39156.804688,
+  "crps": null,
+  "n_val": 10,
+  "horizon": "D7",
+  "asset": "BTC-USD",
+  "model": "NsDiff",
+  "theil_u": 0.957,
+  "MASE": 1.0006,
+  "change_corr": 0.3394,
+  "dir_acc_change": 40.0,
+  "dir_acc_ci95": [
+    16.82,
+    68.73
+  ],
+  "dir_acc_p_vs_coin": 0.7539,
+  "dm_stat": -0.492,
+  "dm_p": 0.6346,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-21",
+    "last_price": 66505.125,
+    "predicted": 65720.296875,
+    "pi_lower": 61466.511719,
+    "pi_upper": 71097.085938
+  }
+}

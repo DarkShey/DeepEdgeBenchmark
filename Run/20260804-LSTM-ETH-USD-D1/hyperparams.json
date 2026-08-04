@@ -1,0 +1,7 @@
+{
+  "seq_len": 30,
+  "units": 64,
+  "epochs": 30,
+  "batch_size": 32,
+  "optimizer": "adam"
+}

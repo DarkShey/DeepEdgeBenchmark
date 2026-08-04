@@ -1,0 +1,35 @@
+{
+  "RMSE": 0.3288,
+  "MAE": 0.2587,
+  "MAPE": 0.23,
+  "directional_accuracy": 44.64,
+  "pi_coverage_95": 90.27,
+  "pi_width_min": 0.695305,
+  "pi_width_mean": 1.224014,
+  "pi_width_max": 1.806969,
+  "crps": 0.18809,
+  "n_val": 113,
+  "horizon": "D1",
+  "asset": "ZN=F",
+  "model": "NsDiff",
+  "theil_u": 1.0196,
+  "MASE": 1.0065,
+  "change_corr": -0.0203,
+  "dir_acc_change": 48.18,
+  "dir_acc_ci95": [
+    39.06,
+    57.42
+  ],
+  "dir_acc_p_vs_coin": 0.775,
+  "dm_stat": 1.089,
+  "dm_p": 0.2787,
+  "dm_lag": 4,
+  "skill_vs_naive": "no better than naive",
+  "forecast": {
+    "last_date": "2026-07-31",
+    "last_price": 108.0,
+    "predicted": 107.981415,
+    "pi_lower": 107.363693,
+    "pi_upper": 108.414154
+  }
+}

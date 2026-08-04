@@ -67,30 +67,42 @@ TC_PIPELINE = {
     "TC1.1": "daily", "TC1.2": "daily", "TC1.3": "daily", "TC1.4": "daily", "TC1.5": "daily",
 }
 
-# Weekly (régime C, BRIEF_weekly_pipeline_integration.md) : réduit à TSDiff seul (décision
-# de revue -- le gain mesuré du weekly n'existe QUE pour TSDiff, cf.
-# experiments/METHODOLOGIE_weekly_vs_daily.md ; les 5 autres modèles ont des données
-# weekly en base mais aucun gain démontré, donc pas de surface dédiée pour eux). Le
-# weekly n'est PAS plus précis pour TSDiff non plus (CRPS non significatif, p=0.236) --
-# seule sa calibration (couverture 95% 0,55 -> 0,78, p<0,001 Holm) est un résultat
-# solide. Ne jamais écrire/suggérer "plus précis".
-WEEKLY_KPI_MODELS = ["TSDiff"]
+# Weekly (régime C, BRIEF_weekly_pipeline_integration.md) : réduit aux modèles de
+# diffusion avec un gain weekly mesuré et déclaré -- TSDiff (calibration, couverture
+# 95% 0,55 -> 0,78, p<0,001 Holm ; PAS un gain de précision, CRPS non significatif
+# p=0.236, cf. experiments/METHODOLOGIE_weekly_vs_daily.md) et, depuis
+# BRIEF_nsdiff_dashboard_daily_oos.md, NsDiff (calibration encore meilleure : Cov95
+# pooled ~95% côté weekly natif, cf. NOTE_backtest_rolling_nsdiffw.md §3 et
+# NOTE_nsdiff_dashboard_daily_oos.md §7). Les 5 modèles paramétriques ont des données
+# weekly en base mais aucun gain démontré, donc pas de surface dédiée pour eux. Le
+# weekly n'est présenté comme un gain de PRÉCISION pour aucun des deux modèles --
+# seule leur calibration (ou fiabilité de l'incertitude) l'est. Ne jamais écrire/
+# suggérer "plus précis".
+WEEKLY_KPI_MODELS = ["TSDiff", "NsDiff"]
 # CRPS/couverture 50-80% recalculés depuis (y_pred,y_lower,y_upper) via un tirage
-# gaussien (cf. collect_weekly_kpis) : APPROXIMATION pour TSDiff (nuage réel non
-# gaussien, déjà collapsé en point+IC95 lors de la génération -- aucun nuage brut n'est
-# persisté). La couverture à 95%, elle, est recalculée directement depuis les bornes
-# stockées (in_interval), sans aucune hypothèse de forme -- seul chiffre "exact".
-WEEKLY_APPROX_CRPS_MODELS = ["TSDiff"]
+# gaussien (cf. collect_weekly_kpis) : APPROXIMATION pour les modèles de diffusion
+# (nuage réel non gaussien, déjà collapsé en point+IC95 lors de la génération --
+# aucun nuage brut n'est persisté, ni pour TSDiff ni pour NsDiff -- cf.
+# weekly_headtohead_v2.run_pair_v2 / experiments/oos_nsdiff_daily_weekly.py). La
+# couverture à 95%, elle, est recalculée directement depuis les bornes stockées
+# (in_interval), sans aucune hypothèse de forme -- seul chiffre "exact" pour les deux.
+WEEKLY_APPROX_CRPS_MODELS = ["TSDiff", "NsDiff"]
 
-MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff"]
+MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff", "NsDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
+# NsDiff : slot 2 (orange) de la palette de référence (skill dataviz,
+# references/palette.md) -- le seul slot categoriel encore inutilisé par les 6
+# modèles existants (blue=1, aqua=3, yellow=4, green=6, violet=7, TSDiff proche du
+# rouge=8) qui reste bien séparé du rouge de TSDiff. Non re-validé par
+# scripts/validate_palette.js (Node indisponible dans cet environnement) --
+# à revalider si l'occasion se présente, cf. NOTE_nsdiff_dashboard_daily_oos.md.
 MODEL_COLORS_LIGHT = {
     "ARIMA-GARCH": "#2a78d6", "SARIMA": "#1baf7a", "Prophet": "#eda100",
-    "LSTM": "#008300", "Naive": "#4a3aa7", "TSDiff": "#d64550",
+    "LSTM": "#008300", "Naive": "#4a3aa7", "TSDiff": "#d64550", "NsDiff": "#eb6834",
 }
 MODEL_COLORS_DARK = {
     "ARIMA-GARCH": "#3987e5", "SARIMA": "#199e70", "Prophet": "#c98500",
-    "LSTM": "#008300", "Naive": "#9085e9", "TSDiff": "#e5606b",
+    "LSTM": "#008300", "Naive": "#9085e9", "TSDiff": "#e5606b", "NsDiff": "#d95926",
 }
 
 
@@ -267,14 +279,16 @@ def _weekly_row_samples(model: str, y_pred: float, y_lower: float, y_upper: floa
                         last_close: float, n_samples: int, rng) -> "np.ndarray":
     """Nuage d'échantillons pour une ligne weekly régime C, réutilisant
     experiments/prob_kpi_common.sample_parametric pour les 5 modèles paramétriques
-    (recouvre exactement leur distribution prédictive stockée). TSDiff n'a pas de
-    nuage brut persisté ici (collapsé en point+IC95 dès la génération, cf.
-    weekly_headtohead_v2.run_pair_v2) -- prob_kpi_common refuse volontairement ce
-    modèle (réservé à son cas natif). Pour ce SEUL affichage dashboard, TSDiff est
-    traité par la même approximation gaussienne (sigma récupéré du PI stocké) déjà
-    documentée et utilisée telle quelle par experiments/weekly_vs_daily_pooled.py --
-    voir WEEKLY_APPROX_CRPS_MODELS, jamais présenté comme un résultat exact."""
-    if model == "TSDiff":
+    (recouvre exactement leur distribution prédictive stockée). Les modèles de
+    diffusion (TSDiff, NsDiff) n'ont pas de nuage brut persisté ici (collapsé en
+    point+IC95 dès la génération, cf. weekly_headtohead_v2.run_pair_v2 /
+    experiments/oos_nsdiff_daily_weekly.py) -- prob_kpi_common refuse volontairement
+    ces modèles (réservé à leur cas natif). Pour ce SEUL affichage dashboard, ils
+    sont traités par la même approximation gaussienne (sigma récupéré du PI stocké)
+    déjà documentée et utilisée telle quelle par experiments/weekly_vs_daily_pooled.py
+    pour TSDiff -- voir WEEKLY_APPROX_CRPS_MODELS, jamais présenté comme un résultat
+    exact."""
+    if model in WEEKLY_APPROX_CRPS_MODELS:
         sigma = max((y_upper - y_lower) / (2.0 * pkc.Z95), 1e-10)
         return rng.normal(loc=y_pred, scale=sigma, size=n_samples)
     return pkc.sample_parametric(model, y_pred, y_lower, y_upper, last_close, n_samples, rng)
@@ -778,10 +792,10 @@ function hideTooltip() { tooltipEl.style.display = 'none'; }
 
 // ---- Définitions des KPI (bulle au survol du repère "ⓘ") -------------------
 const KPI_DEFINITIONS = {
-  weeklyintro: "Régime hebdomadaire natif (C), TSDiff uniquement — le weekly ne rend PAS TSDiff plus précis (CRPS non significatif, p=0.236, cf. experiments/METHODOLOGIE_weekly_vs_daily.md). Il est affiché ici parce qu'il corrige significativement sa sur-confiance sur la calibration de l'incertitude — jamais présenté comme un gain de précision. Les 5 autres modèles ont des données weekly en base mais aucun gain démontré, donc pas de surface dédiée.",
-  weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. C'est le résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm).",
-  weeklycov5080: "Couverture 50%/80% (paramétrique) — recalculée en tirant un nuage paramétrique depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. Reconstruction two-piece qui respecte l'asymétrie des bornes stockées (log-espace pour ARIMA-GARCH/Prophet) — exacte pour des bornes symétriques, cf. prob_kpi_common.sample_parametric. APPROXIMATION pour TSDiff (nuage réel non persisté à cette granularité) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
-  weeklycrps: "CRPS (paramétrique) — score de la distribution complète (précision + incertitude), calculé sur un nuage paramétrique recalculé depuis (prédit, IC95) en respectant l'asymétrie des bornes stockées (two-piece, log-espace pour ARIMA-GARCH/Prophet — plus d'hypothèse de symétrie gaussienne forcée depuis l'adoption skew-t/log). APPROXIMATION pour TSDiff (nuage réel non persisté) — ne PAS lire comme 'TSDiff plus précis en weekly' (non significatif, p=0.236), cf. couverture pour le résultat solide.",
+  weeklyintro: "Régime hebdomadaire natif (C), modèles de diffusion uniquement (sélecteur TSDiff/NsDiff quand l'actif a les deux — cf. BRIEF_nsdiff_dashboard_daily_oos.md) — le weekly ne les rend PAS plus précis en pointe (CRPS non significatif pour TSDiff, p=0.236, cf. experiments/METHODOLOGIE_weekly_vs_daily.md ; skill RMSE indistinguable pour NsDiff en poolé, p=0.169, cf. NOTE_nsdiff_dashboard_daily_oos.md §6). Affiché ici parce que chacun corrige significativement sa fiabilité côté incertitude en weekly — jamais présenté comme un gain de précision. Les 5 modèles paramétriques ont des données weekly en base mais aucun gain démontré, donc pas de surface dédiée.",
+  weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. Résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm) et pour NsDiff (couverture poolée ≈ 92-95% en weekly natif, cf. NOTE_backtest_rolling_nsdiffw.md §3 / NOTE_nsdiff_dashboard_daily_oos.md §7).",
+  weeklycov5080: "Couverture 50%/80% (paramétrique) — recalculée en tirant un nuage paramétrique depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. Reconstruction two-piece qui respecte l'asymétrie des bornes stockées (log-espace pour ARIMA-GARCH/Prophet) — exacte pour des bornes symétriques, cf. prob_kpi_common.sample_parametric. APPROXIMATION pour les modèles de diffusion (TSDiff, NsDiff — nuage réel non persisté à cette granularité pour aucun des deux) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
+  weeklycrps: "CRPS (paramétrique) — score de la distribution complète (précision + incertitude), calculé sur un nuage paramétrique recalculé depuis (prédit, IC95) en respectant l'asymétrie des bornes stockées (two-piece, log-espace pour ARIMA-GARCH/Prophet — plus d'hypothèse de symétrie gaussienne forcée depuis l'adoption skew-t/log). APPROXIMATION pour les modèles de diffusion (TSDiff, NsDiff) — ne PAS lire comme 'plus précis en weekly' (non significatif pour les deux), cf. couverture pour le résultat solide.",
   rollcov: "Monitoring de la calibration déployée (adoption σ dynamique du 30-31/07/2026) : pour chaque modèle × horizon, part des prédictions RÉSOLUES dont le vrai prix est tombé dans la bande 95 % stockée — recalculée depuis les bornes, sans hypothèse de forme. Fenêtre = dernières prédictions résolues (défaut 30) ; « live » = sous-ensemble réellement produit en production (source='live'), c'est lui qui confirme (ou non) en conditions réelles ce qui a été validé en backtest. Rouge = sous-couverture au-delà de 2 écarts-types binomiaux sous 95 % (bandes trop étroites — le sens risqué) ; ambre = 100 % sur fenêtre pleine (bandes probablement trop larges). Les premiers jours après déploiement, n_live est faible : les cellules se fiabilisent au fil des résolutions quotidiennes (evaluate_daily).",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, bande gaussienne (même hypothèse que son IC95) pour Naive, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
@@ -859,6 +873,13 @@ DATA.assets.forEach(a => {
     warnThreshold: 20,
     subtab: 'kpis',
     freq: 'daily',
+    // Modèles affichés dans le panneau Weekly (régime C) -- mêmes cases à cocher +
+    // carrés de couleur que le panneau Daily (models ci-dessus), pas un
+    // sélecteur exclusif : plusieurs modèles de diffusion (DATA.weekly_kpi_models)
+    // peuvent être affichés ensemble. Initialisé à TOUS les modèles weekly
+    // réellement présents pour CET actif (cf. wireAssetPanel) -- ex: NsDiff absent
+    // pour TLT (données non résolues), cf. NOTE_nsdiff_dashboard_daily_oos.md §3.
+    weeklyModels: new Set(),
   };
 });
 
@@ -900,7 +921,8 @@ function assetPanelSkeleton(a) {
       <div class="toggle-group" id="freq-${s}">
         <button class="active" data-freq="daily">Daily</button>
         <button data-freq="weekly">Weekly ${infoDot('weeklyintro')}</button>
-      </div>` : ''}
+      </div>
+      <div class="model-checks" id="weeklymodel-${s}" style="display:none;"></div>` : ''}
       <label class="field-label" id="daterow-${s}">Date de run
         <select class="select-box" id="date-${s}"></select>
       </label>
@@ -1070,6 +1092,31 @@ function wireAssetPanel(a) {
   buildHorizonToggle(ticker);
 
   if (DATA.weekly_kpis && DATA.weekly_kpis[ticker]) {
+    // Modèles weekly réellement présents pour CET actif (ex: NsDiff absent pour
+    // TLT, cf. NOTE_nsdiff_dashboard_daily_oos.md §3), dans l'ordre déclaré
+    // DATA.weekly_kpi_models -- jamais l'ordre d'itération d'un objet JS. Cases à
+    // cocher + carrés de couleur, MÊME composant que le sélecteur de modèles Daily
+    // (models-${s} ci-dessous) -- pas un onglet exclusif : tous cochés par défaut.
+    const weeklyModelsHere = DATA.weekly_kpi_models.filter(m => DATA.weekly_kpis[ticker][m]);
+    st.weeklyModels = new Set(weeklyModelsHere);
+
+    const wmEl = document.getElementById(`weeklymodel-${s}`);
+    weeklyModelsHere.forEach(m => {
+      const label = document.createElement('label');
+      label.className = 'model-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = st.weeklyModels.has(m);
+      cb.addEventListener('change', () => {
+        if (cb.checked) st.weeklyModels.add(m); else st.weeklyModels.delete(m);
+        refreshAssetTab(ticker);
+      });
+      const sw = document.createElement('span');
+      sw.className = 'swatch'; sw.style.background = MODEL_COLORS[m];
+      const txt = document.createElement('span'); txt.textContent = m;
+      label.appendChild(cb); label.appendChild(sw); label.appendChild(txt);
+      wmEl.appendChild(label);
+    });
+
     const freqEl = document.getElementById(`freq-${s}`);
     freqEl.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1078,6 +1125,7 @@ function wireAssetPanel(a) {
         const isWeekly = st.freq === 'weekly';
         document.getElementById(`daterow-${s}`).style.display = isWeekly ? 'none' : '';
         document.getElementById(`models-${s}`).style.display = isWeekly ? 'none' : '';
+        wmEl.style.display = isWeekly && weeklyModelsHere.length > 0 ? '' : 'none';
         document.getElementById(`showtrain-label-${s}`).style.display = isWeekly ? 'none' : '';
         document.getElementById(`showval-label-${s}`).style.display = isWeekly ? 'none' : '';
         buildHorizonToggle(ticker);
@@ -1202,18 +1250,21 @@ function renderRollingCoverage(ticker) {
 }
 
 // =============================================================================
-// Weekly (régime C, TSDiff uniquement) — BRIEF_weekly_pipeline_integration.md
-// Restreint à TSDiff (décision de revue) : seul modèle avec un gain mesuré (calibration,
-// PAS précision -- cf. weeklyintro/weeklycrps dans KPI_DEFINITIONS et le badge
-// DATA.weekly_calibration_badge). Les 5 autres modèles ont des données weekly en base
-// mais aucune surface dédiée ici, faute de gain démontré.
+// Weekly (régime C, modèles de diffusion) — BRIEF_weekly_pipeline_integration.md +
+// BRIEF_nsdiff_dashboard_daily_oos.md. Restreint aux modèles avec un gain mesuré
+// (calibration, PAS précision -- cf. weeklyintro/weeklycrps dans KPI_DEFINITIONS et
+// le badge DATA.weekly_calibration_badge) : TSDiff, puis NsDiff -- cochables/
+// décochables ENSEMBLE via weeklymodel-${s} (mêmes cases à cocher + carrés de
+// couleur que le sélecteur Daily, cf. wireAssetPanel), pas un onglet exclusif. Les
+// 5 modèles paramétriques ont des données weekly en base mais aucune surface dédiée
+// ici, faute de gain démontré.
 // =============================================================================
 
 // Réutilise EXACTEMENT le schéma daily (cartes KPI + breakdown dans l'onglet KPIs,
 // graphique prix + prévision dans l'onglet Graphique) -- toggle Daily/Weekly bascule
 // le contenu de ces DEUX onglets existants, pas un 3e onglet à part (cf. revue).
-function weeklyRows(ticker) {
-  const weekly = (DATA.weekly_kpis[ticker] || {})['TSDiff'] || {};
+function weeklyRows(ticker, model) {
+  const weekly = (DATA.weekly_kpis[ticker] || {})[model] || {};
   const rows = [];
   Object.entries(weekly).forEach(([horizonUnit, kpi]) => rows.push({ horizonUnit, ...kpi }));
   rows.sort((a, b) => a.horizonUnit.localeCompare(b.horizonUnit));
@@ -1223,53 +1274,61 @@ function weeklyRows(ticker) {
 function renderWeeklyKpisInline(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
+  const checked = DATA.weekly_kpi_models.filter(m => st.weeklyModels.has(m) && DATA.weekly_kpis[ticker][m]);
 
-  const rows = weeklyRows(ticker);
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
   cardsEl.innerHTML = '';
-  const rec = rows.find(r => r.horizonUnit === st.horizon);
-  const card = document.createElement('div');
-  card.className = 'kpi-card';
-  let rowsHtml;
-  if (!rec) {
-    rowsHtml = '<div class="no-data">Pas de données</div>';
-  } else {
-    const crpsLabel = rec.crps_gaussian == null ? '—' :
-      fmt(rec.crps_gaussian, 3) + (rec.crps_is_approx ? ' (approx.)' : '');
-    rowsHtml = [
-      [`Couverture 95% ${infoDot('weeklycov95')}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
-      [`Couverture 50% / 80% ${infoDot('weeklycov5080')}`,
-       (rec.cov50_gaussian == null ? '—' : fmt(rec.cov50_gaussian * 100, 1) + ' %') + ' / ' +
-       (rec.cov80_gaussian == null ? '—' : fmt(rec.cov80_gaussian * 100, 1) + ' %')],
-      [`CRPS ${infoDot('weeklycrps')}`, crpsLabel],
-      ['n (réalisé/total)', `${rec.n_realized}/${rec.n_total}`],
-    ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
+  if (!checked.length) {
+    cardsEl.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
   }
-  card.innerHTML = `<div class="kpi-card-title">`
-    + `<span class="swatch" style="background:${MODEL_COLORS['TSDiff']};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>TSDiff</div>`
-    + rowsHtml;
-  cardsEl.appendChild(card);
+  checked.forEach(m => {
+    const rows = weeklyRows(ticker, m);
+    const rec = rows.find(r => r.horizonUnit === st.horizon);
+    const card = document.createElement('div');
+    card.className = 'kpi-card';
+    let rowsHtml;
+    if (!rec) {
+      rowsHtml = '<div class="no-data">Pas de données</div>';
+    } else {
+      const crpsLabel = rec.crps_gaussian == null ? '—' :
+        fmt(rec.crps_gaussian, 3) + (rec.crps_is_approx ? ' (approx.)' : '');
+      rowsHtml = [
+        [`Couverture 95% ${infoDot('weeklycov95')}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
+        [`Couverture 50% / 80% ${infoDot('weeklycov5080')}`,
+         (rec.cov50_gaussian == null ? '—' : fmt(rec.cov50_gaussian * 100, 1) + ' %') + ' / ' +
+         (rec.cov80_gaussian == null ? '—' : fmt(rec.cov80_gaussian * 100, 1) + ' %')],
+        [`CRPS ${infoDot('weeklycrps')}`, crpsLabel],
+        ['n (réalisé/total)', `${rec.n_realized}/${rec.n_total}`],
+      ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
+    }
+    card.innerHTML = `<div class="kpi-card-title">`
+      + `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}</div>`
+      + rowsHtml;
+    cardsEl.appendChild(card);
+  });
 
   const wrap = document.getElementById(`breakdown-wrap-${s}`);
   wrap.innerHTML = '';
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+  const allRows = checked.flatMap(m => weeklyRows(ticker, m).map(r => ({ model: m, ...r })));
+  if (!allRows.length) {
+    wrap.innerHTML = '<div class="no-data">Aucune donnée pour cette sélection.</div>';
     return;
   }
   const table = document.createElement('table');
   table.innerHTML = `
     <thead><tr>
-      <th>Horizon</th><th>n (réalisé/total)</th>
+      <th>Modèle</th><th>Horizon</th><th>n (réalisé/total)</th>
       <th>Couverture 95% ${infoDot('weeklycov95')}</th>
       <th>Couverture 50% / 80% ${infoDot('weeklycov5080')}</th>
       <th>CRPS ${infoDot('weeklycrps')}</th>
     </tr></thead>`;
   const tbody = document.createElement('tbody');
-  rows.forEach(r => {
+  allRows.forEach(r => {
     const tr = document.createElement('tr');
     const crpsLabel = r.crps_gaussian == null ? '—' :
       fmt(r.crps_gaussian, 3) + (r.crps_is_approx ? ' (approx.)' : '');
     tr.innerHTML = `
+      <td><span class="swatch" style="background:${MODEL_COLORS[r.model]};width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;"></span>${r.model}</td>
       <td>${r.horizonUnit}</td>
       <td>${r.n_realized}/${r.n_total}</td>
       <td>${r.cov95_exact == null ? '—' : fmt(r.cov95_exact * 100, 1) + '%'}</td>
@@ -1281,31 +1340,40 @@ function renderWeeklyKpisInline(ticker) {
   wrap.appendChild(table);
 }
 
-// ---- Graphique weekly : prix hebdo réel + prévision TSDiff à l'horizon sélectionné --
-// Même schéma visuel que le Graphique daily (Plotly zoomable, bande IC95), sourcé
-// directement depuis DATA.weekly_kpis (déjà tout en mémoire, pas de fetch réseau
-// contrairement au daily en mode externe).
+// ---- Graphique weekly : prix hebdo réel + prévision de chaque modèle weekly coché --
+// Même schéma visuel que le Graphique daily (Plotly zoomable, bande IC95 par modèle,
+// une trace par modèle coché), sourcé directement depuis DATA.weekly_kpis (déjà tout
+// en mémoire, pas de fetch réseau contrairement au daily en mode externe).
 function renderWeeklyChart(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
+  const checked = DATA.weekly_kpi_models.filter(m => st.weeklyModels.has(m) && DATA.weekly_kpis[ticker][m]);
 
-  const rows = weeklyRows(ticker);
-  if (!rows.length) {
-    container.innerHTML = '<div class="no-data">Aucune donnée weekly TSDiff pour cet actif.</div>';
+  if (!checked.length) {
+    container.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
     dateRangeEl.textContent = '';
     return;
   }
 
-  // Prix réel hebdo : un point par origine (cutoff_date, last_close), dédupliqué --
-  // last_close est identique pour un même cutoff_date quel que soit l'horizon.
+  // Prix réel hebdo : un point par origine (cutoff_date, last_close), dédupliqué sur
+  // TOUS les modèles cochés -- last_close est identique pour un même cutoff_date quel
+  // que soit le modèle ou l'horizon (même grille d'origines, cf. NOTE_nsdiff_dashboard_daily_oos.md).
   const priceByDate = new Map();
-  rows.forEach(r => r.rows.forEach(row => priceByDate.set(row.cutoff_date, row.last_close)));
+  let anyRows = false;
+  checked.forEach(m => weeklyRows(ticker, m).forEach(r => {
+    anyRows = true;
+    r.rows.forEach(row => priceByDate.set(row.cutoff_date, row.last_close));
+  }));
   const priceDates = [...priceByDate.keys()].sort();
   dateRangeEl.textContent = priceDates.length
     ? `Historique hebdomadaire : ${priceDates[0]} → ${priceDates[priceDates.length - 1]}`
     : '';
+  if (!anyRows) {
+    container.innerHTML = '<div class="no-data">Aucune donnée pour cette sélection.</div>';
+    return;
+  }
 
   const traces = [{
     x: priceDates, y: priceDates.map(d => priceByDate.get(d)),
@@ -1314,30 +1382,32 @@ function renderWeeklyChart(ticker) {
     hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
   }];
 
-  const sel = (rows.find(r => r.horizonUnit === st.horizon) || {}).rows || [];
-  const sorted = sel.slice().sort((x, y) => x.target_date.localeCompare(y.target_date));
-  const color = MODEL_COLORS['TSDiff'];
-  if (sorted.length) {
+  checked.forEach(m => {
+    const rows = weeklyRows(ticker, m);
+    const sel = (rows.find(r => r.horizonUnit === st.horizon) || {}).rows || [];
+    const sorted = sel.slice().sort((x, y) => x.target_date.localeCompare(y.target_date));
+    if (!sorted.length) return;
+    const color = MODEL_COLORS[m];
     if (st.showPI) {
       traces.push({
         x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_upper),
-        mode: 'lines', line: { width: 0, color }, showlegend: false, hoverinfo: 'skip',
+        mode: 'lines', line: { width: 0, color }, legendgroup: m, showlegend: false, hoverinfo: 'skip',
       });
       traces.push({
         x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_lower),
-        mode: 'lines', line: { width: 0, color }, fill: 'tonexty',
+        mode: 'lines', line: { width: 0, color }, legendgroup: m, fill: 'tonexty',
         fillcolor: hexToRgba(color, 0.16), showlegend: false, hoverinfo: 'skip',
       });
     }
     if (st.showPred) {
       traces.push({
         x: sorted.map(p => p.target_date), y: sorted.map(p => p.y_pred),
-        mode: 'lines+markers', name: `TSDiff (prévision ${st.horizon})`,
+        mode: 'lines+markers', name: `${m} (prévision ${st.horizon})`, legendgroup: m,
         line: { color, width: 1.8, dash: 'dot' }, marker: { color, size: 5 },
-        hovertemplate: `%{x}<br>%{y:.2f}<extra>TSDiff ${st.horizon}</extra>`,
+        hovertemplate: `%{x}<br>%{y:.2f}<extra>${m} ${st.horizon}</extra>`,
       });
     }
-  }
+  });
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',

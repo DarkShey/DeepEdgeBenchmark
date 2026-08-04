@@ -1,0 +1,35 @@
+{
+  "RMSE": 76.785,
+  "MAE": 53.524,
+  "MAPE": 2.58,
+  "directional_accuracy": 52.44,
+  "pi_coverage_95": 90.3,
+  "pi_width_min": 105.855225,
+  "pi_width_mean": 257.610292,
+  "pi_width_max": 828.670654,
+  "crps": 40.63408,
+  "n_val": 165,
+  "horizon": "D1",
+  "asset": "ETH-USD",
+  "model": "NsDiff",
+  "theil_u": 1.0434,
+  "MASE": 1.0529,
+  "change_corr": -0.0959,
+  "dir_acc_change": 46.06,
+  "dir_acc_ci95": [
+    38.63,
+    53.67
+  ],
+  "dir_acc_p_vs_coin": 0.3502,
+  "dm_stat": 2.042,
+  "dm_p": 0.0427,
+  "dm_lag": 5,
+  "skill_vs_naive": "worse than naive",
+  "forecast": {
+    "last_date": "2026-08-02",
+    "last_price": 1882.521973,
+    "predicted": 1881.17688,
+    "pi_lower": 1790.445312,
+    "pi_upper": 1956.881836
+  }
+}

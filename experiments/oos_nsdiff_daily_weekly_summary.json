@@ -1,0 +1,51 @@
+{
+  "config": {
+    "assets": [
+      "SPY",
+      "BTC-USD",
+      "ETH-USD",
+      "ZN=F",
+      "TLT"
+    ],
+    "epochs": 40,
+    "seed": 42,
+    "n_samples": 50,
+    "k_denoise": 20,
+    "fetch_start": "2015-01-01",
+    "fetch_end": "2026-07-24",
+    "mechanism": "train-once-forward (mirrors weekly_headtohead_v2.run_pair_v2)",
+    "elapsed_s": 41.7
+  },
+  "per_asset": {
+    "SPY": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 270,
+      "n_rows_b": 270
+    },
+    "BTC-USD": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 270,
+      "n_rows_b": 270
+    },
+    "ETH-USD": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 270,
+      "n_rows_b": 270
+    },
+    "ZN=F": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 270,
+      "n_rows_b": 270
+    }
+  },
+  "skipped": [
+    {
+      "asset": "TLT",
+      "reason": "IndexError: single positional indexer is out-of-bounds",
+      "price_source": "offline/DONNEE~1.XLS"
+    }
+  ],
+  "n_rows_regime_c": 1080,
+  "n_rows_regime_b": 1080,
+  "n_written": 2160
+}

@@ -1,0 +1,57 @@
+{
+  "model": "NsDiff",
+  "pytest_filter": "nsdiff_model",
+  "status": "pass",
+  "exit_code": 0,
+  "summary": "11 passed, 77 deselected in 1.89s",
+  "tests": [
+    {
+      "name": "models/test_nsdiff_model.py::test_run_nsdiff_contract",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_run_nsdiff_keep_samples_populates_step_clouds",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_next_step_nsdiff_ordered",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_forecast_horizons_nsdiff_shape",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_too_short_series_raises",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_forecast_from_fitted_matches_reference_walk_forward",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_forecast_from_fitted_direct_call_matches_run_nsdiff",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_forecast_from_fitted_multi_horizon_shape",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_point_in_time_no_lookahead",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_g_psi_predicts_higher_variance_for_high_vol_window",
+      "outcome": "passed"
+    },
+    {
+      "name": "models/test_nsdiff_model.py::test_heteroscedastic_run_nsdiff_produces_finite_valid_pi_coverage",
+      "outcome": "passed"
+    }
+  ],
+  "what_these_tests_check": {
+    "models/test_models_common.py": "Tests factorisés sur les 4 forecasters (arima, sarima, prophet, lstm), via l'interface\ncommune fetch_data/run_<model>/next_step_<model>. Zéro réseau : fetch_data est soit\nmonkeypatché, soit jamais appelé (les données de test viennent de synthetic_series()).\n\nContrat de sortie observé (identique sur les 4 modules, aucune normalisation nécessaire) :\nrun_<model>(train, test) -> dict avec au moins \"predictions\", \"lower\", \"upper\", \"index\",\n\"actual\" + les clés de compute_metrics aplaties (RMSE, MAE, \"Dir. Acc (%)\", \"PI Cov 95% (%)\", ...).",
+    "models/test_metrics.py": "Unit tests for compute_metrics() — duplicated near-identically across the 4 model\nmodules, parametrized here over all 4 to lock down shared behaviour and catch drift.\n\narima_model's compute_metrics diverged on purpose (PI-calibration work): it takes\n`pi_bounds={level: (lower, upper)}` instead of `pi_lower=`/`pi_upper=` and reports\none Coverage/Width pair per level. `_metrics_with_pi` adapts the call so the shared\ncoverage semantics stay locked down across all 4 modules."
+  }
+}
