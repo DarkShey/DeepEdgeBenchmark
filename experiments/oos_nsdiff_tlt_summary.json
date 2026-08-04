@@ -1,0 +1,19 @@
+{
+  "ticker": "TLT",
+  "n_origins_c": 90,
+  "n_origins_b": 90,
+  "status": "written",
+  "price_source": "offline<2026-07-03 + live_raw_close>=2026-07-03",
+  "config": {
+    "epochs": 40,
+    "seed": 42,
+    "n_samples": 50,
+    "k_denoise": 20,
+    "fetch_start": "2015-01-01",
+    "fetch_end": "2026-07-24"
+  },
+  "n_rows_regime_c": 270,
+  "n_rows_regime_b": 270,
+  "n_written": 540,
+  "elapsed_s": 7.3
+}

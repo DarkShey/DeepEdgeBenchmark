@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-04T09:15:27.402887+00:00",
+  "generated_at": "2026-08-04T12:57:03.432501+00:00",
   "db_path": "/Users/maeva/Developer/DeepEdgeBenchmark/validation/tracking.db",
   "horizon_unit": "W+1",
   "seed_pooled": 42,
@@ -1756,6 +1756,103 @@
         },
         "explanation": [
           "Pour NsDiff sur SPY, match nul \u2014 aucune diff\u00e9rence fiable.",
+          "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    },
+    {
+      "model": "NsDiff",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 90,
+      "rmse_daily": 1.426993219709924,
+      "rmse_weekly": 1.4290463507376143,
+      "winkler_daily": 8.530260162353523,
+      "winkler_weekly": 7.9310477786594005,
+      "cov95_daily": 0.8888888888888888,
+      "cov95_weekly": 0.9555555555555556,
+      "pi_width_daily": 4.765379876030816,
+      "pi_width_weekly": 6.116884316338433,
+      "direction_daily": 0.4777777777777778,
+      "direction_weekly": 0.43333333333333335,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.8804,
+      "mean_diff": -0.00586382345839714,
+      "ci95_lo": -0.1846638659150469,
+      "ci95_hi": 0.16147490526285965,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0059, IC95% bootstrap = [-0.1847, +0.1615] : cet intervalle inclut 0 (p=0.8804) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.8804,
+          "ci95_lo": -0.1846638659150469,
+          "ci95_hi": 0.16147490526285965,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "1.427",
+            "value_weekly_display": "1.429",
+            "leaning": "tie",
+            "note": "RMSE quasi identique entre les deux c\u00f4t\u00e9s (\u00e9cart relatif 0.1%) -- mais le verdict reste indistinguable (l'\u00e9cart n'est pas significatif)."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "8.530",
+            "value_weekly_display": "7.931",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 7.0%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "88.9%",
+            "value_weekly_display": "95.6%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=88.9% / weekly=95.6% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 6.7 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "4.765",
+            "value_weekly_display": "6.117",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 22.1%). ATTENTION : couverture (Cov95) sensiblement diff\u00e9rente entre les deux c\u00f4t\u00e9s -> comparer la largeur seule n'est pas informatif ici."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "47.8%",
+            "value_weekly_display": "43.3%",
+            "leaning": "daily",
+            "note": "Direction correcte daily=47.8% / weekly=43.3% (daily plus haut (\u00e9cart relatif 9.3%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 2,
+          "n_weekly": 2,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Pas de gagnant : verdict indistinguable (ou non test\u00e9) au niveau de la cellule, m\u00eame si certains KPI penchent d'un c\u00f4t\u00e9 ci-dessus -- ces \u00e9carts descriptifs ne sont pas garantis significatifs \u00e0 cette \u00e9chelle."
+        }
+      },
+      "plain": {
+        "headline": "Match nul \u2014 aucune diff\u00e9rence fiable",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur TLT, match nul \u2014 aucune diff\u00e9rence fiable.",
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
@@ -13071,6 +13168,548 @@
         "pi_width_weekly": 61.38728637695317
       }
     ],
+    "NsDiff||TLT": [
+      {
+        "cutoff_date": "2024-10-18",
+        "sq_error_diff": 0.8098184634000063,
+        "pi_width_daily": 6.148096656799311,
+        "pi_width_weekly": 7.099640274047857
+      },
+      {
+        "cutoff_date": "2024-10-25",
+        "sq_error_diff": 0.27556717046536505,
+        "pi_width_daily": 5.297353172302238,
+        "pi_width_weekly": 6.509660720825195
+      },
+      {
+        "cutoff_date": "2024-11-01",
+        "sq_error_diff": -1.7156559703289531,
+        "pi_width_daily": 4.99539489746094,
+        "pi_width_weekly": 6.778323745727533
+      },
+      {
+        "cutoff_date": "2024-11-08",
+        "sq_error_diff": -1.047043070604559,
+        "pi_width_daily": 6.9864091873168945,
+        "pi_width_weekly": 5.471801185607902
+      },
+      {
+        "cutoff_date": "2024-11-15",
+        "sq_error_diff": -0.2367234081029892,
+        "pi_width_daily": 7.40877094268798,
+        "pi_width_weekly": 6.663989830017087
+      },
+      {
+        "cutoff_date": "2024-11-22",
+        "sq_error_diff": 2.927878138551023,
+        "pi_width_daily": 4.440942382812494,
+        "pi_width_weekly": 4.732748031616211
+      },
+      {
+        "cutoff_date": "2024-11-29",
+        "sq_error_diff": 0.9017771005164832,
+        "pi_width_daily": 7.041188621521002,
+        "pi_width_weekly": 7.794984245300284
+      },
+      {
+        "cutoff_date": "2024-12-06",
+        "sq_error_diff": 1.1244679393712431,
+        "pi_width_daily": 5.779341697692871,
+        "pi_width_weekly": 7.018958282470706
+      },
+      {
+        "cutoff_date": "2024-12-13",
+        "sq_error_diff": 1.5564482674817555,
+        "pi_width_daily": 5.646356773376468,
+        "pi_width_weekly": 5.21527633666993
+      },
+      {
+        "cutoff_date": "2024-12-20",
+        "sq_error_diff": -0.509807642782107,
+        "pi_width_daily": 4.91185188293457,
+        "pi_width_weekly": 5.854042625427255
+      },
+      {
+        "cutoff_date": "2024-12-27",
+        "sq_error_diff": 0.05504897981882095,
+        "pi_width_daily": 4.529562950134277,
+        "pi_width_weekly": 7.633727073669434
+      },
+      {
+        "cutoff_date": "2025-01-03",
+        "sq_error_diff": -0.05183818860678002,
+        "pi_width_daily": 3.479093551635742,
+        "pi_width_weekly": 7.142046356201178
+      },
+      {
+        "cutoff_date": "2025-01-10",
+        "sq_error_diff": -0.18605463579297066,
+        "pi_width_daily": 4.935687828063962,
+        "pi_width_weekly": 6.915741157531741
+      },
+      {
+        "cutoff_date": "2025-01-17",
+        "sq_error_diff": -0.01272277784300968,
+        "pi_width_daily": 4.85959987640382,
+        "pi_width_weekly": 7.138282394409174
+      },
+      {
+        "cutoff_date": "2025-01-24",
+        "sq_error_diff": -0.07615006808191538,
+        "pi_width_daily": 5.242222404479989,
+        "pi_width_weekly": 5.918527221679696
+      },
+      {
+        "cutoff_date": "2025-01-31",
+        "sq_error_diff": 0.9435430616140366,
+        "pi_width_daily": 4.523324584960932,
+        "pi_width_weekly": 5.663105773925778
+      },
+      {
+        "cutoff_date": "2025-02-07",
+        "sq_error_diff": 0.037523130828049034,
+        "pi_width_daily": 5.181962394714347,
+        "pi_width_weekly": 6.179199409484866
+      },
+      {
+        "cutoff_date": "2025-02-14",
+        "sq_error_diff": 0.2772635221481323,
+        "pi_width_daily": 5.0804639816284265,
+        "pi_width_weekly": 6.1547979354858455
+      },
+      {
+        "cutoff_date": "2025-02-21",
+        "sq_error_diff": 0.5030827748123556,
+        "pi_width_daily": 6.793660354614261,
+        "pi_width_weekly": 5.713382911682132
+      },
+      {
+        "cutoff_date": "2025-02-28",
+        "sq_error_diff": 0.8109178798622452,
+        "pi_width_daily": 5.0974273681640625,
+        "pi_width_weekly": 6.11690177917481
+      },
+      {
+        "cutoff_date": "2025-03-07",
+        "sq_error_diff": 0.03569443599553779,
+        "pi_width_daily": 6.415375518798825,
+        "pi_width_weekly": 5.7447919845581055
+      },
+      {
+        "cutoff_date": "2025-03-14",
+        "sq_error_diff": -0.33114184183068573,
+        "pi_width_daily": 7.711223602294922,
+        "pi_width_weekly": 6.209795951843262
+      },
+      {
+        "cutoff_date": "2025-03-21",
+        "sq_error_diff": 0.010302327573299408,
+        "pi_width_daily": 4.319418144226077,
+        "pi_width_weekly": 6.5804054260253935
+      },
+      {
+        "cutoff_date": "2025-03-28",
+        "sq_error_diff": -2.708488628268242,
+        "pi_width_daily": 5.427946090698242,
+        "pi_width_weekly": 6.210576820373532
+      },
+      {
+        "cutoff_date": "2025-04-04",
+        "sq_error_diff": 2.7168179731816053,
+        "pi_width_daily": 4.032227134704584,
+        "pi_width_weekly": 5.94108238220214
+      },
+      {
+        "cutoff_date": "2025-04-11",
+        "sq_error_diff": -0.35020205861655995,
+        "pi_width_daily": 8.399460601806638,
+        "pi_width_weekly": 7.435790061950684
+      },
+      {
+        "cutoff_date": "2025-04-17",
+        "sq_error_diff": -2.14337170770159,
+        "pi_width_daily": 7.7992731094360295,
+        "pi_width_weekly": 7.687980842590321
+      },
+      {
+        "cutoff_date": "2025-04-25",
+        "sq_error_diff": -0.4479004447348416,
+        "pi_width_daily": 6.001115608215343,
+        "pi_width_weekly": 7.345180320739743
+      },
+      {
+        "cutoff_date": "2025-05-02",
+        "sq_error_diff": 1.7172821256681345,
+        "pi_width_daily": 5.492044830322257,
+        "pi_width_weekly": 7.259767532348633
+      },
+      {
+        "cutoff_date": "2025-05-09",
+        "sq_error_diff": -0.5156658659689128,
+        "pi_width_daily": 6.801787948608393,
+        "pi_width_weekly": 7.365216827392587
+      },
+      {
+        "cutoff_date": "2025-05-16",
+        "sq_error_diff": 0.4211460845544934,
+        "pi_width_daily": 4.2576286315918,
+        "pi_width_weekly": 8.272112274169913
+      },
+      {
+        "cutoff_date": "2025-05-23",
+        "sq_error_diff": -0.0844025750993751,
+        "pi_width_daily": 5.192998695373532,
+        "pi_width_weekly": 5.974058532714849
+      },
+      {
+        "cutoff_date": "2025-05-30",
+        "sq_error_diff": 0.5221851400565356,
+        "pi_width_daily": 6.010807228088382,
+        "pi_width_weekly": 6.952495765686038
+      },
+      {
+        "cutoff_date": "2025-06-06",
+        "sq_error_diff": -1.5698912083171308,
+        "pi_width_daily": 5.136604118347165,
+        "pi_width_weekly": 7.389151382446286
+      },
+      {
+        "cutoff_date": "2025-06-13",
+        "sq_error_diff": 0.0928004551678896,
+        "pi_width_daily": 5.886454010009771,
+        "pi_width_weekly": 7.239706611633295
+      },
+      {
+        "cutoff_date": "2025-06-20",
+        "sq_error_diff": 0.24257602432044223,
+        "pi_width_daily": 5.639460372924802,
+        "pi_width_weekly": 5.366136169433588
+      },
+      {
+        "cutoff_date": "2025-06-27",
+        "sq_error_diff": -0.4049844353576191,
+        "pi_width_daily": 4.774078750610357,
+        "pi_width_weekly": 4.372248458862302
+      },
+      {
+        "cutoff_date": "2025-07-03",
+        "sq_error_diff": 1.2274074352462776,
+        "pi_width_daily": 4.698003768920898,
+        "pi_width_weekly": 4.115316772460943
+      },
+      {
+        "cutoff_date": "2025-07-11",
+        "sq_error_diff": -0.14343079668469727,
+        "pi_width_daily": 3.8179050445556584,
+        "pi_width_weekly": 6.218350791931144
+      },
+      {
+        "cutoff_date": "2025-07-18",
+        "sq_error_diff": 0.7758282897411846,
+        "pi_width_daily": 5.038315773010254,
+        "pi_width_weekly": 6.206558609008795
+      },
+      {
+        "cutoff_date": "2025-07-25",
+        "sq_error_diff": 0.4998487581615336,
+        "pi_width_daily": 3.4643665313720646,
+        "pi_width_weekly": 5.161865234375
+      },
+      {
+        "cutoff_date": "2025-08-01",
+        "sq_error_diff": 0.31302844552556053,
+        "pi_width_daily": 6.955883407592765,
+        "pi_width_weekly": 5.322770309448245
+      },
+      {
+        "cutoff_date": "2025-08-08",
+        "sq_error_diff": 0.7659646642277949,
+        "pi_width_daily": 4.4728731155395565,
+        "pi_width_weekly": 5.709681320190441
+      },
+      {
+        "cutoff_date": "2025-08-15",
+        "sq_error_diff": 0.011130945291370153,
+        "pi_width_daily": 4.9283203124999915,
+        "pi_width_weekly": 4.330856895446786
+      },
+      {
+        "cutoff_date": "2025-08-22",
+        "sq_error_diff": 0.08747491851681843,
+        "pi_width_daily": 4.699184608459461,
+        "pi_width_weekly": 5.788604164123541
+      },
+      {
+        "cutoff_date": "2025-08-29",
+        "sq_error_diff": -1.8944087298586965,
+        "pi_width_daily": 3.4920173645019474,
+        "pi_width_weekly": 5.75914630889892
+      },
+      {
+        "cutoff_date": "2025-09-05",
+        "sq_error_diff": -1.0923917772597633,
+        "pi_width_daily": 5.032708549499517,
+        "pi_width_weekly": 5.494553947448736
+      },
+      {
+        "cutoff_date": "2025-09-12",
+        "sq_error_diff": 0.4507862133323215,
+        "pi_width_daily": 4.051374244689939,
+        "pi_width_weekly": 5.580504417419434
+      },
+      {
+        "cutoff_date": "2025-09-19",
+        "sq_error_diff": 0.000990181986708194,
+        "pi_width_daily": 3.962947463989252,
+        "pi_width_weekly": 5.515766906738278
+      },
+      {
+        "cutoff_date": "2025-09-26",
+        "sq_error_diff": -0.3935496768099256,
+        "pi_width_daily": 5.220396041870103,
+        "pi_width_weekly": 6.494632911682132
+      },
+      {
+        "cutoff_date": "2025-10-03",
+        "sq_error_diff": -1.0348653979599476,
+        "pi_width_daily": 3.3989412307739286,
+        "pi_width_weekly": 6.427799797058114
+      },
+      {
+        "cutoff_date": "2025-10-10",
+        "sq_error_diff": -0.05879755015484989,
+        "pi_width_daily": 4.9617698669433565,
+        "pi_width_weekly": 5.39609870910644
+      },
+      {
+        "cutoff_date": "2025-10-17",
+        "sq_error_diff": -0.005583353340625763,
+        "pi_width_daily": 3.9147418975829993,
+        "pi_width_weekly": 4.927874565124512
+      },
+      {
+        "cutoff_date": "2025-10-24",
+        "sq_error_diff": -0.844342615455389,
+        "pi_width_daily": 3.7733045578003015,
+        "pi_width_weekly": 6.959171485900882
+      },
+      {
+        "cutoff_date": "2025-10-31",
+        "sq_error_diff": 0.06717699317960069,
+        "pi_width_daily": 4.189654350280762,
+        "pi_width_weekly": 5.815899848937988
+      },
+      {
+        "cutoff_date": "2025-11-07",
+        "sq_error_diff": 0.6365126345772296,
+        "pi_width_daily": 4.552674865722651,
+        "pi_width_weekly": 6.85344944000245
+      },
+      {
+        "cutoff_date": "2025-11-14",
+        "sq_error_diff": -0.43379581632325426,
+        "pi_width_daily": 3.9026287078857393,
+        "pi_width_weekly": 5.425461006164539
+      },
+      {
+        "cutoff_date": "2025-11-21",
+        "sq_error_diff": 0.013018774625379592,
+        "pi_width_daily": 3.471590042114258,
+        "pi_width_weekly": 5.508734512329099
+      },
+      {
+        "cutoff_date": "2025-11-28",
+        "sq_error_diff": 1.1720914337201975,
+        "pi_width_daily": 3.61543159484863,
+        "pi_width_weekly": 5.189268112182617
+      },
+      {
+        "cutoff_date": "2025-12-05",
+        "sq_error_diff": 0.2213408267707564,
+        "pi_width_daily": 4.338590431213376,
+        "pi_width_weekly": 5.450117683410653
+      },
+      {
+        "cutoff_date": "2025-12-12",
+        "sq_error_diff": -0.1184495454072021,
+        "pi_width_daily": 2.916724395751956,
+        "pi_width_weekly": 5.2853782653808565
+      },
+      {
+        "cutoff_date": "2025-12-19",
+        "sq_error_diff": -0.04716088832356036,
+        "pi_width_daily": 2.8948396682739173,
+        "pi_width_weekly": 5.473568344116202
+      },
+      {
+        "cutoff_date": "2025-12-26",
+        "sq_error_diff": 0.3994080939446576,
+        "pi_width_daily": 3.113621330261239,
+        "pi_width_weekly": 5.311223030090332
+      },
+      {
+        "cutoff_date": "2026-01-02",
+        "sq_error_diff": -0.19768604007549584,
+        "pi_width_daily": 3.6987480163574276,
+        "pi_width_weekly": 5.090399169921881
+      },
+      {
+        "cutoff_date": "2026-01-09",
+        "sq_error_diff": -0.0003742910921573639,
+        "pi_width_daily": 4.420728492736814,
+        "pi_width_weekly": 7.148914527893069
+      },
+      {
+        "cutoff_date": "2026-01-16",
+        "sq_error_diff": 0.020599325362127274,
+        "pi_width_daily": 2.7483900070190543,
+        "pi_width_weekly": 6.096525001525876
+      },
+      {
+        "cutoff_date": "2026-01-23",
+        "sq_error_diff": 0.39931563660502434,
+        "pi_width_daily": 4.906653022766108,
+        "pi_width_weekly": 6.612353134155271
+      },
+      {
+        "cutoff_date": "2026-01-30",
+        "sq_error_diff": 0.05375803681090474,
+        "pi_width_daily": 3.416004180908203,
+        "pi_width_weekly": 5.382197761535636
+      },
+      {
+        "cutoff_date": "2026-02-06",
+        "sq_error_diff": -0.8295690882368945,
+        "pi_width_daily": 3.9944698333740263,
+        "pi_width_weekly": 6.56731281280517
+      },
+      {
+        "cutoff_date": "2026-02-13",
+        "sq_error_diff": 0.06656784913502634,
+        "pi_width_daily": 4.029225921630854,
+        "pi_width_weekly": 6.8285558700561495
+      },
+      {
+        "cutoff_date": "2026-02-20",
+        "sq_error_diff": -1.8627969198860228,
+        "pi_width_daily": 4.733122062683108,
+        "pi_width_weekly": 5.8076749801635685
+      },
+      {
+        "cutoff_date": "2026-02-27",
+        "sq_error_diff": -0.2338968012481928,
+        "pi_width_daily": 4.153709220886242,
+        "pi_width_weekly": 5.748776435852051
+      },
+      {
+        "cutoff_date": "2026-03-06",
+        "sq_error_diff": -0.9352151457569562,
+        "pi_width_daily": 4.111232757568359,
+        "pi_width_weekly": 4.774767112731936
+      },
+      {
+        "cutoff_date": "2026-03-13",
+        "sq_error_diff": 0.3087197017739527,
+        "pi_width_daily": 4.307261085510262,
+        "pi_width_weekly": 5.889461135864252
+      },
+      {
+        "cutoff_date": "2026-03-20",
+        "sq_error_diff": 0.18401066231308505,
+        "pi_width_daily": 4.995832061767587,
+        "pi_width_weekly": 5.005231857299805
+      },
+      {
+        "cutoff_date": "2026-03-27",
+        "sq_error_diff": -1.7031984792556614,
+        "pi_width_daily": 5.170315742492676,
+        "pi_width_weekly": 6.768923568725583
+      },
+      {
+        "cutoff_date": "2026-04-02",
+        "sq_error_diff": 0.014443324878811836,
+        "pi_width_daily": 4.899016571044925,
+        "pi_width_weekly": 5.880763816833493
+      },
+      {
+        "cutoff_date": "2026-04-10",
+        "sq_error_diff": -0.5876098796725273,
+        "pi_width_daily": 3.9593746185302763,
+        "pi_width_weekly": 5.995198631286627
+      },
+      {
+        "cutoff_date": "2026-04-17",
+        "sq_error_diff": 0.4886314605246298,
+        "pi_width_daily": 4.25079879760743,
+        "pi_width_weekly": 5.749755477905268
+      },
+      {
+        "cutoff_date": "2026-04-24",
+        "sq_error_diff": 0.5477891812915914,
+        "pi_width_daily": 4.121570777893069,
+        "pi_width_weekly": 6.971077919006348
+      },
+      {
+        "cutoff_date": "2026-05-01",
+        "sq_error_diff": 0.09116778039606288,
+        "pi_width_daily": 3.3045932769775277,
+        "pi_width_weekly": 6.3575029373168945
+      },
+      {
+        "cutoff_date": "2026-05-08",
+        "sq_error_diff": 0.21022787393303588,
+        "pi_width_daily": 4.5091468811035185,
+        "pi_width_weekly": 5.782144546508789
+      },
+      {
+        "cutoff_date": "2026-05-15",
+        "sq_error_diff": 0.11687346122926101,
+        "pi_width_daily": 5.047212791442874,
+        "pi_width_weekly": 5.242241477966317
+      },
+      {
+        "cutoff_date": "2026-05-22",
+        "sq_error_diff": -0.15266313031315804,
+        "pi_width_daily": 4.847040176391602,
+        "pi_width_weekly": 6.599458885192874
+      },
+      {
+        "cutoff_date": "2026-05-29",
+        "sq_error_diff": 0.31318452791310847,
+        "pi_width_daily": 4.540976142883309,
+        "pi_width_weekly": 6.203576469421392
+      },
+      {
+        "cutoff_date": "2026-06-05",
+        "sq_error_diff": -0.0665379948914051,
+        "pi_width_daily": 3.3368988037109375,
+        "pi_width_weekly": 6.783635902404782
+      },
+      {
+        "cutoff_date": "2026-06-12",
+        "sq_error_diff": -1.0665406924090348,
+        "pi_width_daily": 3.2556585311889705,
+        "pi_width_weekly": 6.453844833374035
+      },
+      {
+        "cutoff_date": "2026-06-18",
+        "sq_error_diff": 0.19173187291016802,
+        "pi_width_daily": 3.9616451263427734,
+        "pi_width_weekly": 6.076880073547372
+      },
+      {
+        "cutoff_date": "2026-06-26",
+        "sq_error_diff": -0.025782325596082956,
+        "pi_width_daily": 3.2006258010864173,
+        "pi_width_weekly": 5.39261093139649
+      },
+      {
+        "cutoff_date": "2026-07-02",
+        "sq_error_diff": -0.03822294651763514,
+        "pi_width_daily": 4.408513069152832,
+        "pi_width_weekly": 6.525515174865717
+      }
+    ],
     "NsDiff||ZN=F": [
       {
         "cutoff_date": "2024-10-18",
@@ -21748,15 +22387,15 @@
     "global": {
       "status": "tested",
       "n_origins": 95,
-      "n_contributions": 2526,
+      "n_contributions": 2527,
       "skill_sqerror": {
         "n": 95,
         "block_length": 3,
         "effective_n": 31,
-        "mean_diff": 0.4188893138931036,
-        "ci95_lo": -0.1365887969751064,
-        "ci95_hi": 0.9911464123890258,
-        "p_value": 0.1686,
+        "mean_diff": 0.41815219318369534,
+        "ci95_lo": -0.1394759736371497,
+        "ci95_hi": 0.9909141485984566,
+        "p_value": 0.1702,
         "significant_at_05": false,
         "verdict": "indistinguishable"
       },
@@ -21764,28 +22403,28 @@
         "n": 95,
         "block_length": 3,
         "effective_n": 31,
-        "mean_diff": -0.764713674266525,
-        "ci95_lo": -0.9899245841066218,
-        "ci95_hi": -0.56769389477241,
+        "mean_diff": -0.7649776963979096,
+        "ci95_lo": -0.9917558324989197,
+        "ci95_hi": -0.5662872732126557,
         "p_value": 0.0,
         "significant_at_05": true,
         "verdict": "weekly_native_significantly_better"
       },
       "report": {
         "skill_sqerror": {
-          "text": "Test bootstrap par blocs sur skill RMSE (pr\u00e9cision du point, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = +0.4189, IC95% bootstrap = [-0.1366, +0.9911] : cet intervalle inclut 0 (p=0.1686) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
-          "p_value": 0.1686,
-          "ci95_lo": -0.1365887969751064,
-          "ci95_hi": 0.9911464123890258,
+          "text": "Test bootstrap par blocs sur skill RMSE (pr\u00e9cision du point, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = +0.4182, IC95% bootstrap = [-0.1395, +0.9909] : cet intervalle inclut 0 (p=0.1702) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.1702,
+          "ci95_lo": -0.1394759736371497,
+          "ci95_hi": 0.9909141485984566,
           "n": 95,
           "effective_n": 31,
           "block_length": 3
         },
         "skill_winkler": {
-          "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.7647, IC95% bootstrap = [-0.9899, -0.5677] : cet intervalle exclut 0 (p=0.0000) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.7650, IC95% bootstrap = [-0.9918, -0.5663] : cet intervalle exclut 0 (p=0.0000) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.0,
-          "ci95_lo": -0.9899245841066218,
-          "ci95_hi": -0.56769389477241,
+          "ci95_lo": -0.9917558324989197,
+          "ci95_hi": -0.5662872732126557,
           "n": 95,
           "effective_n": 31,
           "block_length": 3
@@ -21922,15 +22561,15 @@
     "bond": {
       "status": "tested",
       "n_origins": 91,
-      "n_contributions": 636,
+      "n_contributions": 637,
       "skill_sqerror": {
         "n": 91,
         "block_length": 3,
         "effective_n": 30,
-        "mean_diff": 0.6438746159204178,
-        "ci95_lo": 0.20306456180371,
-        "ci95_hi": 1.0401049593002445,
-        "p_value": 0.0034,
+        "mean_diff": 0.6454896088066304,
+        "ci95_lo": 0.2001170995779091,
+        "ci95_hi": 1.0424096909888114,
+        "p_value": 0.0032,
         "significant_at_05": true,
         "verdict": "daily_significantly_better"
       },
@@ -21938,28 +22577,28 @@
         "n": 91,
         "block_length": 3,
         "effective_n": 30,
-        "mean_diff": -0.08825767965101376,
-        "ci95_lo": -0.1873976864323536,
-        "ci95_hi": 0.0358707011329546,
-        "p_value": 0.165,
+        "mean_diff": -0.08836186876104864,
+        "ci95_lo": -0.174161680195682,
+        "ci95_hi": 0.015156247614355144,
+        "p_value": 0.0992,
         "significant_at_05": false,
         "verdict": "indistinguishable"
       },
       "report": {
         "skill_sqerror": {
-          "text": "Test bootstrap par blocs sur skill RMSE (pr\u00e9cision du point, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = +0.6439, IC95% bootstrap = [+0.2031, +1.0401] : cet intervalle exclut 0 (p=0.0034) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
-          "p_value": 0.0034,
-          "ci95_lo": 0.20306456180371,
-          "ci95_hi": 1.0401049593002445,
+          "text": "Test bootstrap par blocs sur skill RMSE (pr\u00e9cision du point, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = +0.6455, IC95% bootstrap = [+0.2001, +1.0424] : cet intervalle exclut 0 (p=0.0032) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.0032,
+          "ci95_lo": 0.2001170995779091,
+          "ci95_hi": 1.0424096909888114,
           "n": 91,
           "effective_n": 30,
           "block_length": 3
         },
         "skill_winkler": {
-          "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0883, IC95% bootstrap = [-0.1874, +0.0359] : cet intervalle inclut 0 (p=0.1650) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
-          "p_value": 0.165,
-          "ci95_lo": -0.1873976864323536,
-          "ci95_hi": 0.0358707011329546,
+          "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0884, IC95% bootstrap = [-0.1742, +0.0152] : cet intervalle inclut 0 (p=0.0992) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.0992,
+          "ci95_lo": -0.174161680195682,
+          "ci95_hi": 0.015156247614355144,
           "n": 91,
           "effective_n": 30,
           "block_length": 3

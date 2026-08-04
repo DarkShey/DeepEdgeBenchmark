@@ -1,0 +1,774 @@
+{
+  "note": "aggregate NsDiff-only (pooling restreint a model=='NsDiff'), recompute via dashboard_d7_w1.build_pooled_series/run_pooled_test (reuse, pas de reimplementation).",
+  "seed_pooled": 42,
+  "block_length": 3,
+  "cells_nsdiff_from_dashboard_json": {
+    "BTC-USD": {
+      "model": "NsDiff",
+      "asset": "BTC-USD",
+      "asset_class": "crypto",
+      "n": 90,
+      "rmse_daily": 5916.98713464826,
+      "rmse_weekly": 5452.013823385852,
+      "winkler_daily": 37237.219883897575,
+      "winkler_weekly": 29604.98138780382,
+      "cov95_daily": 0.9,
+      "cov95_weekly": 0.9666666666666667,
+      "pi_width_daily": 21246.72526584201,
+      "pi_width_weekly": 25903.542976345485,
+      "direction_daily": 0.5111111111111111,
+      "direction_weekly": 0.4777777777777778,
+      "status": "tested",
+      "verdict": "weekly_native_significantly_better",
+      "p_value": 0.0048,
+      "mean_diff": 5286282.021202596,
+      "ci95_lo": 1514515.2866783524,
+      "ci95_hi": 9660195.519627051,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = +5286282.0212, IC95% bootstrap = [+1514515.2867, +9660195.5196] : cet intervalle exclut 0 (p=0.0048) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.0048,
+          "ci95_lo": 1514515.2866783524,
+          "ci95_hi": 9660195.519627051,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "5916.987",
+            "value_weekly_display": "5452.014",
+            "leaning": "weekly",
+            "note": "RMSE weekly natif plus bas (\u00e9cart relatif 7.9%) -- coh\u00e9rent avec le verdict test\u00e9 ci-dessus."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "37237.220",
+            "value_weekly_display": "29604.981",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 20.5%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "90.0%",
+            "value_weekly_display": "96.7%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=90.0% / weekly=96.7% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 6.7 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "21246.725",
+            "value_weekly_display": "25903.543",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 18.0%). ATTENTION : couverture (Cov95) sensiblement diff\u00e9rente entre les deux c\u00f4t\u00e9s -> comparer la largeur seule n'est pas informatif ici."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "51.1%",
+            "value_weekly_display": "47.8%",
+            "leaning": "daily",
+            "note": "Direction correcte daily=51.1% / weekly=47.8% (daily plus haut (\u00e9cart relatif 6.5%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 2,
+          "n_weekly": 2,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Concordant : le point (RMSE) et l'incertitude (Winkler) favorisent tous deux weekly."
+        }
+      },
+      "plain": {
+        "headline": "Le mod\u00e8le hebdomadaire est meilleur",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur BTC-USD, le mod\u00e8le hebdomadaire est meilleur.",
+          "Le mod\u00e8le hebdomadaire pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    },
+    "ETH-USD": {
+      "model": "NsDiff",
+      "asset": "ETH-USD",
+      "asset_class": "crypto",
+      "n": 90,
+      "rmse_daily": 293.8263918572598,
+      "rmse_weekly": 285.6081975602328,
+      "winkler_daily": 1942.6750339423284,
+      "winkler_weekly": 1440.502690565321,
+      "cov95_daily": 0.8666666666666667,
+      "cov95_weekly": 0.9333333333333333,
+      "pi_width_daily": 990.6942247517903,
+      "pi_width_weekly": 1113.029914957682,
+      "direction_daily": 0.4888888888888889,
+      "direction_weekly": 0.43333333333333335,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3956,
+      "mean_diff": 4761.906038251022,
+      "ci95_lo": -5506.33149785479,
+      "ci95_hi": 16399.99073571903,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = +4761.9060, IC95% bootstrap = [-5506.3315, +16399.9907] : cet intervalle inclut 0 (p=0.3956) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.3956,
+          "ci95_lo": -5506.33149785479,
+          "ci95_hi": 16399.99073571903,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "293.826",
+            "value_weekly_display": "285.608",
+            "leaning": "weekly",
+            "note": "RMSE weekly natif plus bas (\u00e9cart relatif 2.8%) -- mais le verdict reste indistinguable (l'\u00e9cart n'est pas significatif)."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "1942.675",
+            "value_weekly_display": "1440.503",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 25.8%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "86.7%",
+            "value_weekly_display": "93.3%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=86.7% / weekly=93.3% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 6.7 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "990.694",
+            "value_weekly_display": "1113.030",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 11.0%). ATTENTION : couverture (Cov95) sensiblement diff\u00e9rente entre les deux c\u00f4t\u00e9s -> comparer la largeur seule n'est pas informatif ici."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "48.9%",
+            "value_weekly_display": "43.3%",
+            "leaning": "daily",
+            "note": "Direction correcte daily=48.9% / weekly=43.3% (daily plus haut (\u00e9cart relatif 11.4%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 2,
+          "n_weekly": 2,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Pas de gagnant : verdict indistinguable (ou non test\u00e9) au niveau de la cellule, m\u00eame si certains KPI penchent d'un c\u00f4t\u00e9 ci-dessus -- ces \u00e9carts descriptifs ne sont pas garantis significatifs \u00e0 cette \u00e9chelle."
+        }
+      },
+      "plain": {
+        "headline": "Match nul \u2014 aucune diff\u00e9rence fiable",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur ETH-USD, match nul \u2014 aucune diff\u00e9rence fiable.",
+          "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    },
+    "SPY": {
+      "model": "NsDiff",
+      "asset": "SPY",
+      "asset_class": "index",
+      "n": 90,
+      "rmse_daily": 13.612619689857022,
+      "rmse_weekly": 13.112868578577288,
+      "winkler_daily": 98.13313847011987,
+      "winkler_weekly": 72.1626123301189,
+      "cov95_daily": 0.8222222222222222,
+      "cov95_weekly": 0.9222222222222223,
+      "pi_width_daily": 42.218652793036576,
+      "pi_width_weekly": 47.433219833374025,
+      "direction_daily": 0.4777777777777778,
+      "direction_weekly": 0.5222222222222223,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.2804,
+      "mean_diff": 13.356092461643534,
+      "ci95_lo": -8.356796772005037,
+      "ci95_hi": 41.841827112132044,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = +13.3561, IC95% bootstrap = [-8.3568, +41.8418] : cet intervalle inclut 0 (p=0.2804) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.2804,
+          "ci95_lo": -8.356796772005037,
+          "ci95_hi": 41.841827112132044,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "13.613",
+            "value_weekly_display": "13.113",
+            "leaning": "weekly",
+            "note": "RMSE weekly natif plus bas (\u00e9cart relatif 3.7%) -- mais le verdict reste indistinguable (l'\u00e9cart n'est pas significatif)."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "98.133",
+            "value_weekly_display": "72.163",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 26.5%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "82.2%",
+            "value_weekly_display": "92.2%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=82.2% / weekly=92.2% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 10.0 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "42.219",
+            "value_weekly_display": "47.433",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 11.0%). ATTENTION : couverture (Cov95) sensiblement diff\u00e9rente entre les deux c\u00f4t\u00e9s -> comparer la largeur seule n'est pas informatif ici."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "47.8%",
+            "value_weekly_display": "52.2%",
+            "leaning": "weekly",
+            "note": "Direction correcte daily=47.8% / weekly=52.2% (weekly natif plus haut (\u00e9cart relatif 8.5%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 1,
+          "n_weekly": 3,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Pas de gagnant : verdict indistinguable (ou non test\u00e9) au niveau de la cellule, m\u00eame si certains KPI penchent d'un c\u00f4t\u00e9 ci-dessus -- ces \u00e9carts descriptifs ne sont pas garantis significatifs \u00e0 cette \u00e9chelle."
+        }
+      },
+      "plain": {
+        "headline": "Match nul \u2014 aucune diff\u00e9rence fiable",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur SPY, match nul \u2014 aucune diff\u00e9rence fiable.",
+          "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    },
+    "TLT": {
+      "model": "NsDiff",
+      "asset": "TLT",
+      "asset_class": "bond",
+      "n": 90,
+      "rmse_daily": 1.426993219709924,
+      "rmse_weekly": 1.4290463507376143,
+      "winkler_daily": 8.530260162353523,
+      "winkler_weekly": 7.9310477786594005,
+      "cov95_daily": 0.8888888888888888,
+      "cov95_weekly": 0.9555555555555556,
+      "pi_width_daily": 4.765379876030816,
+      "pi_width_weekly": 6.116884316338433,
+      "direction_daily": 0.4777777777777778,
+      "direction_weekly": 0.43333333333333335,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.8804,
+      "mean_diff": -0.00586382345839714,
+      "ci95_lo": -0.1846638659150469,
+      "ci95_hi": 0.16147490526285965,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0059, IC95% bootstrap = [-0.1847, +0.1615] : cet intervalle inclut 0 (p=0.8804) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.8804,
+          "ci95_lo": -0.1846638659150469,
+          "ci95_hi": 0.16147490526285965,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "1.427",
+            "value_weekly_display": "1.429",
+            "leaning": "tie",
+            "note": "RMSE quasi identique entre les deux c\u00f4t\u00e9s (\u00e9cart relatif 0.1%) -- mais le verdict reste indistinguable (l'\u00e9cart n'est pas significatif)."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "8.530",
+            "value_weekly_display": "7.931",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 7.0%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "88.9%",
+            "value_weekly_display": "95.6%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=88.9% / weekly=95.6% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 6.7 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "4.765",
+            "value_weekly_display": "6.117",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 22.1%). ATTENTION : couverture (Cov95) sensiblement diff\u00e9rente entre les deux c\u00f4t\u00e9s -> comparer la largeur seule n'est pas informatif ici."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "47.8%",
+            "value_weekly_display": "43.3%",
+            "leaning": "daily",
+            "note": "Direction correcte daily=47.8% / weekly=43.3% (daily plus haut (\u00e9cart relatif 9.3%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 2,
+          "n_weekly": 2,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Pas de gagnant : verdict indistinguable (ou non test\u00e9) au niveau de la cellule, m\u00eame si certains KPI penchent d'un c\u00f4t\u00e9 ci-dessus -- ces \u00e9carts descriptifs ne sont pas garantis significatifs \u00e0 cette \u00e9chelle."
+        }
+      },
+      "plain": {
+        "headline": "Match nul \u2014 aucune diff\u00e9rence fiable",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur TLT, match nul \u2014 aucune diff\u00e9rence fiable.",
+          "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    },
+    "ZN=F": {
+      "model": "NsDiff",
+      "asset": "ZN=F",
+      "asset_class": "bond",
+      "n": 90,
+      "rmse_daily": 0.795557532768037,
+      "rmse_weekly": 0.79561860780338,
+      "winkler_daily": 4.476078361935085,
+      "winkler_weekly": 4.189069601694747,
+      "cov95_daily": 0.8555555555555555,
+      "cov95_weekly": 0.8777777777777778,
+      "pi_width_daily": 2.5850701967875156,
+      "pi_width_weekly": 2.838530796898736,
+      "direction_daily": 0.43333333333333335,
+      "direction_weekly": 0.5222222222222223,
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.9256,
+      "mean_diff": -9.718113902231885e-05,
+      "ci95_lo": -0.05844270684969767,
+      "ci95_hi": 0.05165605033232067,
+      "effective_n": 30,
+      "block_length": 3,
+      "report": {
+        "verdict_basis": {
+          "text": "Test bootstrap par blocs sur erreur quadratique (RMSE) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0001, IC95% bootstrap = [-0.0584, +0.0517] : cet intervalle inclut 0 (p=0.9256) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
+          "p_value": 0.9256,
+          "ci95_lo": -0.05844270684969767,
+          "ci95_hi": 0.05165605033232067,
+          "n": 90,
+          "effective_n": 30,
+          "block_length": 3
+        },
+        "kpi_readings": [
+          {
+            "key": "rmse",
+            "label": "RMSE (pr\u00e9cision du point -- d\u00e9cide le verdict)",
+            "value_daily_display": "0.796",
+            "value_weekly_display": "0.796",
+            "leaning": "tie",
+            "note": "RMSE quasi identique entre les deux c\u00f4t\u00e9s (\u00e9cart relatif 0.0%) -- mais le verdict reste indistinguable (l'\u00e9cart n'est pas significatif)."
+          },
+          {
+            "key": "winkler",
+            "label": "Winkler / Interval Score (fiabilit\u00e9 probabiliste)",
+            "value_daily_display": "4.476",
+            "value_weekly_display": "4.189",
+            "leaning": "weekly",
+            "note": "Winkler weekly natif plus bas (\u00e9cart relatif 6.4%) -- lecture descriptive, non test\u00e9e \u00e0 ce niveau de cellule (seul le RMSE est test\u00e9 statistiquement par cellule)."
+          },
+          {
+            "key": "cov95",
+            "label": "Cov95 (calibration, cible 95%)",
+            "value_daily_display": "85.6%",
+            "value_weekly_display": "87.8%",
+            "leaning": "weekly",
+            "note": "Cov95 daily=85.6% / weekly=87.8% (cible 95%) -- weekly natif plus proche de la cible (\u00e9cart entre les deux : 2.2 pt)."
+          },
+          {
+            "key": "pi_width",
+            "label": "Largeur PI 95% (finesse, \u00e0 couverture comparable)",
+            "value_daily_display": "2.585",
+            "value_weekly_display": "2.839",
+            "leaning": "daily",
+            "note": "PI daily plus \u00e9troit (\u00e9cart relatif 8.9%). Couverture comparable des deux c\u00f4t\u00e9s -> comparaison de largeur informative."
+          },
+          {
+            "key": "direction",
+            "label": "Direction correcte (diagnostic, bruit\u00e9 \u00e0 n\u224830)",
+            "value_daily_display": "43.3%",
+            "value_weekly_display": "52.2%",
+            "leaning": "weekly",
+            "note": "Direction correcte daily=43.3% / weekly=52.2% (weekly natif plus haut (\u00e9cart relatif 17.0%)) -- diagnostic \u00e0 lire avec prudence, proche du hasard (50%) \u00e0 n\u224890."
+          }
+        ],
+        "arbitrage": {
+          "n_daily": 1,
+          "n_weekly": 3,
+          "n_tie": 0,
+          "conflict": false,
+          "text": "Pas de gagnant : verdict indistinguable (ou non test\u00e9) au niveau de la cellule, m\u00eame si certains KPI penchent d'un c\u00f4t\u00e9 ci-dessus -- ces \u00e9carts descriptifs ne sont pas garantis significatifs \u00e0 cette \u00e9chelle."
+        }
+      },
+      "plain": {
+        "headline": "Match nul \u2014 aucune diff\u00e9rence fiable",
+        "gauge": {
+          "level": "moyenne",
+          "emoji": "\ud83d\udfe0",
+          "label": "Fiabilit\u00e9 moyenne"
+        },
+        "explanation": [
+          "Pour NsDiff sur ZN=F, match nul \u2014 aucune diff\u00e9rence fiable.",
+          "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
+          "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
+        ]
+      }
+    }
+  },
+  "aggregate_nsdiff": {
+    "global": {
+      "status": "tested",
+      "n_origins": 95,
+      "n_contributions": 361,
+      "skill_sqerror": {
+        "n": 95,
+        "block_length": 3,
+        "effective_n": 31,
+        "mean_diff": -0.21317861397374097,
+        "ci95_lo": -0.5106448739033269,
+        "ci95_hi": 0.09178389731794728,
+        "p_value": 0.1578,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      },
+      "skill_winkler": {
+        "n": 95,
+        "block_length": 3,
+        "effective_n": 31,
+        "mean_diff": -0.2455822130862138,
+        "ci95_lo": -0.47169942653453023,
+        "ci95_hi": -0.061574518280611404,
+        "p_value": 0.01,
+        "significant_at_05": true,
+        "verdict": "weekly_native_significantly_better"
+      }
+    },
+    "crypto": {
+      "status": "tested",
+      "n_origins": 90,
+      "n_contributions": 180,
+      "skill_sqerror": {
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.49539355884970643,
+        "ci95_lo": -1.009499972405403,
+        "ci95_hi": -0.04610563429552294,
+        "p_value": 0.0284,
+        "significant_at_05": true,
+        "verdict": "weekly_native_significantly_better"
+      },
+      "skill_winkler": {
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.28155109736463996,
+        "ci95_lo": -0.58295033524332,
+        "ci95_hi": -0.042506389185481185,
+        "p_value": 0.0154,
+        "significant_at_05": true,
+        "verdict": "weekly_native_significantly_better"
+      }
+    },
+    "index": {
+      "status": "tested",
+      "n_origins": 90,
+      "n_contributions": 90,
+      "skill_sqerror": {
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.1604317099304876,
+        "ci95_lo": -0.5229932969254685,
+        "ci95_hi": 0.10259106888323813,
+        "p_value": 0.2874,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      },
+      "skill_winkler": {
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.4419591897458162,
+        "ci95_lo": -1.171340774864778,
+        "ci95_hi": 0.06676899335237968,
+        "p_value": 0.1012,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      }
+    },
+    "bond": {
+      "status": "tested",
+      "n_origins": 91,
+      "n_contributions": 91,
+      "skill_sqerror": {
+        "n": 91,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.019305205532925657,
+        "ci95_lo": -0.2745874742210935,
+        "ci95_hi": 0.26156897836077453,
+        "p_value": 0.9594,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      },
+      "skill_winkler": {
+        "n": 91,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.08800407545118585,
+        "ci95_lo": -0.3493045286635406,
+        "ci95_hi": 0.09352196956753697,
+        "p_value": 0.4352,
+        "significant_at_05": false,
+        "verdict": "indistinguishable"
+      }
+    }
+  },
+  "cells_nsdiff_w2_w3": [
+    {
+      "horizon_unit": "W+2",
+      "asset": "BTC-USD",
+      "status": "tested",
+      "verdict": "weekly_native_significantly_better",
+      "p_value": 0.0006,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 8817.198337353351,
+      "rmse_weekly": 8026.320435440873,
+      "cov95_daily": 0.8777777777777778,
+      "cov95_weekly": 0.9333333333333333,
+      "pi_width_daily": 33621.683091362844,
+      "pi_width_weekly": 36737.203625217015,
+      "winkler_daily": 51952.75622504338,
+      "winkler_weekly": 44789.113217230915
+    },
+    {
+      "horizon_unit": "W+2",
+      "asset": "ETH-USD",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.4186,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 428.83229863504476,
+      "rmse_weekly": 417.255874132898,
+      "cov95_daily": 0.8333333333333334,
+      "cov95_weekly": 0.9111111111111111,
+      "pi_width_daily": 1489.583765496148,
+      "pi_width_weekly": 1570.2680572848844,
+      "winkler_daily": 2472.144134691027,
+      "winkler_weekly": 2021.8381039428705
+    },
+    {
+      "horizon_unit": "W+2",
+      "asset": "SPY",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.2414,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 17.162594175304477,
+      "rmse_weekly": 17.770263463352798,
+      "cov95_daily": 0.9,
+      "cov95_weekly": 0.9333333333333333,
+      "pi_width_daily": 63.064375635782866,
+      "pi_width_weekly": 66.25925563388401,
+      "winkler_daily": 93.01949851989743,
+      "winkler_weekly": 100.76917995029021
+    },
+    {
+      "horizon_unit": "W+2",
+      "asset": "TLT",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.5584,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 1.9014903970855594,
+      "rmse_weekly": 1.8652105312379577,
+      "cov95_daily": 0.9444444444444444,
+      "cov95_weekly": 0.9555555555555556,
+      "pi_width_daily": 7.178536792331272,
+      "pi_width_weekly": 8.49242649078369,
+      "winkler_daily": 10.17942290412055,
+      "winkler_weekly": 10.41787865956624
+    },
+    {
+      "horizon_unit": "W+2",
+      "asset": "ZN=F",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.4104,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 1.0088939782981285,
+      "rmse_weekly": 0.9864569824926461,
+      "cov95_daily": 0.9,
+      "cov95_weekly": 0.9,
+      "pi_width_daily": 3.809716311560737,
+      "pi_width_weekly": 3.9748694504631885,
+      "winkler_daily": 5.218085926903612,
+      "winkler_weekly": 5.186116025712756
+    },
+    {
+      "horizon_unit": "W+3",
+      "asset": "BTC-USD",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.0824,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 10793.904411800042,
+      "rmse_weekly": 10448.84895054943,
+      "cov95_daily": 0.8666666666666667,
+      "cov95_weekly": 0.9333333333333333,
+      "pi_width_daily": 35379.80218315972,
+      "pi_width_weekly": 46850.46291449653,
+      "winkler_daily": 76643.26155815972,
+      "winkler_weekly": 62492.274069010426
+    },
+    {
+      "horizon_unit": "W+3",
+      "asset": "ETH-USD",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.9288,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 531.3348145954628,
+      "rmse_weekly": 534.0195060765489,
+      "cov95_daily": 0.7777777777777778,
+      "cov95_weekly": 0.9,
+      "pi_width_daily": 1560.7676245795355,
+      "pi_width_weekly": 1992.1029166836204,
+      "winkler_daily": 3690.700194295248,
+      "winkler_weekly": 2644.935126970079
+    },
+    {
+      "horizon_unit": "W+3",
+      "asset": "SPY",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.3596,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 21.306491383530318,
+      "rmse_weekly": 21.8358187486263,
+      "cov95_daily": 0.9222222222222223,
+      "cov95_weekly": 0.9333333333333333,
+      "pi_width_daily": 78.46464881896972,
+      "pi_width_weekly": 83.06144094679091,
+      "winkler_daily": 112.58714230855308,
+      "winkler_weekly": 131.18107663472483
+    },
+    {
+      "horizon_unit": "W+3",
+      "asset": "TLT",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.7494,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 2.065623358664653,
+      "rmse_weekly": 2.084639676656412,
+      "cov95_daily": 0.9666666666666667,
+      "cov95_weekly": 0.9888888888888889,
+      "pi_width_daily": 8.98614030626085,
+      "pi_width_weekly": 10.642319889068602,
+      "winkler_daily": 10.578691897922088,
+      "winkler_weekly": 11.095994375016957
+    },
+    {
+      "horizon_unit": "W+3",
+      "asset": "ZN=F",
+      "status": "tested",
+      "verdict": "indistinguishable",
+      "p_value": 0.9152,
+      "n": 90,
+      "effective_n": 30,
+      "rmse_daily": 1.155429281739286,
+      "rmse_weekly": 1.1500054654623713,
+      "cov95_daily": 0.9333333333333333,
+      "cov95_weekly": 0.9666666666666667,
+      "pi_width_daily": 4.7269911342197,
+      "pi_width_weekly": 4.92684428109063,
+      "winkler_daily": 6.050412697262238,
+      "winkler_weekly": 5.413320331573492
+    }
+  ]
+}

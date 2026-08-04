@@ -1,0 +1,448 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "assets": [
+    "SPY",
+    "BTC-USD",
+    "ETH-USD",
+    "ZN=F",
+    "TLT"
+  ],
+  "config": {
+    "epochs": 40,
+    "n_samples": 50,
+    "k_denoise": 20,
+    "horizon_scope": "W+1 only (scope de la note, cf. dashboard_d7_w1)"
+  },
+  "note": "Table isolee (jamais ecrite dans tracking.db oos). CV = std inter-graines / mean inter-graines, calcule sur RMSE et Winkler (pas de CRPS ici -- les rows generees ne stockent que point+quantiles 2.5/97.5, pas le nuage complet d'echantillons, cf. NOTE_compare_weekly_tsdiff_nsdiff.md Etape 0 pour la meme limite cote duel).",
+  "per_seed": {
+    "42": {
+      "SPY": {
+        "seed": 42,
+        "rmse_daily": 13.61293677001843,
+        "rmse_weekly": 13.112878605805163,
+        "winkler_daily": 98.06242545233832,
+        "winkler_weekly": 72.16277620103631,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.2798,
+        "n": 90,
+        "effective_n": 30
+      },
+      "BTC-USD": {
+        "seed": 42,
+        "rmse_daily": 5916.98713464826,
+        "rmse_weekly": 5452.013823385852,
+        "winkler_daily": 37237.219883897575,
+        "winkler_weekly": 29604.98138780382,
+        "verdict_rmse": "weekly_native_significantly_better",
+        "p_value_rmse": 0.0048,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ETH-USD": {
+        "seed": 42,
+        "rmse_daily": 293.8263918572598,
+        "rmse_weekly": 285.6081975602328,
+        "winkler_daily": 1942.6750339423284,
+        "winkler_weekly": 1440.502690565321,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.3956,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ZN=F": {
+        "seed": 42,
+        "rmse_daily": 0.795557532768037,
+        "rmse_weekly": 0.79561860780338,
+        "winkler_daily": 4.476078361935085,
+        "winkler_weekly": 4.189069601694747,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.9256,
+        "n": 90,
+        "effective_n": 30
+      },
+      "TLT": {
+        "seed": 42,
+        "rmse_daily": 1.426993219709924,
+        "rmse_weekly": 1.4290463507376143,
+        "winkler_daily": 8.530260162353523,
+        "winkler_weekly": 7.9310477786594005,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.8804,
+        "n": 90,
+        "effective_n": 30
+      }
+    },
+    "43": {
+      "SPY": {
+        "seed": 43,
+        "rmse_daily": 13.180507695213816,
+        "rmse_weekly": 13.201921499383278,
+        "winkler_daily": 75.78103277418357,
+        "winkler_weekly": 70.35650000678167,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.9878,
+        "n": 90,
+        "effective_n": 30
+      },
+      "BTC-USD": {
+        "seed": 43,
+        "rmse_daily": 5009.530295829942,
+        "rmse_weekly": 5371.945126451937,
+        "winkler_daily": 31059.79754557291,
+        "winkler_weekly": 29218.305605468748,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.1406,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ETH-USD": {
+        "seed": 43,
+        "rmse_daily": 266.5305346016982,
+        "rmse_weekly": 271.03757363025653,
+        "winkler_daily": 1510.1131368340384,
+        "winkler_weekly": 1375.1754198879664,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.804,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ZN=F": {
+        "seed": 43,
+        "rmse_daily": 0.7837737141291026,
+        "rmse_weekly": 0.7689200859424183,
+        "winkler_daily": 4.217093308766681,
+        "winkler_weekly": 4.6606695111592655,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.4816,
+        "n": 90,
+        "effective_n": 30
+      },
+      "TLT": {
+        "seed": 43,
+        "rmse_daily": 1.4213622237948313,
+        "rmse_weekly": 1.4081383995987216,
+        "winkler_daily": 7.563784084320066,
+        "winkler_weekly": 7.97547219170464,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.788,
+        "n": 90,
+        "effective_n": 30
+      }
+    },
+    "44": {
+      "SPY": {
+        "seed": 44,
+        "rmse_daily": 13.137418467661352,
+        "rmse_weekly": 12.9502857633587,
+        "winkler_daily": 87.77806262546119,
+        "winkler_weekly": 71.48182941860621,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.6732,
+        "n": 90,
+        "effective_n": 30
+      },
+      "BTC-USD": {
+        "seed": 44,
+        "rmse_daily": 5516.317521072587,
+        "rmse_weekly": 5170.413599785123,
+        "winkler_daily": 32368.616191406258,
+        "winkler_weekly": 27574.60420138888,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.071,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ETH-USD": {
+        "seed": 44,
+        "rmse_daily": 276.34524998348866,
+        "rmse_weekly": 270.34593712053754,
+        "winkler_daily": 1574.4838787502713,
+        "winkler_weekly": 1249.2210626898873,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.5206,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ZN=F": {
+        "seed": 44,
+        "rmse_daily": 0.7900851709798379,
+        "rmse_weekly": 0.7864341124291605,
+        "winkler_daily": 4.341218003167049,
+        "winkler_weekly": 4.212858778635656,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.9758,
+        "n": 90,
+        "effective_n": 30
+      },
+      "TLT": {
+        "seed": 44,
+        "rmse_daily": 1.4259890970156976,
+        "rmse_weekly": 1.4683987825340423,
+        "winkler_daily": 8.36311181598239,
+        "winkler_weekly": 7.749649861653638,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.2924,
+        "n": 90,
+        "effective_n": 30
+      }
+    },
+    "45": {
+      "SPY": {
+        "seed": 45,
+        "rmse_daily": 13.99090315672732,
+        "rmse_weekly": 12.743204590718953,
+        "winkler_daily": 96.18480036417641,
+        "winkler_weekly": 64.78601543850365,
+        "verdict_rmse": "weekly_native_significantly_better",
+        "p_value_rmse": 0.004,
+        "n": 90,
+        "effective_n": 30
+      },
+      "BTC-USD": {
+        "seed": 45,
+        "rmse_daily": 5007.605564714224,
+        "rmse_weekly": 5096.874355119371,
+        "winkler_daily": 27475.87148871528,
+        "winkler_weekly": 29085.60504557292,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.6638,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ETH-USD": {
+        "seed": 45,
+        "rmse_daily": 265.9288735675225,
+        "rmse_weekly": 270.9642043408288,
+        "winkler_daily": 1522.7496439954969,
+        "winkler_weekly": 1373.2379343329533,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.6724,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ZN=F": {
+        "seed": 45,
+        "rmse_daily": 0.7725638160404458,
+        "rmse_weekly": 0.7782056955483403,
+        "winkler_daily": 4.1882823202345065,
+        "winkler_weekly": 4.7115185991923,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.7376,
+        "n": 90,
+        "effective_n": 30
+      },
+      "TLT": {
+        "seed": 45,
+        "rmse_daily": 1.417832088849253,
+        "rmse_weekly": 1.4129476515764319,
+        "winkler_daily": 7.613425165812169,
+        "winkler_weekly": 8.051629153357611,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.7842,
+        "n": 90,
+        "effective_n": 30
+      }
+    },
+    "46": {
+      "SPY": {
+        "seed": 46,
+        "rmse_daily": 13.634997288465224,
+        "rmse_weekly": 13.233006589747092,
+        "winkler_daily": 79.46638932122126,
+        "winkler_weekly": 70.62250472174749,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.261,
+        "n": 90,
+        "effective_n": 30
+      },
+      "BTC-USD": {
+        "seed": 46,
+        "rmse_daily": 5216.87943425827,
+        "rmse_weekly": 5233.386748549285,
+        "winkler_daily": 29310.282578125,
+        "winkler_weekly": 29639.829803602424,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.836,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ETH-USD": {
+        "seed": 46,
+        "rmse_daily": 267.55221560335485,
+        "rmse_weekly": 276.83311037279594,
+        "winkler_daily": 1504.6478597683383,
+        "winkler_weekly": 1340.9823768446183,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.2248,
+        "n": 90,
+        "effective_n": 30
+      },
+      "ZN=F": {
+        "seed": 46,
+        "rmse_daily": 0.807859857798102,
+        "rmse_weekly": 0.761470215835608,
+        "winkler_daily": 4.603589971330437,
+        "winkler_weekly": 4.247973808712425,
+        "verdict_rmse": "weekly_native_significantly_better",
+        "p_value_rmse": 0.0498,
+        "n": 90,
+        "effective_n": 30
+      },
+      "TLT": {
+        "seed": 46,
+        "rmse_daily": 1.4472565640530035,
+        "rmse_weekly": 1.3739919233267104,
+        "winkler_daily": 8.437455232408308,
+        "winkler_weekly": 7.875536719428166,
+        "verdict_rmse": "indistinguishable",
+        "p_value_rmse": 0.0504,
+        "n": 90,
+        "effective_n": 30
+      }
+    }
+  },
+  "cv_table": {
+    "SPY": {
+      "verdicts_by_seed": {
+        "42": "indistinguishable",
+        "43": "indistinguishable",
+        "44": "indistinguishable",
+        "45": "weekly_native_significantly_better",
+        "46": "indistinguishable"
+      },
+      "p_values_by_seed": {
+        "42": 0.2798,
+        "43": 0.9878,
+        "44": 0.6732,
+        "45": 0.004,
+        "46": 0.261
+      },
+      "verdict_stable": false,
+      "n": 90,
+      "effective_n": 30,
+      "cv_rmse_daily": 0.026294030430163602,
+      "cv_rmse_weekly": 0.01554537856413187,
+      "cv_winkler_daily": 0.11275186374934852,
+      "cv_winkler_weekly": 0.04202808034573693,
+      "rmse_daily_mean": 13.511352675617228,
+      "rmse_weekly_mean": 13.048259409802636,
+      "winkler_daily_mean": 87.45454210747614,
+      "winkler_weekly_mean": 69.88192515733508
+    },
+    "BTC-USD": {
+      "verdicts_by_seed": {
+        "42": "weekly_native_significantly_better",
+        "43": "indistinguishable",
+        "44": "indistinguishable",
+        "45": "indistinguishable",
+        "46": "indistinguishable"
+      },
+      "p_values_by_seed": {
+        "42": 0.0048,
+        "43": 0.1406,
+        "44": 0.071,
+        "45": 0.6638,
+        "46": 0.836
+      },
+      "verdict_stable": false,
+      "n": 90,
+      "effective_n": 30,
+      "cv_rmse_daily": 0.0725345182315608,
+      "cv_rmse_weekly": 0.02762634773020092,
+      "cv_winkler_daily": 0.1175949131825386,
+      "cv_winkler_weekly": 0.029128361511031844,
+      "rmse_daily_mean": 5333.463990104656,
+      "rmse_weekly_mean": 5264.926730658314,
+      "winkler_daily_mean": 31490.3575375434,
+      "winkler_weekly_mean": 29024.665208767354
+    },
+    "ETH-USD": {
+      "verdicts_by_seed": {
+        "42": "indistinguishable",
+        "43": "indistinguishable",
+        "44": "indistinguishable",
+        "45": "indistinguishable",
+        "46": "indistinguishable"
+      },
+      "p_values_by_seed": {
+        "42": 0.3956,
+        "43": 0.804,
+        "44": 0.5206,
+        "45": 0.6724,
+        "46": 0.2248
+      },
+      "verdict_stable": true,
+      "n": 90,
+      "effective_n": 30,
+      "cv_rmse_daily": 0.043219258283671014,
+      "cv_rmse_weekly": 0.02367731105692561,
+      "cv_winkler_daily": 0.11638954427194328,
+      "cv_winkler_weekly": 0.051408257332961886,
+      "rmse_daily_mean": 274.0366531226648,
+      "rmse_weekly_mean": 274.95780460493035,
+      "winkler_daily_mean": 1610.9339106580946,
+      "winkler_weekly_mean": 1355.8238968641494
+    },
+    "ZN=F": {
+      "verdicts_by_seed": {
+        "42": "indistinguishable",
+        "43": "indistinguishable",
+        "44": "indistinguishable",
+        "45": "indistinguishable",
+        "46": "weekly_native_significantly_better"
+      },
+      "p_values_by_seed": {
+        "42": 0.9256,
+        "43": 0.4816,
+        "44": 0.9758,
+        "45": 0.7376,
+        "46": 0.0498
+      },
+      "verdict_stable": false,
+      "n": 90,
+      "effective_n": 30,
+      "cv_rmse_daily": 0.016657790942024967,
+      "cv_rmse_weekly": 0.01744643223672939,
+      "cv_winkler_daily": 0.04016033290539645,
+      "cv_winkler_weekly": 0.058716453340692955,
+      "rmse_daily_mean": 0.789968018343105,
+      "rmse_weekly_mean": 0.7781297435117814,
+      "winkler_daily_mean": 4.3652523930867515,
+      "winkler_weekly_mean": 4.4044180598788785
+    },
+    "TLT": {
+      "verdicts_by_seed": {
+        "42": "indistinguishable",
+        "43": "indistinguishable",
+        "44": "indistinguishable",
+        "45": "indistinguishable",
+        "46": "indistinguishable"
+      },
+      "p_values_by_seed": {
+        "42": 0.8804,
+        "43": 0.788,
+        "44": 0.2924,
+        "45": 0.7842,
+        "46": 0.0504
+      },
+      "verdict_stable": true,
+      "n": 90,
+      "effective_n": 30,
+      "cv_rmse_daily": 0.008010007055597032,
+      "cv_rmse_weekly": 0.024217140409086135,
+      "cv_winkler_daily": 0.05830452735540789,
+      "cv_winkler_weekly": 0.014328083369469101,
+      "rmse_daily_mean": 1.427886638684542,
+      "rmse_weekly_mean": 1.4185046215547041,
+      "winkler_daily_mean": 8.101607292175292,
+      "winkler_weekly_mean": 7.916667140960692
+    }
+  },
+  "elapsed_s": 199.7
+}
