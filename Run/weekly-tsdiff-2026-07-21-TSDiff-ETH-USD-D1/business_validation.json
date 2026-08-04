@@ -28,5 +28,6 @@
   "horizon_type": "weekly",
   "horizon_unit": "W+1",
   "real_flag": "live",
+  "sigma_scale_applied": 1.0,
   "horizon_trading_days": 1
 }
