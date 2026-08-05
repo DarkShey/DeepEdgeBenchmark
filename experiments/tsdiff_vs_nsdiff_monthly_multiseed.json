@@ -1,0 +1,234 @@
+{
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "assets": [
+    "SPY",
+    "BTC-USD",
+    "ETH-USD",
+    "ZN=F",
+    "TLT"
+  ],
+  "horizon_scope": "M+1 only",
+  "note": "Post-hoc, reconstruit depuis les checkpoints deja calcules par nsdiff_monthly_multiseed.py / tsdiff_monthly_multiseed.py -- aucun reentrainement ici.",
+  "cv_table_by_regime": {
+    "daily": {
+      "SPY": {
+        "verdicts_by_seed": {
+          "42": "indistinguishable",
+          "43": "TSDiff_significantly_better",
+          "44": "indistinguishable",
+          "45": "indistinguishable",
+          "46": "TSDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.6242,
+          "43": 0.0282,
+          "44": 0.6776,
+          "45": 0.407,
+          "46": 0.014
+        },
+        "verdict_stable": false,
+        "rmse_tsdiff_mean": 20.067012478664083,
+        "rmse_nsdiff_mean": 21.45319948830625,
+        "cv_rmse_tsdiff": 0.007526510276644865,
+        "cv_rmse_nsdiff": 0.06751712044719123
+      },
+      "BTC-USD": {
+        "verdicts_by_seed": {
+          "42": "indistinguishable",
+          "43": "indistinguishable",
+          "44": "indistinguishable",
+          "45": "indistinguishable",
+          "46": "indistinguishable"
+        },
+        "p_values_by_seed": {
+          "42": 0.2424,
+          "43": 0.8572,
+          "44": 0.426,
+          "45": 0.7362,
+          "46": 0.6884
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 9172.43340529805,
+        "rmse_nsdiff_mean": 9232.010480175813,
+        "cv_rmse_tsdiff": 0.009874725262075838,
+        "cv_rmse_nsdiff": 0.03629242687973892
+      },
+      "ETH-USD": {
+        "verdicts_by_seed": {
+          "42": "indistinguishable",
+          "43": "indistinguishable",
+          "44": "TSDiff_significantly_better",
+          "45": "indistinguishable",
+          "46": "indistinguishable"
+        },
+        "p_values_by_seed": {
+          "42": 0.2402,
+          "43": 0.285,
+          "44": 0.017,
+          "45": 0.4462,
+          "46": 0.8424
+        },
+        "verdict_stable": false,
+        "rmse_tsdiff_mean": 507.9324394271836,
+        "rmse_nsdiff_mean": 520.5385106768135,
+        "cv_rmse_tsdiff": 0.038640044534549674,
+        "cv_rmse_nsdiff": 0.029091327191792273
+      },
+      "ZN=F": {
+        "verdicts_by_seed": {
+          "42": "TSDiff_significantly_better",
+          "43": "indistinguishable",
+          "44": "TSDiff_significantly_better",
+          "45": "indistinguishable",
+          "46": "indistinguishable"
+        },
+        "p_values_by_seed": {
+          "42": 0.012,
+          "43": 0.3764,
+          "44": 0.0252,
+          "45": 0.6016,
+          "46": 0.0904
+        },
+        "verdict_stable": false,
+        "rmse_tsdiff_mean": 1.8715011212505837,
+        "rmse_nsdiff_mean": 1.9863945349298633,
+        "cv_rmse_tsdiff": 0.009984347451786639,
+        "cv_rmse_nsdiff": 0.04960414286444373
+      },
+      "TLT": {
+        "verdicts_by_seed": {
+          "42": "indistinguishable",
+          "43": "indistinguishable",
+          "44": "TSDiff_significantly_better",
+          "45": "indistinguishable",
+          "46": "TSDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 1.0,
+          "43": 0.8938,
+          "44": 0.0018,
+          "45": 0.5192,
+          "46": 0.0362
+        },
+        "verdict_stable": false,
+        "rmse_tsdiff_mean": 3.325014612333148,
+        "rmse_nsdiff_mean": 3.415879573232097,
+        "cv_rmse_tsdiff": 0.003792976568208057,
+        "cv_rmse_nsdiff": 0.03393799408483824
+      }
+    },
+    "monthly": {
+      "SPY": {
+        "verdicts_by_seed": {
+          "42": "NsDiff_significantly_better",
+          "43": "NsDiff_significantly_better",
+          "44": "NsDiff_significantly_better",
+          "45": "NsDiff_significantly_better",
+          "46": "NsDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.0,
+          "43": 0.0004,
+          "44": 0.0,
+          "45": 0.0,
+          "46": 0.0
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 73.01339107451972,
+        "rmse_nsdiff_mean": 22.154254749050615,
+        "cv_rmse_tsdiff": 0.3824058267343426,
+        "cv_rmse_nsdiff": 0.06235987954838068
+      },
+      "BTC-USD": {
+        "verdicts_by_seed": {
+          "42": "NsDiff_significantly_better",
+          "43": "NsDiff_significantly_better",
+          "44": "NsDiff_significantly_better",
+          "45": "NsDiff_significantly_better",
+          "46": "NsDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.0,
+          "43": 0.0,
+          "44": 0.0,
+          "45": 0.0,
+          "46": 0.0
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 87881.72742431838,
+        "rmse_nsdiff_mean": 11791.697522359696,
+        "cv_rmse_tsdiff": 0.6816493388378909,
+        "cv_rmse_nsdiff": 0.15057303138146277
+      },
+      "ETH-USD": {
+        "verdicts_by_seed": {
+          "42": "NsDiff_significantly_better",
+          "43": "NsDiff_significantly_better",
+          "44": "NsDiff_significantly_better",
+          "45": "NsDiff_significantly_better",
+          "46": "NsDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.003,
+          "43": 0.0,
+          "44": 0.0,
+          "45": 0.0,
+          "46": 0.0
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 7895.837389520524,
+        "rmse_nsdiff_mean": 677.2751422441918,
+        "cv_rmse_tsdiff": 0.7401548396761358,
+        "cv_rmse_nsdiff": 0.10746437995519516
+      },
+      "ZN=F": {
+        "verdicts_by_seed": {
+          "42": "NsDiff_significantly_better",
+          "43": "NsDiff_significantly_better",
+          "44": "NsDiff_significantly_better",
+          "45": "NsDiff_significantly_better",
+          "46": "NsDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.0,
+          "43": 0.0,
+          "44": 0.0,
+          "45": 0.0,
+          "46": 0.0
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 5.00711310629333,
+        "rmse_nsdiff_mean": 1.9618010308925662,
+        "cv_rmse_tsdiff": 0.2243747832018785,
+        "cv_rmse_nsdiff": 0.04257787295793482
+      },
+      "TLT": {
+        "verdicts_by_seed": {
+          "42": "NsDiff_significantly_better",
+          "43": "NsDiff_significantly_better",
+          "44": "NsDiff_significantly_better",
+          "45": "NsDiff_significantly_better",
+          "46": "NsDiff_significantly_better"
+        },
+        "p_values_by_seed": {
+          "42": 0.0,
+          "43": 0.0026,
+          "44": 0.0,
+          "45": 0.0,
+          "46": 0.0
+        },
+        "verdict_stable": true,
+        "rmse_tsdiff_mean": 9.895872439251074,
+        "rmse_nsdiff_mean": 3.3920552418734067,
+        "cv_rmse_tsdiff": 0.29927059525318395,
+        "cv_rmse_nsdiff": 0.042529952104217665
+      }
+    }
+  }
+}

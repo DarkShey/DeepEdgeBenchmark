@@ -1,0 +1,48 @@
+{
+  "config": {
+    "assets": [
+      "SPY"
+    ],
+    "epochs": 40,
+    "seed": 42,
+    "n_samples": 50,
+    "k_denoise": 20,
+    "seq_len_monthly": 18,
+    "n_val": 6,
+    "n_test": 40,
+    "month_margin": 3,
+    "fetch_start": "2015-01-01",
+    "fetch_end": "2026-08-05",
+    "mechanism": "train-once-forward (mirrors oos_nsdiff_daily_weekly.generate_nsdiff_asset)",
+    "origins": "self-generated via three_way_split_monthly (no baseline monthly oos rows exist, brief \u00a72)",
+    "elapsed_s": 9.4
+  },
+  "per_asset": {
+    "SPY": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "val_origins": [
+        "2022-07-29",
+        "2022-08-31",
+        "2022-09-30",
+        "2022-10-31",
+        "2022-11-30",
+        "2022-12-30"
+      ],
+      "n_test_origins": 40,
+      "max_daily_horizon": 65,
+      "train_monthly_len": 96,
+      "train_daily_len": 2033,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    }
+  },
+  "skipped": [],
+  "n_rows_regime_c": 120,
+  "n_rows_regime_b": 120,
+  "n_written": 240
+}

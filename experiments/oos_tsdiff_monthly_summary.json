@@ -1,0 +1,100 @@
+{
+  "config": {
+    "assets": [
+      "SPY",
+      "BTC-USD",
+      "ETH-USD",
+      "ZN=F",
+      "TLT"
+    ],
+    "epochs": 40,
+    "seed": 42,
+    "n_samples": 50,
+    "k_denoise": 20,
+    "ddim_eta": 1.0,
+    "seq_len_monthly": 18,
+    "n_val": 6,
+    "n_test": 40,
+    "month_margin": 3,
+    "fetch_start": "2015-01-01",
+    "fetch_end": "2026-08-05",
+    "mechanism": "train-once-forward (mirrors oos_nsdiff_monthly.generate_nsdiff_asset_monthly)",
+    "elapsed_s": 1804.6
+  },
+  "per_asset": {
+    "SPY": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "n_test_origins": 40,
+      "max_daily_horizon": 65,
+      "train_monthly_len": 96,
+      "train_daily_len": 2033,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    },
+    "BTC-USD": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "n_test_origins": 40,
+      "max_daily_horizon": 92,
+      "train_monthly_len": 96,
+      "train_daily_len": 2952,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    },
+    "ETH-USD": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "n_test_origins": 40,
+      "max_daily_horizon": 92,
+      "train_monthly_len": 62,
+      "train_daily_len": 1909,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    },
+    "ZN=F": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "n_test_origins": 40,
+      "max_daily_horizon": 65,
+      "train_monthly_len": 96,
+      "train_daily_len": 2030,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    },
+    "TLT": {
+      "price_source": "live/yfinance",
+      "n_rows_c": 120,
+      "n_rows_b": 120,
+      "train_end": "2022-06-30",
+      "n_test_origins": 40,
+      "max_daily_horizon": 65,
+      "train_monthly_len": 96,
+      "train_daily_len": 2033,
+      "test_origin_range": [
+        "2023-01-31",
+        "2026-04-30"
+      ]
+    }
+  },
+  "skipped": [],
+  "n_rows_regime_c": 600,
+  "n_rows_regime_b": 600,
+  "n_written": 1200
+}
