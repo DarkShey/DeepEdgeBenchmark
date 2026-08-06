@@ -365,6 +365,32 @@ def collect_weekly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
     return out
 
 
+def collect_weekly_multiseed(assets: list) -> dict:
+    """Badge de robustesse inter-graines + label de config honnête
+    (BRIEF_dashboard_multiseed_200.md) pour les modèles WEEKLY_KPI_MODELS
+    (TSDiff, NsDiff -- les 2 seuls modèles échantillonnés du panel, cf. audit
+    dans NOTE_dashboard_multiseed_200.md). Réutilise `experiments/
+    dashboard_d7_w1.py` (déjà sur sys.path, cf. tête de module) -- même
+    artefact JSON multiseed, même logique, pas réimplémentée ici. Jamais
+    bloquant : une erreur d'import/lecture retombe sur un payload vide
+    (dégradation gracieuse, même logique défensive que collect_weekly_kpis)."""
+    try:
+        import dashboard_d7_w1 as dash_d7w1
+    except Exception as exc:
+        print(f"[generate_dashboard] badge robustesse multiseed indisponible ({exc})")
+        return {"data_config": None, "robustness": {}}
+
+    artifacts = dash_d7w1.load_multiseed_artifacts()
+    data_config = dash_d7w1.build_data_config(artifacts, MODEL_ORDER)
+    robustness = {}
+    for asset in assets:
+        for model in WEEKLY_KPI_MODELS:
+            badge = dash_d7w1.cell_robustness_badge(artifacts, model, asset)
+            if badge:
+                robustness.setdefault(asset, {})[model] = badge
+    return {"data_config": data_config, "robustness": robustness}
+
+
 ROLLING_COVERAGE_WINDOW = 30   # dernières N prédictions résolues par cellule
 
 
@@ -472,6 +498,7 @@ def render_html(run_data: dict, run_root_label: str, external_series: bool = Fal
         "tc_pipeline": TC_PIPELINE,
         "weekly_kpis": collect_weekly_kpis(),
         "weekly_kpi_models": WEEKLY_KPI_MODELS,
+        "weekly_multiseed": collect_weekly_multiseed([a["ticker"] for a in asset_catalog]),
         "rolling_coverage": collect_rolling_coverage(),
         "rolling_coverage_window": ROLLING_COVERAGE_WINDOW,
         "external_series": external_series,
@@ -681,10 +708,25 @@ td.wide-cell { background: rgba(230,162,60,0.12); color: #b07b1e; font-weight: 6
 .tc-legend .tc-legend-item { white-space: nowrap; }
 .tc-legend b { color: var(--text-primary); }
 td.gated-out-cell { color: var(--text-muted); font-style: italic; }
+.robustness-pill { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10.5px;
+                   font-weight:600; white-space:nowrap; border:1px solid var(--border-ring); margin-left:6px; }
+.robustness-pill.stable { background:rgba(27,175,122,0.14); color:var(--pos-color); }
+.robustness-pill.unstable { background:rgba(214,69,80,0.14); color:var(--neg-color); }
+.robustness-pill.na { background:transparent; color:var(--text-muted); border-style:dashed; }
+.config-banner { background:var(--surface-1); border:1px solid var(--border-ring); border-radius:10px;
+                 box-shadow:var(--card-shadow); padding:10px 16px; margin:0 0 18px; font-size:12.5px;
+                 line-height:1.5; color:var(--text-secondary); max-width:900px; }
+.config-banner.target-met { border-left:3px solid var(--pos-color); }
+.config-banner.target-pending { border-left:3px solid #c98a2c; }
+.config-banner .cb-headline { font-weight:600; color:var(--text-primary); margin:0; }
+.config-banner details { margin-top:6px; }
+.config-banner summary { cursor:pointer; color:var(--text-muted); font-size:11.5px; }
+.config-banner .cb-extra p { margin:6px 0 0; }
 </style>
 
 <h1>Dashboard KPI — Modèles de prévision</h1>
 <p class="subtitle" id="subtitle"></p>
+<div id="weekly-multiseed-banner"></div>
 
 <div class="tabbar" id="asset-tabbar"></div>
 <div id="asset-panels"></div>
@@ -760,6 +802,47 @@ function renderSubtitle() {
   const nCombos = DATA.records.length;
   const nAssets = new Set(DATA.records.map(r => r.asset)).size;
   el.textContent = `${nCombos} combinaisons (modèle × actif × horizon × date) — ${nAssets} actif(s), ${MODELS.length} modèle(s) — généré le ${DATA.generated_at} depuis ${DATA.run_root}`;
+}
+
+// ---- Bandeau config ensemble 5x200 / badge robustesse inter-graines --------
+// (BRIEF_dashboard_multiseed_200.md) -- global, pas par actif : le label de
+// config est le même partout (source = experiments/{model}_daily_weekly_
+// multiseed.json, lus une fois côté Python, cf. DATA.weekly_multiseed).
+function renderWeeklyMultiseedBanner() {
+  const wm = DATA.weekly_multiseed;
+  const el = document.getElementById('weekly-multiseed-banner');
+  if (!wm || !wm.data_config) { el.innerHTML = ''; return; }
+  const dc = wm.data_config;
+  const cls = dc.all_target_config ? 'target-met' : 'target-pending';
+  const perModelLines = dc.sampled_models.map(m => {
+    const s = dc.multiseed_artifacts[m];
+    if (!s || !s.artifact_found) return `<li>${m} : artefact multiseed absent (pas de badge)</li>`;
+    return `<li>${m} : ${s.n_seeds} graine(s) × ${s.n_samples} tirages -- ${s.status_label}</li>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="config-banner ${cls}">
+      <p class="cb-headline">${dc.headline}</p>
+      <details>
+        <summary>Détail par modèle échantillonné + modèles non concernés</summary>
+        <div class="cb-extra">
+          <ul>${perModelLines}</ul>
+          <p><b>Modèles non concernés (bandes fermées/déterministes)</b> : ${dc.analytic_models.join(', ')}. ${dc.analytic_note}</p>
+          <p><b>Note traçabilité</b> : ${dc.oos_rows_note}</p>
+        </div>
+      </details>
+    </div>`;
+}
+
+// pill "5/5 stable"/"3/5 instable" · CV(Winkler) daily/weekly, "—" si pas
+// d'artefact multiseed pour ce modèle/actif (dégradation gracieuse)
+function robustnessPillHTML(ticker, model) {
+  const r = ((DATA.weekly_multiseed || {}).robustness || {})[ticker] && DATA.weekly_multiseed.robustness[ticker][model];
+  if (!r) return '';
+  const cls = r.verdict_stable ? 'stable' : 'unstable';
+  const label = r.verdict_stable ? `${r.n_seeds}/${r.n_seeds} stable` : `${r.majority_count}/${r.n_seeds} instable`;
+  const cvd = fmt(r.cv_winkler_daily * 100, 1), cvw = fmt(r.cv_winkler_weekly * 100, 1);
+  const title = `Verdict RMSE identique sur ${r.majority_count}/${r.n_seeds} graines · CV(Winkler) daily=${cvd}% weekly=${cvw}% · artefact à n_samples=${r.n_samples}`;
+  return `<span class="robustness-pill ${cls}" title="${title}">${label} · CV(W) ${cvd}%/${cvw}%</span>`;
 }
 
 // ---- Tooltip helper (onglet Comparaison) -----------------------------------
@@ -1302,7 +1385,8 @@ function renderWeeklyKpisInline(ticker) {
       ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
     }
     card.innerHTML = `<div class="kpi-card-title">`
-      + `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}</div>`
+      + `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}`
+      + robustnessPillHTML(ticker, m) + `</div>`
       + rowsHtml;
     cardsEl.appendChild(card);
   });
@@ -1328,7 +1412,7 @@ function renderWeeklyKpisInline(ticker) {
     const crpsLabel = r.crps_gaussian == null ? '—' :
       fmt(r.crps_gaussian, 3) + (r.crps_is_approx ? ' (approx.)' : '');
     tr.innerHTML = `
-      <td><span class="swatch" style="background:${MODEL_COLORS[r.model]};width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;"></span>${r.model}</td>
+      <td><span class="swatch" style="background:${MODEL_COLORS[r.model]};width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;"></span>${r.model}${robustnessPillHTML(ticker, r.model)}</td>
       <td>${r.horizonUnit}</td>
       <td>${r.n_realized}/${r.n_total}</td>
       <td>${r.cov95_exact == null ? '—' : fmt(r.cov95_exact * 100, 1) + '%'}</td>
@@ -2420,6 +2504,7 @@ function renderComparisonTab() {
 async function boot() {
   seedDataCacheFromInline();
   renderSubtitle();
+  renderWeeklyMultiseedBanner();
   buildTabBar();
   // Toutes les fiches actif démarrent sur la même date (la plus récente, cf. assetState
   // ci-dessus) -- un seul fetch couvre le rendu KPI initial de tous les actifs.
