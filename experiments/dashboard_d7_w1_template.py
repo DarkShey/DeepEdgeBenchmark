@@ -106,6 +106,20 @@ tbody tr:hover { background:rgba(128,128,128,0.06); }
 .badge.w1 { background:var(--w1-color); }
 .badge.tie { background:var(--tie-color); }
 .badge.na { background:var(--text-muted); }
+.robustness-pill { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10.5px;
+                   font-weight:600; white-space:nowrap; border:1px solid var(--border-ring); }
+.robustness-pill.stable { background:rgba(27,175,122,0.14); color:var(--pos-color); }
+.robustness-pill.unstable { background:rgba(214,69,80,0.14); color:var(--neg-color); }
+.robustness-pill.na { background:transparent; color:var(--text-muted); border-style:dashed; }
+.config-banner { background:var(--surface-1); border:1px solid var(--border-ring); border-radius:10px;
+                 box-shadow:var(--card-shadow); padding:12px 16px; margin:0 0 20px; font-size:12.5px;
+                 line-height:1.55; color:var(--text-secondary); max-width:900px; }
+.config-banner.target-met { border-left:3px solid var(--pos-color); }
+.config-banner.target-pending { border-left:3px solid var(--d7-color); }
+.config-banner .cb-headline { font-weight:600; color:var(--text-primary); margin:0 0 4px; }
+.config-banner details { margin-top:6px; }
+.config-banner summary { cursor:pointer; color:var(--text-muted); font-size:11.5px; }
+.config-banner .cb-extra p { margin:6px 0 0; }
 .select-box { font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--border-ring);
               background:var(--surface-1); color:var(--text-primary); }
 .controls-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
@@ -178,6 +192,8 @@ dfn { font-style:normal; border-bottom:1px dotted var(--text-muted); }
 
 <h1 id="header-question"></h1>
 <p class="header-answer" id="header-answer"></p>
+
+<div id="config-banner-wrap"></div>
 
 <div class="card-grid-3" id="card-grid"></div>
 
@@ -345,10 +361,36 @@ function renderCellDetailHTML(r) {
   document.getElementById("header-question").textContent = DATA.plain.question;
   document.getElementById("header-answer").textContent = DATA.plain.answer;
   const gen = new Date(DATA.generated_at);
+  const dcNote = DATA.data_config ? ` · ${DATA.data_config.headline}` : "";
   document.getElementById("footer-meta").textContent =
-    `Source : ${DATA.db_path} · horizon W+1 · généré le ${gen.toLocaleString("fr-FR")} · graine aléatoire (reproductibilité) : test global=${DATA.seed_pooled}, test par ligne=${DATA.seed_cell_tests}.`;
+    `Source : ${DATA.db_path} · horizon W+1 · généré le ${gen.toLocaleString("fr-FR")} · graine aléatoire (reproductibilité) : test global=${DATA.seed_pooled}, test par ligne=${DATA.seed_cell_tests}.${dcNote}`;
   document.getElementById("footer-n-weeks").textContent = (DATA.cells[0] && DATA.cells[0].n) || "—";
   document.getElementById("footer-eff-n-example").textContent = (DATA.cells[0] && DATA.cells[0].effective_n) || "—";
+})();
+
+// ---- Bandeau config des données (label honnête, jamais "200/ensemble" tant que
+// ---- ce n'est pas vrai -- lu depuis DATA.data_config, calculé côté Python) ----
+(function renderConfigBanner() {
+  const dc = DATA.data_config;
+  if (!dc) return;
+  const cls = dc.all_target_config ? "target-met" : "target-pending";
+  const perModelLines = dc.sampled_models.map(m => {
+    const s = dc.multiseed_artifacts[m];
+    if (!s || !s.artifact_found) return `<li>${m} : artefact multiseed absent (pas de badge)</li>`;
+    return `<li>${m} : ${s.n_seeds} graine(s) × ${s.n_samples} tirages -- ${s.status_label}</li>`;
+  }).join("");
+  document.getElementById("config-banner-wrap").innerHTML = `
+    <div class="config-banner ${cls}">
+      <p class="cb-headline">${dc.headline}</p>
+      <details>
+        <summary>Détail par modèle échantillonné + modèles non concernés</summary>
+        <div class="cb-extra">
+          <ul>${perModelLines}</ul>
+          <p><b>Modèles analytiques (non concernés)</b> : ${dc.analytic_models.join(", ")}. ${dc.analytic_note}</p>
+          <p><b>Note traçabilité</b> : ${dc.oos_rows_note}</p>
+        </div>
+      </details>
+    </div>`;
 })();
 
 // ---- Niveau 1 : grille de 3 cartes (crypto / actions / obligations) ----
@@ -393,6 +435,7 @@ const CELL_COLUMNS = [
   {key:"asset", label:"Actif", extra:false},
   {key:"__verdict", label:"Verdict", extra:false},
   {key:"__fiabilite", label:"Fiabilité", extra:false},
+  {key:"__robustesse", label:"Robustesse inter-graines", extra:false},
   {key:"asset_class", label:"Classe", extra:true},
   {key:"rmse_daily", label:"Précision Daily (RMSE)", extra:true},
   {key:"rmse_weekly", label:"Précision Weekly (RMSE)", extra:true},
@@ -415,7 +458,19 @@ const expandedCells = new Set();   // clés "model||asset" dépliées -- préser
 function sortValue(row, key) {
   if (key === "__verdict") return row.p_value ?? 2;
   if (key === "__fiabilite") return row.effective_n ?? -1;
+  if (key === "__robustesse") return row.robustness ? (row.robustness.cv_winkler_weekly ?? -1) : -2;
   return row[key];
+}
+
+// pill "5/5 stable" / "3/5 instable" · CV(Winkler) daily/weekly, ou "—" si pas
+// d'artefact multiseed pour ce modèle (dégradation gracieuse, jamais d'erreur)
+function robustnessPillHTML(r) {
+  if (!r) return `<span class="robustness-pill na" title="Pas d'artefact multiseed pour ce modèle">—</span>`;
+  const cls = r.verdict_stable ? "stable" : "unstable";
+  const label = r.verdict_stable ? `${r.n_seeds}/${r.n_seeds} stable` : `${r.majority_count}/${r.n_seeds} instable`;
+  const cvd = fmtPct(r.cv_winkler_daily), cvw = fmtPct(r.cv_winkler_weekly);
+  const title = `Verdict RMSE identique sur ${r.majority_count}/${r.n_seeds} graines · CV(Winkler) daily=${cvd} weekly=${cvw} · artefact à n_samples=${r.n_samples}`;
+  return `<span class="robustness-pill ${cls}" title="${title}">${label} · CV(W) ${cvd}/${cvw}</span>`;
 }
 
 function renderCellTable() {
@@ -452,6 +507,7 @@ function renderCellTable() {
       <td>${r.model}</td><td>${r.asset}</td>
       <td><button class="verdict-toggle" data-key="${key}" title="Déplier l'explication"><span class="badge ${outcomeCls}">${plain.headline}</span><span class="expand-arrow">${expanded ? "▲" : "▼"}</span></button></td>
       <td>${plain.gauge.emoji} ${plain.gauge.label.split(" -- ")[0]}</td>
+      <td>${robustnessPillHTML(r.robustness)}</td>
       <td class="extra-col">${DATA.asset_class_label[r.asset_class] || r.asset_class}</td>
       <td class="extra-col">${fmtNum(r.rmse_daily,2)}</td><td class="extra-col">${fmtNum(r.rmse_weekly,2)}</td>
       <td class="extra-col">${fmtNum(r.winkler_daily,2)}</td><td class="extra-col">${fmtNum(r.winkler_weekly,2)}</td>

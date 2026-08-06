@@ -1,35 +1,32 @@
 """
-nsdiff_daily_weekly_multiseed.py -- multi-seed robustness table for NsDiff's
-daily(B)-vs-weekly(C) verdict (BRIEF_nsdiff_ameliorer_limites.md Fix 2).
+tsdiff_daily_weekly_multiseed.py -- multi-seed robustness table for TSDiff's
+daily(B)-vs-weekly(C) verdict + badge source for the dashboard.
 
-Cadrage (mis à jour BRIEF_dashboard_multiseed_200.md) : ce script n'écrit
-TOUJOURS PAS dans `tracking.db` -- il produit uniquement l'artefact JSON isolé
-(source du badge de robustesse du dashboard). L'écriture de la ligne `oos`
-ENSEMBLE (concaténation des 5 nuages, 1 seule ligne/origine) est faite par un
-script séparé, `oos_ensemble_nsdiff_daily_weekly.py`, qui réutilise (n'écrase
-pas) les checkpoints produits ici. Il relance NsDiff daily(B) + weekly(C) sur
-les graines 42-46, mêmes origines (lues verbatim, comme
-oos_nsdiff_daily_weekly.py), mêmes budgets (epochs=40, seq_len=30,
-k_denoise=20), n_samples=200 (ensemble 5x200, tâche 6 -- avant
-BRIEF_dashboard_multiseed_200.md ce script tournait à n_samples=50, cf. son
-historique git), dans un artefact JSON isolé (`nsdiff_daily_weekly_multiseed.json`)
-+ un fichier par (seed, asset) sous `experiments/checkpoints_nsdiff_multiseed_200/`
-(reprenable, même convention que `duel_multiseed.py` -- nouveau dossier,
-distinct de l'ancien `checkpoints_nsdiff_multiseed/` à n_samples=50, qui reste
-en place comme trace historique). Les checkpoints stockent aussi le nuage brut
-de chaque tirage (`collect_samples=True`, cf. `generate_nsdiff_asset`) --
-nécessaire à `oos_ensemble_nsdiff_daily_weekly.py` pour concaténer les 5
-nuages sans refitter les modèles.
+MIRROR of `nsdiff_daily_weekly_multiseed.py` (declared, not silently
+duplicated -- see BRIEF_dashboard_multiseed_200.md §4). Never writes to
+`tracking.db` -- produces only the isolated JSON artifact
+(`tsdiff_daily_weekly_multiseed.json`), the badge's source (dashboard §5).
+The `oos` ENSEMBLE line (one per origin, concatenation of the 5 clouds) is
+written by a separate script, `oos_ensemble_tsdiff_daily_weekly.py`, which
+reuses (does not refit) the checkpoints this script produces.
 
-Réutilise tel quel : `oos_nsdiff_daily_weekly.generate_nsdiff_asset` (fit +
-forecast), `oos_nsdiff_daily_weekly.fetch_verified` (prix, 4 actifs),
-`oos_nsdiff_tlt.fetch_tlt_patched` (prix TLT, cf. Fix 1),
+IMPORTANT -- written but NOT executed on this machine (compute lourd chez le
+tuteur). See RUNBOOK_regeneration_multiseed_200.md.
+
+Relance TSDiff-W (regime C) + TSDiff-D (regime B) sur les graines 42-46, mêmes
+origines (lues verbatim, comme oos_tsdiff_daily_weekly.py), n_samples=200
+(ensemble 5x200, tâche 6), avec collect_samples=True (nuages bruts conservés,
+requis par oos_ensemble_tsdiff_daily_weekly.py). Checkpoints reprenables sous
+`experiments/checkpoints_tsdiff_multiseed_200/` (un fichier par (seed, asset)).
+
+Réutilise tel quel : `oos_tsdiff_daily_weekly.generate_tsdiff_asset` (fit +
+forecast), `oos_tsdiff_daily_weekly.load_baseline_triplets_daily` (regime B
+origins), `backtest_rolling_tsdiffw.load_baseline_triplets` (regime C
+origins), `oos_nsdiff_daily_weekly.fetch_verified` (prix, 5 actifs),
+`weekly_headtohead_v2.load_selected_epochs` (budgets par actif),
 `matrice_paired_tests.comparison_3_daily_vs_weekly` (test par cellule, seed
 interne 0 -- comme le dashboard), `dashboard_d7_w1.winkler_score`. Aucune
 fonction de test réimplémentée.
-
-Prix et origines chargés UNE SEULE FOIS (ne dépendent pas de la graine) ;
-seul le fit/forecast NsDiff est répété par graine.
 """
 
 import json
@@ -49,24 +46,17 @@ import matrice_paired_tests as mpt                                      # noqa: 
 import dashboard_d7_w1 as dash                                          # noqa: E402
 from weekly_headtohead import ASSETS as ASSET_TICKERS                   # noqa: E402
 from backtest_rolling_tsdiffw import load_baseline_triplets             # noqa: E402
-from oos_nsdiff_daily_weekly import (                                   # noqa: E402
-    load_baseline_triplets_daily, fetch_verified, generate_nsdiff_asset,
-    DEFAULT_K_DENOISE,
-)
+from oos_nsdiff_daily_weekly import fetch_verified, load_baseline_triplets_daily  # noqa: E402
 from oos_nsdiff_tlt import fetch_tlt_patched                            # noqa: E402
 from weekly_headtohead import build_weekly                              # noqa: E402
-from weekly_nsdiff_production import NSDIFF_EPOCHS_W as NSDIFF_EPOCHS   # noqa: E402
+from weekly_headtohead_v2 import load_selected_epochs                   # noqa: E402
+from oos_tsdiff_daily_weekly import generate_tsdiff_asset, DEFAULT_K_DENOISE, DEFAULT_SWEEP_FILE  # noqa: E402
 
 SEEDS = [42, 43, 44, 45, 46]
 ASSETS = list(ASSET_TICKERS.values())  # BTC-USD, ETH-USD, SPY, ZN=F, TLT
-# Ensemble 5 graines x 200 tirages (tâche 6, BRIEF_dashboard_multiseed_200.md) --
-# était n_samples=50 (import DEFAULT_N_SAMPLES d'oos_nsdiff_daily_weekly.py)
-# avant ce brief ; nouveau dossier de checkpoints (données différentes, pas un
-# simple écrasement) ET collect_samples=True (nuages bruts conservés, requis
-# par oos_ensemble_nsdiff_daily_weekly.py pour l'ensemble concaténé).
-N_SAMPLES = 200
-CHECKPOINT_DIR = Path(__file__).resolve().parent / "checkpoints_nsdiff_multiseed_200"
-OUT_PATH = Path(__file__).resolve().parent / "nsdiff_daily_weekly_multiseed.json"
+N_SAMPLES = 200   # ensemble 5x200 (tâche 6, BRIEF_dashboard_multiseed_200.md)
+CHECKPOINT_DIR = Path(__file__).resolve().parent / "checkpoints_tsdiff_multiseed_200"
+OUT_PATH = Path(__file__).resolve().parent / "tsdiff_daily_weekly_multiseed.json"
 
 
 def checkpoint_path(seed: int, asset: str) -> Path:
@@ -74,7 +64,10 @@ def checkpoint_path(seed: int, asset: str) -> Path:
 
 
 def load_price_data():
-    """Origins + verified price series, per asset -- computed once (seed-independent)."""
+    """Origins + verified price series + per-asset epochs*, per asset --
+    computed once (seed-independent). Mirror of the NsDiff version, plus the
+    selected epochs (TSDiff-W/TSDiff-D, swept independently per asset)."""
+    selected = load_selected_epochs(DEFAULT_SWEEP_FILE)
     origins_c_all = load_baseline_triplets(ASSETS)
     origins_b_all = load_baseline_triplets_daily(ASSETS)
     prices = {}
@@ -90,23 +83,26 @@ def load_price_data():
             if fetched is None:
                 raise SystemExit(f"[{asset}] price verification failed -- cannot run multiseed.")
             daily, weekly, weekly_dates, _label = fetched
-        prices[asset] = (daily, weekly, weekly_dates, origins_c, origins_b)
-        print(f"[{asset}] price data ready ({len(origins_c)} regime-C / {len(origins_b)} regime-B rows).")
+        epochs_w = selected[f"{asset}|TSDiff-W"]["epochs"]
+        epochs_d = selected[f"{asset}|TSDiff-D"]["epochs"]
+        prices[asset] = (daily, weekly, weekly_dates, origins_c, origins_b, epochs_w, epochs_d)
+        print(f"[{asset}] price data ready ({len(origins_c)} regime-C / {len(origins_b)} regime-B rows, "
+             f"epochs W={epochs_w}/D={epochs_d}).")
     return prices
 
 
 def run_seed(seed: int, prices: dict) -> list:
     all_rows = []
-    for asset, (daily, weekly, weekly_dates, origins_c, origins_b) in prices.items():
+    for asset, (daily, weekly, weekly_dates, origins_c, origins_b, epochs_w, epochs_d) in prices.items():
         path = checkpoint_path(seed, asset)
         if path.exists():
             rows = json.loads(path.read_text())
             print(f"[seed={seed}][{asset}] loaded from checkpoint")
         else:
             t0 = time.time()
-            rows_c, rows_b = generate_nsdiff_asset(
+            rows_c, rows_b = generate_tsdiff_asset(
                 asset, daily, weekly, weekly_dates, origins_c, origins_b,
-                NSDIFF_EPOCHS, seed, N_SAMPLES, DEFAULT_K_DENOISE,
+                epochs_w, epochs_d, seed, N_SAMPLES, DEFAULT_K_DENOISE,
                 collect_samples=True,
             )
             rows = rows_c + rows_b
@@ -152,7 +148,7 @@ def per_seed_summary(seed: int, df: pd.DataFrame) -> dict:
 
 def main():
     t_start = time.time()
-    print("=== loading verified price data (once, seed-independent) ===")
+    print("=== loading verified price data + selected epochs (once, seed-independent) ===")
     prices = load_price_data()
 
     per_seed = {}
@@ -162,7 +158,6 @@ def main():
         df = build_df(rows)
         per_seed[seed] = per_seed_summary(seed, df)
 
-    # --- table verdict x graine + CV inter-graines (RMSE, Winkler) ---
     by_asset = {asset: [] for asset in ASSETS}
     for seed, summary in per_seed.items():
         for asset, row in summary.items():
@@ -192,12 +187,11 @@ def main():
 
     payload = {
         "seeds": SEEDS, "assets": ASSETS,
-        "config": {"epochs": NSDIFF_EPOCHS, "n_samples": N_SAMPLES, "k_denoise": DEFAULT_K_DENOISE,
-                  "horizon_scope": "W+1 only (scope de la note, cf. dashboard_d7_w1)"},
+        "config": {"n_samples": N_SAMPLES, "k_denoise": DEFAULT_K_DENOISE,
+                  "horizon_scope": "W+1 only (scope de la note, cf. dashboard_d7_w1)",
+                  "epochs_source": str(DEFAULT_SWEEP_FILE)},
         "note": "Table isolee (jamais ecrite dans tracking.db oos). CV = std inter-graines / mean "
-                "inter-graines, calcule sur RMSE et Winkler (pas de CRPS ici -- les rows generees ne "
-                "stockent que point+quantiles 2.5/97.5, pas le nuage complet d'echantillons, cf. "
-                "NOTE_compare_weekly_tsdiff_nsdiff.md Etape 0 pour la meme limite cote duel).",
+                "inter-graines, calcule sur RMSE et Winkler.",
         "per_seed": {str(s): v for s, v in per_seed.items()},
         "cv_table": cv_table,
         "elapsed_s": round(time.time() - t_start, 1),
