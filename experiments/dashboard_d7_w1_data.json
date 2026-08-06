@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-04T12:57:03.432501+00:00",
+  "generated_at": "2026-08-06T13:42:40.298961+00:00",
   "db_path": "/Users/maeva/Developer/DeepEdgeBenchmark/validation/tracking.db",
   "horizon_unit": "W+1",
   "seed_pooled": 42,
@@ -110,7 +110,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "ARIMA-GARCH",
@@ -207,7 +208,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "ARIMA-GARCH",
@@ -304,7 +306,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "ARIMA-GARCH",
@@ -401,7 +404,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "ARIMA-GARCH",
@@ -498,7 +502,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "LSTM",
@@ -595,7 +600,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "LSTM",
@@ -692,7 +698,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "LSTM",
@@ -789,7 +796,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "LSTM",
@@ -886,7 +894,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "LSTM",
@@ -983,7 +992,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Naive",
@@ -1080,7 +1090,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Naive",
@@ -1177,7 +1188,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Naive",
@@ -1274,7 +1286,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Naive",
@@ -1371,7 +1384,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Naive",
@@ -1468,7 +1482,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), les deux se valent.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "NsDiff",
@@ -1565,6 +1580,16 @@
           "Le mod\u00e8le hebdomadaire pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
+      },
+      "robustness": {
+        "model": "NsDiff",
+        "verdict_stable": false,
+        "n_seeds": 5,
+        "majority_count": 4,
+        "cv_winkler_daily": 0.1175949131825386,
+        "cv_winkler_weekly": 0.029128361511031844,
+        "n_samples": 50,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
     {
@@ -1662,6 +1687,16 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
+      },
+      "robustness": {
+        "model": "NsDiff",
+        "verdict_stable": true,
+        "n_seeds": 5,
+        "majority_count": 5,
+        "cv_winkler_daily": 0.11638954427194328,
+        "cv_winkler_weekly": 0.051408257332961886,
+        "n_samples": 50,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
     {
@@ -1759,6 +1794,16 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
+      },
+      "robustness": {
+        "model": "NsDiff",
+        "verdict_stable": false,
+        "n_seeds": 5,
+        "majority_count": 4,
+        "cv_winkler_daily": 0.11275186374934852,
+        "cv_winkler_weekly": 0.04202808034573693,
+        "n_samples": 50,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
     {
@@ -1856,6 +1901,16 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
+      },
+      "robustness": {
+        "model": "NsDiff",
+        "verdict_stable": true,
+        "n_seeds": 5,
+        "majority_count": 5,
+        "cv_winkler_daily": 0.05830452735540789,
+        "cv_winkler_weekly": 0.014328083369469101,
+        "n_samples": 50,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
     {
@@ -1953,6 +2008,16 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
+      },
+      "robustness": {
+        "model": "NsDiff",
+        "verdict_stable": false,
+        "n_seeds": 5,
+        "majority_count": 4,
+        "cv_winkler_daily": 0.04016033290539645,
+        "cv_winkler_weekly": 0.058716453340692955,
+        "n_samples": 50,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
     {
@@ -2050,7 +2115,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Prophet",
@@ -2147,7 +2213,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Prophet",
@@ -2244,7 +2311,8 @@
           "Le mod\u00e8le hebdomadaire pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Prophet",
@@ -2341,7 +2409,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "Prophet",
@@ -2438,7 +2507,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 quotidien.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "SARIMA",
@@ -2535,7 +2605,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "SARIMA",
@@ -2632,7 +2703,8 @@
           "Le mod\u00e8le quotidien pr\u00e9voit un prix un peu plus proche de la r\u00e9alit\u00e9. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "SARIMA",
@@ -2729,7 +2801,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "SARIMA",
@@ -2826,7 +2899,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "SARIMA",
@@ -2923,7 +2997,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), les deux se valent.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "TSDiff",
@@ -3020,7 +3095,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "TSDiff",
@@ -3117,7 +3193,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "TSDiff",
@@ -3214,7 +3291,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "TSDiff",
@@ -3311,7 +3389,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     },
     {
       "model": "TSDiff",
@@ -3408,7 +3487,8 @@
           "Les deux mod\u00e8les pr\u00e9voient le prix avec une pr\u00e9cision comparable. C\u00f4t\u00e9 fourchette de prix (lecture indicative, pas test\u00e9e statistiquement \u00e0 ce niveau d\u00e9taill\u00e9), elle penche plut\u00f4t du c\u00f4t\u00e9 hebdomadaire.",
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
-      }
+      },
+      "robustness": null
     }
   ],
   "trajectories": {
@@ -22403,9 +22483,9 @@
         "n": 95,
         "block_length": 3,
         "effective_n": 31,
-        "mean_diff": -0.7649776963979096,
-        "ci95_lo": -0.9917558324989197,
-        "ci95_hi": -0.5662872732126557,
+        "mean_diff": -0.7649777304125913,
+        "ci95_lo": -0.9917558982534179,
+        "ci95_hi": -0.5662872143566217,
         "p_value": 0.0,
         "significant_at_05": true,
         "verdict": "weekly_native_significantly_better"
@@ -22423,8 +22503,8 @@
         "skill_winkler": {
           "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.7650, IC95% bootstrap = [-0.9918, -0.5663] : cet intervalle exclut 0 (p=0.0000) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.0,
-          "ci95_lo": -0.9917558324989197,
-          "ci95_hi": -0.5662872732126557,
+          "ci95_lo": -0.9917558982534179,
+          "ci95_hi": -0.5662872143566217,
           "n": 95,
           "effective_n": 31,
           "block_length": 3
@@ -22514,9 +22594,9 @@
         "n": 90,
         "block_length": 3,
         "effective_n": 30,
-        "mean_diff": -0.2926280367364931,
-        "ci95_lo": -0.7200058155878523,
-        "ci95_hi": 0.013297813358683071,
+        "mean_diff": -0.29262837690395566,
+        "ci95_lo": -0.7200066525635368,
+        "ci95_hi": 0.01329782881681714,
         "p_value": 0.068,
         "significant_at_05": false,
         "verdict": "indistinguishable"
@@ -22534,8 +22614,8 @@
         "skill_winkler": {
           "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 90 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=90). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.2926, IC95% bootstrap = [-0.7200, +0.0133] : cet intervalle inclut 0 (p=0.0680) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.068,
-          "ci95_lo": -0.7200058155878523,
-          "ci95_hi": 0.013297813358683071,
+          "ci95_lo": -0.7200066525635368,
+          "ci95_hi": 0.01329782881681714,
           "n": 90,
           "effective_n": 30,
           "block_length": 3
@@ -22577,9 +22657,9 @@
         "n": 91,
         "block_length": 3,
         "effective_n": 30,
-        "mean_diff": -0.08836186876104864,
-        "ci95_lo": -0.174161680195682,
-        "ci95_hi": 0.015156247614355144,
+        "mean_diff": -0.0883616543704554,
+        "ci95_lo": -0.17416135864375584,
+        "ci95_hi": 0.015156319874648001,
         "p_value": 0.0992,
         "significant_at_05": false,
         "verdict": "indistinguishable"
@@ -22597,8 +22677,8 @@
         "skill_winkler": {
           "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0884, IC95% bootstrap = [-0.1742, +0.0152] : cet intervalle inclut 0 (p=0.0992) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.0992,
-          "ci95_lo": -0.174161680195682,
-          "ci95_hi": 0.015156247614355144,
+          "ci95_lo": -0.17416135864375584,
+          "ci95_hi": 0.015156319874648001,
           "n": 91,
           "effective_n": 30,
           "block_length": 3
@@ -22621,6 +22701,42 @@
         ]
       }
     }
+  },
+  "data_config": {
+    "target": "ensemble 5 graines (42-46) x 200 tirages",
+    "sampled_models": [
+      "NsDiff",
+      "TSDiff"
+    ],
+    "analytic_models": [
+      "ARIMA-GARCH",
+      "LSTM",
+      "Naive",
+      "Prophet",
+      "SARIMA"
+    ],
+    "analytic_note": "Bandes ferm\u00e9es/d\u00e9terministes (aucun nuage de tirages, non concern\u00e9s par ce budget) : Naive/ARIMA-GARCH/SARIMA (formule ferm\u00e9e) ; LSTM (formule ferm\u00e9e malgr\u00e9 une graine d'entra\u00eenement). Prophet \u00e9chantillonne en interne (librairie Facebook Prophet) mais sans seed ni n_samples expos\u00e9s dans ce d\u00e9p\u00f4t -- dette d\u00e9clar\u00e9e, non r\u00e9g\u00e9n\u00e9r\u00e9 ici.",
+    "multiseed_artifacts": {
+      "NsDiff": {
+        "artifact_found": true,
+        "n_samples": 50,
+        "n_seeds": 5,
+        "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json",
+        "is_target_config": false,
+        "status_label": "5 graine(s) x 50 tirages -- PAS encore la config cible"
+      },
+      "TSDiff": {
+        "artifact_found": false,
+        "n_samples": null,
+        "n_seeds": null,
+        "source_path": null,
+        "is_target_config": false,
+        "status_label": "artefact multiseed absent -- badge indisponible pour ce mod\u00e8le"
+      }
+    },
+    "all_target_config": false,
+    "headline": "Donn\u00e9es actuelles (NsDiff : 5 graine(s) x 50 tirages; TSDiff : artefact absent) -- cible : ensemble 5 graines (42-46) x 200 tirages, r\u00e9g\u00e9n\u00e9ration en attente c\u00f4t\u00e9 tuteur (voir RUNBOOK_regeneration_multiseed_200.md).",
+    "oos_rows_note": "Le badge (artefact JSON multiseed) et les lignes `oos` affich\u00e9es dans le tableau sont DEUX \u00e9critures ind\u00e9pendantes (jamais la m\u00eame) -- l'artefact peut \u00eatre \u00e0 200 tirages sans garantir que les lignes `oos` aient d\u00e9j\u00e0 \u00e9t\u00e9 r\u00e9\u00e9crites en ensemble, et inversement. Se fier au run_id/n_samples affich\u00e9s ici pour la vraie provenance, jamais \u00e0 une supposition."
   },
   "plain": {
     "question": "Pour pr\u00e9voir un prix \u00e0 1 semaine, vaut-il mieux un mod\u00e8le hebdomadaire ou quotidien ?",

@@ -214,7 +214,14 @@ def _standardized_returns(prices: pd.Series, mu: float, sd: float) -> np.ndarray
 
 def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekly_dates: pd.Series,
                           origins_c: pd.DataFrame, origins_b: pd.DataFrame, epochs: int, seed: int,
-                          n_samples: int, k_denoise: int) -> tuple:
+                          n_samples: int, k_denoise: int, collect_samples: bool = False) -> tuple:
+    """`collect_samples=True` (additive, default False -> bit-for-bit unchanged
+    behaviour for every existing caller) stashes the raw sample cloud used for
+    each row's point/quantiles under row["_samples"] (list[float], length
+    n_samples), on top of the already-computed y_pred/y_lower/y_upper -- needed
+    by the multi-seed ENSEMBLE (BRIEF_dashboard_multiseed_200.md §4): concatenate
+    the 5 seeds' clouds into 1 of 5*n_samples before reading quantiles, instead
+    of averaging 5 already-quantiled bounds."""
     sym_diff = set(origins_c["cutoff_date"]) ^ set(origins_b["cutoff_date"])
     if sym_diff:
         raise SystemExit(f"[{asset}] regime B/C cutoff sets differ ({len(sym_diff)} dates not shared) -- "
@@ -285,13 +292,16 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
                 s = samples_w[h]
                 point = float(np.mean(s))
                 lo, hi = (float(q) for q in np.quantile(s, [0.025, 0.975]))
-                rows_c.append({
+                row_out = {
                     "run_id": RUN_ID, "model": "NsDiff", "asset": asset, "horizon": h,
                     "regime": "unknown", "cutoff_date": cutoff_date, "target_date": stored_target,
                     "last_close": last_price, "y_pred": point, "y_lower": lo, "y_upper": hi,
                     "y_true": float(row_c["y_true"].iloc[0]), "source": "oos",
                     "frequence": "weekly", "horizon_type": "weekly", "horizon_unit": HORIZON_UNITS[h],
-                })
+                }
+                if collect_samples:
+                    row_out["_samples"] = [float(x) for x in np.asarray(s).ravel()]
+                rows_c.append(row_out)
 
             row_b = grp_b[grp_b["horizon"] == h]
             if len(row_b):
@@ -302,13 +312,16 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
                 s = samples_d[h_d]
                 point = float(np.mean(s))
                 lo, hi = (float(q) for q in np.quantile(s, [0.025, 0.975]))
-                rows_b.append({
+                row_out = {
                     "run_id": RUN_ID, "model": "NsDiff", "asset": asset, "horizon": h,
                     "regime": "unknown", "cutoff_date": cutoff_date, "target_date": stored_target,
                     "last_close": last_price, "y_pred": point, "y_lower": lo, "y_upper": hi,
                     "y_true": float(row_b["y_true"].iloc[0]), "source": "oos",
                     "frequence": "daily", "horizon_type": "weekly", "horizon_unit": HORIZON_UNITS[h],
-                })
+                }
+                if collect_samples:
+                    row_out["_samples"] = [float(x) for x in np.asarray(s).ravel()]
+                rows_b.append(row_out)
         if (k + 1) % 15 == 0 or k == len(cutoffs) - 1:
             print(f"[{asset}] origin {k + 1}/{len(cutoffs)} ({cutoff_date}) done")
 
