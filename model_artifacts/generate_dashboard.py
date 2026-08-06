@@ -370,22 +370,28 @@ def collect_weekly_multiseed(assets: list) -> dict:
     (BRIEF_dashboard_multiseed_200.md) pour les modèles WEEKLY_KPI_MODELS
     (TSDiff, NsDiff -- les 2 seuls modèles échantillonnés du panel, cf. audit
     dans NOTE_dashboard_multiseed_200.md). Réutilise `experiments/
-    dashboard_d7_w1.py` (déjà sur sys.path, cf. tête de module) -- même
-    artefact JSON multiseed, même logique, pas réimplémentée ici. Jamais
-    bloquant : une erreur d'import/lecture retombe sur un payload vide
-    (dégradation gracieuse, même logique défensive que collect_weekly_kpis)."""
+    multiseed_badge_common.py` -- PAS `dashboard_d7_w1.py` (bug constaté en
+    prod : ce dernier importe arima_model/matrice_paired_tests, qui tirent
+    yfinance/statsmodels/arch, absents de l'environnement minimal de
+    .github/workflows/deploy-pages.yml -- `import dashboard_d7_w1` y échouait
+    silencieusement, capturé par le try/except ci-dessous, badge/bandeau vides
+    en ligne alors que tout marchait en local avec le venv complet).
+    multiseed_badge_common.py n'a besoin que de la stdlib -- même artefact
+    JSON multiseed, même logique, aucun risque de ce genre de panne. Le
+    try/except reste en garde-fou (dégradation gracieuse, même logique
+    défensive que collect_weekly_kpis) au cas où le fichier lui-même manquerait."""
     try:
-        import dashboard_d7_w1 as dash_d7w1
+        import multiseed_badge_common as mbc
     except Exception as exc:
         print(f"[generate_dashboard] badge robustesse multiseed indisponible ({exc})")
         return {"data_config": None, "robustness": {}}
 
-    artifacts = dash_d7w1.load_multiseed_artifacts()
-    data_config = dash_d7w1.build_data_config(artifacts, MODEL_ORDER)
+    artifacts = mbc.load_multiseed_artifacts()
+    data_config = mbc.build_data_config(artifacts, MODEL_ORDER)
     robustness = {}
     for asset in assets:
         for model in WEEKLY_KPI_MODELS:
-            badge = dash_d7w1.cell_robustness_badge(artifacts, model, asset)
+            badge = mbc.cell_robustness_badge(artifacts, model, asset)
             if badge:
                 robustness.setdefault(asset, {})[model] = badge
     return {"data_config": data_config, "robustness": robustness}
