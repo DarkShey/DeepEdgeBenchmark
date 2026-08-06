@@ -161,11 +161,11 @@ def build_data_config(multiseed_artifacts: dict, models_in_df: list) -> dict:
         per_model[model] = {
             "artifact_found": True, "n_samples": n_samples, "n_seeds": n_seeds,
             "source_path": entry["path"], "is_target_config": is_target,
-            "status_label": (
-                f"{n_seeds} graines x {n_samples} tirages -- config cible atteinte"
-                if is_target else
-                f"{n_seeds} graine(s) x {n_samples} tirages -- PAS encore la config cible"
-            ),
+            # Juste le suffixe : les templates JS préfixent déjà "{n_seeds} graine(s) x
+            # {n_samples} tirages -- " avant d'insérer status_label (dashboard_d7_w1_
+            # template.py et model_artifacts/generate_dashboard.py) -- le préfixer ICI
+            # AUSSI dupliquait le texte à l'affichage (bug signalé, corrigé).
+            "status_label": "config cible atteinte" if is_target else "pas encore la config cible",
         }
     analytic_models = sorted(m for m in models_in_df if m not in MULTISEED_MODELS)
     all_target = bool(per_model) and all(v["is_target_config"] for v in per_model.values())

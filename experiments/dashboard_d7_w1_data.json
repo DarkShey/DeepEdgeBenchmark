@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-06T13:42:40.298961+00:00",
+  "generated_at": "2026-08-06T14:52:04.658935+00:00",
   "db_path": "/Users/maeva/Developer/DeepEdgeBenchmark/validation/tracking.db",
   "horizon_unit": "W+1",
   "seed_pooled": 42,
@@ -22723,7 +22723,7 @@
         "n_seeds": 5,
         "source_path": "/Users/maeva/Developer/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json",
         "is_target_config": false,
-        "status_label": "5 graine(s) x 50 tirages -- PAS encore la config cible"
+        "status_label": "pas encore la config cible"
       },
       "TSDiff": {
         "artifact_found": false,
