@@ -1,0 +1,1944 @@
+{
+  "question": "combien d'origines faut-il pour trancher, et l'extension les fournit-elle ?",
+  "config": {
+    "method": "n_requis = n_observe x [SE_observe x (z_{1-a/2} + z_{1-b}) / delta]^2 ; SE_observe vient du bootstrap PAR BLOCS deja utilise (aucune nouvelle hypothese de loi ni d'autocorrelation)",
+    "alpha": 0.05,
+    "alpha_holm_rank1": 0.008333333333333333,
+    "power": 0.8,
+    "block_length": 3,
+    "n_origins_now": 90,
+    "declared_target_bps": 3.0,
+    "why_two_targets": "3 bps est l'edge POOLE ENTRE ACTIFS du chantier B ; l'edge par INSTRUMENT mesure au chantier 1 est bien plus grand (jusqu'a 16 bps), donc exiger la puissance de detecter 3 bps sur-estime massivement le besoin",
+    "inclusion_criteria": "liquidite, historique >= aux actifs actuels, frais reels <= 5 bps aller-retour (declares dans le brief)",
+    "elapsed_s": 0.2
+  },
+  "per_cell": {
+    "SPY-ETF|inverse_width|W+1|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 12.489063035608883,
+      "observed_effect_bps": 12.489063035608886,
+      "se_bps": 13.800566337658298,
+      "p_value": 0.3622,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 14948.633443331415,
+        "effective_n_required": 4982.877814443805,
+        "factor_vs_now": 166.09592714812683
+      },
+      "for_observed_effect": {
+        "n_required": 862.5500146179807,
+        "effective_n_required": 287.51667153932686,
+        "factor_vs_now": 9.583889051310896
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1330.7754353245602,
+        "effective_n_required": 443.5918117748534,
+        "factor_vs_now": 14.786393725828448
+      }
+    },
+    "SPY-ETF|inverse_width|W+1|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": -17.557246413881163,
+      "observed_effect_bps": 17.557246413881156,
+      "se_bps": 23.49704516846467,
+      "p_value": 0.5008,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 43334.538723073485,
+        "effective_n_required": 14444.846241024496,
+        "factor_vs_now": 481.49487470081647
+      },
+      "for_observed_effect": {
+        "n_required": 1265.2136787061922,
+        "effective_n_required": 421.73789290206406,
+        "factor_vs_now": 14.057929763402136
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1952.020468986405,
+        "effective_n_required": 650.673489662135,
+        "factor_vs_now": 21.689116322071165
+      }
+    },
+    "SPY-ETF|inverse_width|W+2|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 8.43975847447559,
+      "observed_effect_bps": 8.439758474475589,
+      "se_bps": 10.536636904008352,
+      "p_value": 0.428,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 8713.882576921776,
+        "effective_n_required": 2904.627525640592,
+        "factor_vs_now": 96.82091752135307
+      },
+      "for_observed_effect": {
+        "n_required": 1101.0173839568724,
+        "effective_n_required": 367.00579465229083,
+        "factor_vs_now": 12.233526488409694
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1698.692091593145,
+        "effective_n_required": 566.230697197715,
+        "factor_vs_now": 18.874356573257167
+      }
+    },
+    "SPY-ETF|inverse_width|W+2|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": -25.06082391991169,
+      "observed_effect_bps": 25.060823919911687,
+      "se_bps": 18.804827086404117,
+      "p_value": 0.158,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 27755.327956897912,
+        "effective_n_required": 9251.775985632637,
+        "factor_vs_now": 308.39253285442123
+      },
+      "for_observed_effect": {
+        "n_required": 397.73900462225066,
+        "effective_n_required": 132.5796682074169,
+        "factor_vs_now": 4.419322273580563
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 613.6470790695631,
+        "effective_n_required": 204.54902635652104,
+        "factor_vs_now": 6.818300878550701
+      }
+    },
+    "SPY-ETF|inverse_width|W+3|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 18.43293788588369,
+      "observed_effect_bps": 18.43293788588369,
+      "se_bps": 15.247511754644709,
+      "p_value": 0.199,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 18247.5947868927,
+        "effective_n_required": 6082.5315956309,
+        "factor_vs_now": 202.75105318769667
+      },
+      "for_observed_effect": {
+        "n_required": 483.346990035424,
+        "effective_n_required": 161.11566334514134,
+        "factor_vs_now": 5.3705221115047115
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 745.7263812836286,
+        "effective_n_required": 248.5754604278762,
+        "factor_vs_now": 8.285848680929206
+      }
+    },
+    "SPY-ETF|inverse_width|W+3|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": -3.5659908338444377,
+      "observed_effect_bps": 3.5659908338444377,
+      "se_bps": 10.083473255967885,
+      "p_value": 0.7686,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 7980.460936796942,
+        "effective_n_required": 2660.153645598981,
+        "factor_vs_now": 88.6717881866327
+      },
+      "for_observed_effect": {
+        "n_required": 5648.199662747391,
+        "effective_n_required": 1882.733220915797,
+        "factor_vs_now": 62.75777403052656
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 8714.260318367404,
+        "effective_n_required": 2904.753439455801,
+        "factor_vs_now": 96.82511464852671
+      }
+    },
+    "SPY-ES|inverse_width|W+1|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 12.603515747587128,
+      "observed_effect_bps": 12.603515747587135,
+      "se_bps": 13.801950719655688,
+      "p_value": 0.358,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 14951.632690824914,
+        "effective_n_required": 4983.877563608305,
+        "factor_vs_now": 166.12925212027682
+      },
+      "for_observed_effect": {
+        "n_required": 847.125416428877,
+        "effective_n_required": 282.37513880962564,
+        "factor_vs_now": 9.412504626987522
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1306.9777702362326,
+        "effective_n_required": 435.65925674541086,
+        "factor_vs_now": 14.521975224847028
+      }
+    },
+    "SPY-ES|inverse_width|W+1|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": -17.661794075317243,
+      "observed_effect_bps": 17.661794075317232,
+      "se_bps": 23.496415326847448,
+      "p_value": 0.499,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 43332.215577337774,
+        "effective_n_required": 14444.071859112591,
+        "factor_vs_now": 481.4690619704197
+      },
+      "for_observed_effect": {
+        "n_required": 1250.212309950918,
+        "effective_n_required": 416.73743665030605,
+        "factor_vs_now": 13.891247888343534
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1928.8757785946175,
+        "effective_n_required": 642.9585928648725,
+        "factor_vs_now": 21.43195309549575
+      }
+    },
+    "SPY-ES|inverse_width|W+2|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 8.563654204934547,
+      "observed_effect_bps": 8.56365420493455,
+      "se_bps": 10.574448892516589,
+      "p_value": 0.4222,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 8776.536426859784,
+        "effective_n_required": 2925.5121422865946,
+        "factor_vs_now": 97.51707140955315
+      },
+      "for_observed_effect": {
+        "n_required": 1077.0786672179852,
+        "effective_n_required": 359.02622240599504,
+        "factor_vs_now": 11.967540746866502
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1661.7585159750242,
+        "effective_n_required": 553.9195053250081,
+        "factor_vs_now": 18.463983510833604
+      }
+    },
+    "SPY-ES|inverse_width|W+2|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": -25.1523456662434,
+      "observed_effect_bps": 25.1523456662434,
+      "se_bps": 18.823443553481983,
+      "p_value": 0.1566,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 27810.309788108647,
+        "effective_n_required": 9270.103262702882,
+        "factor_vs_now": 309.0034420900961
+      },
+      "for_observed_effect": {
+        "n_required": 395.631944294749,
+        "effective_n_required": 131.87731476491635,
+        "factor_vs_now": 4.395910492163878
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 610.3962251166736,
+        "effective_n_required": 203.46540837222452,
+        "factor_vs_now": 6.782180279074151
+      }
+    },
+    "SPY-ES|inverse_width|W+3|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 18.561205294591034,
+      "observed_effect_bps": 18.56120529459104,
+      "se_bps": 15.264651672967215,
+      "p_value": 0.197,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 18288.642543308222,
+        "effective_n_required": 6096.21418110274,
+        "factor_vs_now": 203.20713937009134
+      },
+      "for_observed_effect": {
+        "n_required": 477.7620313043562,
+        "effective_n_required": 159.25401043478539,
+        "factor_vs_now": 5.308467014492846
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 737.109691514168,
+        "effective_n_required": 245.70323050472268,
+        "factor_vs_now": 8.190107683490757
+      }
+    },
+    "SPY-ES|inverse_width|W+3|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": -3.6613416680715054,
+      "observed_effect_bps": 3.6613416680715054,
+      "se_bps": 10.090646575796704,
+      "p_value": 0.76,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 7991.819475584596,
+        "effective_n_required": 2663.9398251948655,
+        "factor_vs_now": 88.79799417316218
+      },
+      "for_observed_effect": {
+        "n_required": 5365.468609068651,
+        "effective_n_required": 1788.489536356217,
+        "factor_vs_now": 59.61631787854056
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 8278.05194243255,
+        "effective_n_required": 2759.3506474775168,
+        "factor_vs_now": 91.97835491591722
+      }
+    },
+    "TLT-ETF|inverse_width|W+1|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -30.673113209589342,
+      "observed_effect_bps": 30.67311320958934,
+      "se_bps": 17.912848710028623,
+      "p_value": 0.086,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 25184.71209124511,
+        "effective_n_required": 8394.904030415037,
+        "factor_vs_now": 279.83013434716787
+      },
+      "for_observed_effect": {
+        "n_required": 240.9149687344638,
+        "effective_n_required": 80.3049895781546,
+        "factor_vs_now": 2.6768329859384865
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 371.69290703195094,
+        "effective_n_required": 123.89763567731698,
+        "factor_vs_now": 4.129921189243899
+      }
+    },
+    "TLT-ETF|inverse_width|W+1|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -29.104014261986364,
+      "observed_effect_bps": 29.104014261986357,
+      "se_bps": 23.673595037085608,
+      "p_value": 0.207,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 43988.19109867031,
+        "effective_n_required": 14662.730366223435,
+        "factor_vs_now": 488.7576788741145
+      },
+      "for_observed_effect": {
+        "n_required": 467.382904861978,
+        "effective_n_required": 155.79430162065933,
+        "factor_vs_now": 5.193143387355311
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 721.096374865206,
+        "effective_n_required": 240.365458288402,
+        "factor_vs_now": 8.012181942946734
+      }
+    },
+    "TLT-ETF|inverse_width|W+2|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -27.132730995041147,
+      "observed_effect_bps": 27.13273099504115,
+      "se_bps": 21.433876362749142,
+      "p_value": 0.2214,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 36058.62126653277,
+        "effective_n_required": 12019.54042217759,
+        "factor_vs_now": 400.6513474059197
+      },
+      "for_observed_effect": {
+        "n_required": 440.8233680039472,
+        "effective_n_required": 146.9411226679824,
+        "factor_vs_now": 4.89803742226608
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 680.1192968694234,
+        "effective_n_required": 226.7064322898078,
+        "factor_vs_now": 7.556881076326926
+      }
+    },
+    "TLT-ETF|inverse_width|W+2|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -19.824529454877762,
+      "observed_effect_bps": 19.824529454877762,
+      "se_bps": 28.482089024128644,
+      "p_value": 0.5656,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 63672.419597239284,
+        "effective_n_required": 21224.139865746427,
+        "factor_vs_now": 707.4713288582143
+      },
+      "for_observed_effect": {
+        "n_required": 1458.102609787893,
+        "effective_n_required": 486.034203262631,
+        "factor_vs_now": 16.201140108754366
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 2249.616952528553,
+        "effective_n_required": 749.8723175095178,
+        "factor_vs_now": 24.995743916983923
+      }
+    },
+    "TLT-ETF|inverse_width|W+3|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -18.34853733220295,
+      "observed_effect_bps": 18.348537332202948,
+      "se_bps": 32.89176669585086,
+      "p_value": 0.5914,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 84914.54303624487,
+        "effective_n_required": 28304.84767874829,
+        "factor_vs_now": 943.494922624943
+      },
+      "for_observed_effect": {
+        "n_required": 2269.9782007176236,
+        "effective_n_required": 756.6594002392079,
+        "factor_vs_now": 25.221980007973595
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 3502.209932226561,
+        "effective_n_required": 1167.403310742187,
+        "factor_vs_now": 38.91344369140623
+      }
+    },
+    "TLT-ETF|inverse_width|W+3|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -44.59712978109613,
+      "observed_effect_bps": 44.59712978109613,
+      "se_bps": 34.39101890889965,
+      "p_value": 0.2268,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 92832.01140059579,
+        "effective_n_required": 30944.003800198596,
+        "factor_vs_now": 1031.4667933399533
+      },
+      "for_observed_effect": {
+        "n_required": 420.0746285529578,
+        "effective_n_required": 140.02487618431925,
+        "factor_vs_now": 4.667495872810642
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 648.1073412640948,
+        "effective_n_required": 216.03578042136493,
+        "factor_vs_now": 7.201192680712165
+      }
+    },
+    "ZN-FUT|inverse_width|W+1|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.930394429523205,
+      "observed_effect_bps": 0.9303944295232055,
+      "se_bps": 7.739637800731606,
+      "p_value": 0.8856,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 4701.635411536314,
+        "effective_n_required": 1567.211803845438,
+        "factor_vs_now": 52.2403934615146
+      },
+      "for_observed_effect": {
+        "n_required": 48882.93291375498,
+        "effective_n_required": 16294.31097125166,
+        "factor_vs_now": 543.143699041722
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 75418.47455310157,
+        "effective_n_required": 25139.49151770052,
+        "factor_vs_now": 837.9830505900175
+      }
+    },
+    "ZN-FUT|inverse_width|W+1|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": -13.313899202145777,
+      "observed_effect_bps": 13.313899202145778,
+      "se_bps": 7.932140684035082,
+      "p_value": 0.1028,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 4938.425324429152,
+        "effective_n_required": 1646.1417748097174,
+        "factor_vs_now": 54.87139249365725
+      },
+      "for_observed_effect": {
+        "n_required": 250.73818116678171,
+        "effective_n_required": 83.57939372226058,
+        "factor_vs_now": 2.785979790742019
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 386.8485381018699,
+        "effective_n_required": 128.9495127006233,
+        "factor_vs_now": 4.2983170900207766
+      }
+    },
+    "ZN-FUT|inverse_width|W+2|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 6.886318691284789,
+      "observed_effect_bps": 6.886318691284786,
+      "se_bps": 8.47178671301174,
+      "p_value": 0.3528,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 5633.232825928829,
+        "effective_n_required": 1877.7442753096095,
+        "factor_vs_now": 62.591475843653654
+      },
+      "for_observed_effect": {
+        "n_required": 1069.1188228110482,
+        "effective_n_required": 356.37294093701604,
+        "factor_vs_now": 11.87909803123387
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1649.4777609738803,
+        "effective_n_required": 549.8259203246267,
+        "factor_vs_now": 18.32753067748756
+      }
+    },
+    "ZN-FUT|inverse_width|W+2|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": -11.089775737791378,
+      "observed_effect_bps": 11.089775737791378,
+      "se_bps": 10.577325149438918,
+      "p_value": 0.2806,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 8781.311523329134,
+        "effective_n_required": 2927.103841109711,
+        "factor_vs_now": 97.57012803699038
+      },
+      "for_observed_effect": {
+        "n_required": 642.6231494953416,
+        "effective_n_required": 214.2077164984472,
+        "factor_vs_now": 7.140257216614907
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 991.4637841587211,
+        "effective_n_required": 330.487928052907,
+        "factor_vs_now": 11.016264268430234
+      }
+    },
+    "ZN-FUT|inverse_width|W+3|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.6710848242388224,
+      "observed_effect_bps": 0.6710848242388215,
+      "se_bps": 12.25247640838149,
+      "p_value": 0.8248,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 11782.987705429945,
+        "effective_n_required": 3927.662568476648,
+        "factor_vs_now": 130.92208561588828
+      },
+      "for_observed_effect": {
+        "n_required": 235474.07425927572,
+        "effective_n_required": 78491.35808642524,
+        "factor_vs_now": 2616.3786028808413
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 363298.4851537248,
+        "effective_n_required": 121099.4950512416,
+        "factor_vs_now": 4036.6498350413863
+      }
+    },
+    "ZN-FUT|inverse_width|W+3|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": -0.6320169059263047,
+      "observed_effect_bps": 0.6320169059263065,
+      "se_bps": 11.37067483322029,
+      "p_value": 1.0,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 10147.992907159045,
+        "effective_n_required": 3382.6643023863485,
+        "factor_vs_now": 112.75547674621161
+      },
+      "for_observed_effect": {
+        "n_required": 228646.876810603,
+        "effective_n_required": 76215.62560353432,
+        "factor_vs_now": 2540.5208534511444
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 352765.2215715217,
+        "effective_n_required": 117588.40719050723,
+        "factor_vs_now": 3919.613573016908
+      }
+    },
+    "BTC-SPOT|inverse_width|W+1|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 20.560145999741966,
+      "observed_effect_bps": 20.560145999741973,
+      "se_bps": 15.133528030789178,
+      "p_value": 0.2106,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 17975.792473191672,
+        "effective_n_required": 5991.930824397224,
+        "factor_vs_now": 199.73102747990745
+      },
+      "for_observed_effect": {
+        "n_required": 382.7173637263629,
+        "effective_n_required": 127.5724545754543,
+        "factor_vs_now": 4.252415152515144
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 590.4711120372423,
+        "effective_n_required": 196.82370401241408,
+        "factor_vs_now": 6.560790133747137
+      }
+    },
+    "BTC-SPOT|inverse_width|W+1|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 20.986748329631684,
+      "observed_effect_bps": 20.98674832963168,
+      "se_bps": 15.518986993597359,
+      "p_value": 0.1238,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 18903.160112521622,
+        "effective_n_required": 6301.053370840541,
+        "factor_vs_now": 210.03511236135134
+      },
+      "for_observed_effect": {
+        "n_required": 386.2661164949221,
+        "effective_n_required": 128.75537216497403,
+        "factor_vs_now": 4.291845738832468
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 595.9462647013232,
+        "effective_n_required": 198.64875490044108,
+        "factor_vs_now": 6.621625163348035
+      }
+    },
+    "BTC-SPOT|inverse_width|W+2|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 8.59818025109828,
+      "observed_effect_bps": 8.59818025109828,
+      "se_bps": 8.455341716061323,
+      "p_value": 0.3334,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 5611.384168205416,
+        "effective_n_required": 1870.4613894018055,
+        "factor_vs_now": 62.34871298006018
+      },
+      "for_observed_effect": {
+        "n_required": 683.1238075855811,
+        "effective_n_required": 227.70793586186036,
+        "factor_vs_now": 7.590264528728678
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1053.9497617687734,
+        "effective_n_required": 351.31658725625783,
+        "factor_vs_now": 11.710552908541928
+      }
+    },
+    "BTC-SPOT|inverse_width|W+2|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 4.827705565460597,
+      "observed_effect_bps": 4.827705565460598,
+      "se_bps": 10.108514582729308,
+      "p_value": 0.6728,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 8020.14755433744,
+        "effective_n_required": 2673.38251811248,
+        "factor_vs_now": 89.11275060374933
+      },
+      "for_observed_effect": {
+        "n_required": 3097.015061269238,
+        "effective_n_required": 1032.3383537564125,
+        "factor_vs_now": 34.41127845854709
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 4778.19430354152,
+        "effective_n_required": 1592.73143451384,
+        "factor_vs_now": 53.091047817128
+      }
+    },
+    "BTC-SPOT|inverse_width|W+3|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": -0.5104139280026924,
+      "observed_effect_bps": 0.5104139280026871,
+      "se_bps": 2.674599658725827,
+      "p_value": 0.8966,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 561.4683037381808,
+        "effective_n_required": 187.15610124606027,
+        "factor_vs_now": 6.238536708202009
+      },
+      "for_observed_effect": {
+        "n_required": 19396.47094577075,
+        "effective_n_required": 6465.490315256917,
+        "factor_vs_now": 215.51634384189722
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 29925.623591868374,
+        "effective_n_required": 9975.207863956124,
+        "factor_vs_now": 332.5069287985375
+      }
+    },
+    "BTC-SPOT|inverse_width|W+3|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": -7.504379481359912,
+      "observed_effect_bps": 7.504379481359915,
+      "se_bps": 7.153554971333765,
+      "p_value": 0.2772,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 4016.5345976914614,
+        "effective_n_required": 1338.8448658971538,
+        "factor_vs_now": 44.62816219657179
+      },
+      "for_observed_effect": {
+        "n_required": 641.8956713926731,
+        "effective_n_required": 213.96522379755768,
+        "factor_vs_now": 7.132174126585256
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 990.3414028795362,
+        "effective_n_required": 330.1138009598454,
+        "factor_vs_now": 11.00379336532818
+      }
+    },
+    "ETH-SPOT|inverse_width|W+1|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 30.462740517566573,
+      "observed_effect_bps": 30.462740517566584,
+      "se_bps": 108.80520655163026,
+      "p_value": 0.8316,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 929195.354893748,
+        "effective_n_required": 309731.78496458265,
+        "factor_vs_now": 10324.392832152755
+      },
+      "for_observed_effect": {
+        "n_required": 9011.801086740923,
+        "effective_n_required": 3003.933695580308,
+        "factor_vs_now": 100.13112318601026
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 13903.754345859585,
+        "effective_n_required": 4634.584781953195,
+        "factor_vs_now": 154.48615939843984
+      }
+    },
+    "ETH-SPOT|inverse_width|W+1|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 7.755475751957825,
+      "observed_effect_bps": 7.755475751957817,
+      "se_bps": 91.74929405002169,
+      "p_value": 0.951,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 660713.4340447187,
+        "effective_n_required": 220237.81134823957,
+        "factor_vs_now": 7341.260378274653
+      },
+      "for_observed_effect": {
+        "n_required": 98864.13206860967,
+        "effective_n_required": 32954.71068953656,
+        "factor_vs_now": 1098.4903563178852
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 152531.39662847124,
+        "effective_n_required": 50843.79887615708,
+        "factor_vs_now": 1694.7932958719025
+      }
+    },
+    "ETH-SPOT|inverse_width|W+2|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": -122.65063157940772,
+      "observed_effect_bps": 122.65063157940776,
+      "se_bps": 155.65164162231912,
+      "p_value": 0.3766,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 1901582.1212522024,
+        "effective_n_required": 633860.7070840675,
+        "factor_vs_now": 21128.690236135582
+      },
+      "for_observed_effect": {
+        "n_required": 1137.6744823037668,
+        "effective_n_required": 379.2248274345889,
+        "factor_vs_now": 12.640827581152964
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1755.2480769662702,
+        "effective_n_required": 585.0826923220901,
+        "factor_vs_now": 19.502756410736335
+      }
+    },
+    "ETH-SPOT|inverse_width|W+2|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": -240.49428599832126,
+      "observed_effect_bps": 240.4942859983213,
+      "se_bps": 176.50217562159312,
+      "p_value": 0.1472,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2445162.9163738554,
+        "effective_n_required": 815054.3054579519,
+        "factor_vs_now": 27168.476848598395
+      },
+      "for_observed_effect": {
+        "n_required": 380.48784334393963,
+        "effective_n_required": 126.82928111464655,
+        "factor_vs_now": 4.227642703821552
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 587.0313219877363,
+        "effective_n_required": 195.67710732924544,
+        "factor_vs_now": 6.522570244308181
+      }
+    },
+    "ETH-SPOT|inverse_width|W+3|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 0.456171551397619,
+      "observed_effect_bps": 0.45617155139759175,
+      "se_bps": 189.35613818860173,
+      "p_value": 1.0,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2814274.4653532156,
+        "effective_n_required": 938091.4884510719,
+        "factor_vs_now": 31269.716281702396
+      },
+      "for_observed_effect": {
+        "n_required": 121717371.35454512,
+        "effective_n_required": 40572457.118181705,
+        "factor_vs_now": 1352415.2372727236
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 187790255.76000428,
+        "effective_n_required": 62596751.920001425,
+        "factor_vs_now": 2086558.3973333808
+      }
+    },
+    "ETH-SPOT|inverse_width|W+3|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": -38.888243355784475,
+      "observed_effect_bps": 38.88824335578448,
+      "se_bps": 224.81706395067664,
+      "p_value": 0.8506,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 3967036.6984628043,
+        "effective_n_required": 1322345.566154268,
+        "factor_vs_now": 44078.185538475605
+      },
+      "for_observed_effect": {
+        "n_required": 23608.700127564516,
+        "effective_n_required": 7869.566709188172,
+        "factor_vs_now": 262.3188903062724
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 36424.41325981718,
+        "effective_n_required": 12141.471086605727,
+        "factor_vs_now": 404.7157028868575
+      }
+    },
+    "SPY-ETF|var_limit|W+1|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 6.025877137616381,
+      "observed_effect_bps": 6.025877137616382,
+      "se_bps": 3.4683985443047662,
+      "p_value": 0.069,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 944.2036286896122,
+        "effective_n_required": 314.7345428965374,
+        "factor_vs_now": 10.49115142988458
+      },
+      "for_observed_effect": {
+        "n_required": 234.02789671970802,
+        "effective_n_required": 78.00929890656934,
+        "factor_vs_now": 2.6003099635523115
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 361.06726665954017,
+        "effective_n_required": 120.35575555318006,
+        "factor_vs_now": 4.011858518439335
+      }
+    },
+    "SPY-ETF|var_limit|W+1|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 2.2046110800946876,
+      "observed_effect_bps": 2.2046110800946868,
+      "se_bps": 2.974109175402991,
+      "p_value": 0.445,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 694.2589517544519,
+        "effective_n_required": 231.4196505848173,
+        "factor_vs_now": 7.7139883528272435
+      },
+      "for_observed_effect": {
+        "n_required": 1285.5827194519763,
+        "effective_n_required": 428.5275731506588,
+        "factor_vs_now": 14.284252438355294
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1983.446610782508,
+        "effective_n_required": 661.148870260836,
+        "factor_vs_now": 22.0382956753612
+      }
+    },
+    "SPY-ETF|var_limit|W+2|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 11.522364767073126,
+      "observed_effect_bps": 11.522364767073126,
+      "se_bps": 5.30777336978361,
+      "p_value": 0.0168,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2211.2223580096334,
+        "effective_n_required": 737.0741193365444,
+        "factor_vs_now": 24.569137311218146
+      },
+      "for_observed_effect": {
+        "n_required": 149.89656714395971,
+        "effective_n_required": 49.96552238131991,
+        "factor_vs_now": 1.6655174127106636
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 231.26620603329107,
+        "effective_n_required": 77.08873534443036,
+        "factor_vs_now": 2.569624511481012
+      }
+    },
+    "SPY-ETF|var_limit|W+2|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 9.02080543677825,
+      "observed_effect_bps": 9.02080543677825,
+      "se_bps": 5.608229422233162,
+      "p_value": 0.08,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2468.6482757031526,
+        "effective_n_required": 822.8827585677176,
+        "factor_vs_now": 27.429425285590582
+      },
+      "for_observed_effect": {
+        "n_required": 273.0304564625173,
+        "effective_n_required": 91.01015215417243,
+        "factor_vs_now": 3.0336717384724143
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 421.24192035019837,
+        "effective_n_required": 140.41397345006612,
+        "factor_vs_now": 4.680465781668871
+      }
+    },
+    "SPY-ETF|var_limit|W+3|weekly|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 16.480600199440385,
+      "observed_effect_bps": 16.480600199440385,
+      "se_bps": 8.185689997894382,
+      "p_value": 0.0214,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 5259.182738384726,
+        "effective_n_required": 1753.0609127949085,
+        "factor_vs_now": 58.43536375983029
+      },
+      "for_observed_effect": {
+        "n_required": 174.26682657549682,
+        "effective_n_required": 58.088942191832274,
+        "factor_vs_now": 1.936298073061076
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 268.86558236434365,
+        "effective_n_required": 89.62186078811455,
+        "factor_vs_now": 2.987395359603818
+      }
+    },
+    "SPY-ETF|var_limit|W+3|daily|central": {
+      "instrument": "SPY-ETF",
+      "edge_net_bps": 11.25780103690028,
+      "observed_effect_bps": 11.257801036900283,
+      "se_bps": 6.164775259090812,
+      "p_value": 0.043,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2982.923887771284,
+        "effective_n_required": 994.307962590428,
+        "factor_vs_now": 33.14359875301427
+      },
+      "for_observed_effect": {
+        "n_required": 211.82516022926728,
+        "effective_n_required": 70.6083867430891,
+        "factor_vs_now": 2.353612891436303
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 326.8120283339702,
+        "effective_n_required": 108.93734277799007,
+        "factor_vs_now": 3.6312447592663357
+      }
+    },
+    "SPY-ES|var_limit|W+1|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 6.0251166986532345,
+      "observed_effect_bps": 6.025116698653234,
+      "se_bps": 3.479289908796782,
+      "p_value": 0.0702,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 950.1428608613487,
+        "effective_n_required": 316.7142869537829,
+        "factor_vs_now": 10.55714289845943
+      },
+      "for_observed_effect": {
+        "n_required": 235.55942897548823,
+        "effective_n_required": 78.51980965849607,
+        "factor_vs_now": 2.617326988616536
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 363.4301737024462,
+        "effective_n_required": 121.14339123414874,
+        "factor_vs_now": 4.038113041138291
+      }
+    },
+    "SPY-ES|var_limit|W+1|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 2.29853139074208,
+      "observed_effect_bps": 2.298531390742081,
+      "se_bps": 2.9808714718988103,
+      "p_value": 0.4254,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 697.4196441947826,
+        "effective_n_required": 232.4732147315942,
+        "factor_vs_now": 7.7491071577198065
+      },
+      "for_observed_effect": {
+        "n_required": 1188.0529771474457,
+        "effective_n_required": 396.01765904914856,
+        "factor_vs_now": 13.200588634971618
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1832.9739621559947,
+        "effective_n_required": 610.991320718665,
+        "factor_vs_now": 20.36637735728883
+      }
+    },
+    "SPY-ES|var_limit|W+2|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 11.492073604847299,
+      "observed_effect_bps": 11.492073604847297,
+      "se_bps": 5.316217949874775,
+      "p_value": 0.0168,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2218.2639918902287,
+        "effective_n_required": 739.4213306300762,
+        "factor_vs_now": 24.64737768766921
+      },
+      "for_observed_effect": {
+        "n_required": 151.16767764595292,
+        "effective_n_required": 50.38922588198431,
+        "factor_vs_now": 1.6796408627328103
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 233.22732434871403,
+        "effective_n_required": 77.74244144957134,
+        "factor_vs_now": 2.5914147149857114
+      }
+    },
+    "SPY-ES|var_limit|W+2|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 9.193872322755812,
+      "observed_effect_bps": 9.19387232275581,
+      "se_bps": 5.63264015715551,
+      "p_value": 0.074,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2490.1854358944033,
+        "effective_n_required": 830.0618119648011,
+        "factor_vs_now": 27.66872706549337
+      },
+      "for_observed_effect": {
+        "n_required": 265.14122690081126,
+        "effective_n_required": 88.38040896693708,
+        "factor_vs_now": 2.946013632231236
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 409.07011265623584,
+        "effective_n_required": 136.35670421874528,
+        "factor_vs_now": 4.545223473958176
+      }
+    },
+    "SPY-ES|var_limit|W+3|weekly|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 16.48487660498939,
+      "observed_effect_bps": 16.484876604989392,
+      "se_bps": 8.206354315895203,
+      "p_value": 0.0216,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 5285.76928139034,
+        "effective_n_required": 1761.9230937967802,
+        "factor_vs_now": 58.73076979322601
+      },
+      "for_observed_effect": {
+        "n_required": 175.0569311770365,
+        "effective_n_required": 58.352310392345494,
+        "factor_vs_now": 1.9450770130781831
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 270.084586221797,
+        "effective_n_required": 90.02819540726567,
+        "factor_vs_now": 3.0009398469088557
+      }
+    },
+    "SPY-ES|var_limit|W+3|daily|central": {
+      "instrument": "SPY-ES",
+      "edge_net_bps": 11.403295584144033,
+      "observed_effect_bps": 11.403295584144029,
+      "se_bps": 6.1897554079596455,
+      "p_value": 0.0406,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 3007.146944628165,
+        "effective_n_required": 1002.3823148760549,
+        "factor_vs_now": 33.41274382920183
+      },
+      "for_observed_effect": {
+        "n_required": 208.1308205075582,
+        "effective_n_required": 69.37694016918607,
+        "factor_vs_now": 2.3125646723062023
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 321.1122585025689,
+        "effective_n_required": 107.0374195008563,
+        "factor_vs_now": 3.5679139833618767
+      }
+    },
+    "TLT-ETF|var_limit|W+1|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -1.1340641122607757,
+      "observed_effect_bps": 1.134064112260776,
+      "se_bps": 1.8790783526201507,
+      "p_value": 0.4272,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 277.13887738286286,
+        "effective_n_required": 92.37962579428762,
+        "factor_vs_now": 3.079320859809587
+      },
+      "for_observed_effect": {
+        "n_required": 1939.3881972756956,
+        "effective_n_required": 646.4627324252318,
+        "factor_vs_now": 21.54875774750773
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 2992.1629224433336,
+        "effective_n_required": 997.3876408144446,
+        "factor_vs_now": 33.24625469381482
+      }
+    },
+    "TLT-ETF|var_limit|W+1|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -0.8305335384367368,
+      "observed_effect_bps": 0.830533538436737,
+      "se_bps": 1.4697326845341805,
+      "p_value": 0.618,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 169.54476285606216,
+        "effective_n_required": 56.514920952020724,
+        "factor_vs_now": 1.8838306984006907
+      },
+      "for_observed_effect": {
+        "n_required": 2212.1396455981962,
+        "effective_n_required": 737.3798818660654,
+        "factor_vs_now": 24.579329395535513
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 3412.9743782724063,
+        "effective_n_required": 1137.6581260908022,
+        "factor_vs_now": 37.92193753636007
+      }
+    },
+    "TLT-ETF|var_limit|W+2|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -2.4241354734982026,
+      "observed_effect_bps": 2.424135473498203,
+      "se_bps": 2.56588491192599,
+      "p_value": 0.2632,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 516.7518267659788,
+        "effective_n_required": 172.25060892199292,
+        "factor_vs_now": 5.741686964066431
+      },
+      "for_observed_effect": {
+        "n_required": 791.4268067088914,
+        "effective_n_required": 263.8089355696305,
+        "factor_vs_now": 8.793631185654348
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1221.043806592495,
+        "effective_n_required": 407.01460219749833,
+        "factor_vs_now": 13.567153406583278
+      }
+    },
+    "TLT-ETF|var_limit|W+2|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -1.8439548668921892,
+      "observed_effect_bps": 1.8439548668921895,
+      "se_bps": 1.6015291151078448,
+      "p_value": 0.2762,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 201.31556361990067,
+        "effective_n_required": 67.10518787330022,
+        "factor_vs_now": 2.236839595776674
+      },
+      "for_observed_effect": {
+        "n_required": 532.8675659642009,
+        "effective_n_required": 177.62252198806698,
+        "factor_vs_now": 5.9207507329355655
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 822.1286360773144,
+        "effective_n_required": 274.04287869243814,
+        "factor_vs_now": 9.13476262308127
+      }
+    },
+    "TLT-ETF|var_limit|W+3|weekly|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -1.311250799804958,
+      "observed_effect_bps": 1.311250799804959,
+      "se_bps": 2.303118189427476,
+      "p_value": 0.439,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 416.3323186169468,
+        "effective_n_required": 138.77743953898226,
+        "factor_vs_now": 4.625914651299409
+      },
+      "for_observed_effect": {
+        "n_required": 2179.270311274061,
+        "effective_n_required": 726.4234370913537,
+        "factor_vs_now": 24.21411456971179
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 3362.262301346176,
+        "effective_n_required": 1120.7541004487255,
+        "factor_vs_now": 37.35847001495751
+      }
+    },
+    "TLT-ETF|var_limit|W+3|daily|central": {
+      "instrument": "TLT-ETF",
+      "edge_net_bps": -0.9405256995166396,
+      "observed_effect_bps": 0.9405256995166398,
+      "se_bps": 1.1689428128366788,
+      "p_value": 0.4642,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 107.24923540939531,
+        "effective_n_required": 35.7497451364651,
+        "factor_vs_now": 1.1916581712155034
+      },
+      "for_observed_effect": {
+        "n_required": 1091.1774445349458,
+        "effective_n_required": 363.7258148449819,
+        "factor_vs_now": 12.124193828166066
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1683.5106534784156,
+        "effective_n_required": 561.1702178261386,
+        "factor_vs_now": 18.70567392753795
+      }
+    },
+    "ZN-FUT|var_limit|W+1|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.0,
+      "observed_effect_bps": 0.0,
+      "se_bps": 0.0,
+      "p_value": 1.0,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      },
+      "for_observed_effect": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      }
+    },
+    "ZN-FUT|var_limit|W+1|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.0,
+      "observed_effect_bps": 0.0,
+      "se_bps": 0.0,
+      "p_value": 1.0,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      },
+      "for_observed_effect": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": null,
+        "effective_n_required": null,
+        "factor_vs_now": null
+      }
+    },
+    "ZN-FUT|var_limit|W+2|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.13965059690853143,
+      "observed_effect_bps": 0.13965059690853138,
+      "se_bps": 0.08561196405222044,
+      "p_value": 0.0526,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 0.575276449682381,
+        "effective_n_required": 0.19175881656079366,
+        "factor_vs_now": 0.006391960552026455
+      },
+      "for_observed_effect": {
+        "n_required": 265.48104120271074,
+        "effective_n_required": 88.49368040090359,
+        "factor_vs_now": 2.949789346696786
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 409.59439126950565,
+        "effective_n_required": 136.5314637565019,
+        "factor_vs_now": 4.551048791883396
+      }
+    },
+    "ZN-FUT|var_limit|W+2|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": -0.19229835990751146,
+      "observed_effect_bps": 0.19229835990751137,
+      "se_bps": 0.147169816454029,
+      "p_value": 0.4868,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 1.6999853198645256,
+        "effective_n_required": 0.5666617732881752,
+        "factor_vs_now": 0.018888725776272507
+      },
+      "for_observed_effect": {
+        "n_required": 413.7485836483592,
+        "effective_n_required": 137.91619454945308,
+        "factor_vs_now": 4.597206484981769
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 638.3472751587937,
+        "effective_n_required": 212.78242505293122,
+        "factor_vs_now": 7.092747501764373
+      }
+    },
+    "ZN-FUT|var_limit|W+3|weekly|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": 0.11797901420139009,
+      "observed_effect_bps": 0.1179790142013899,
+      "se_bps": 0.23836922145880604,
+      "p_value": 0.6502,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 4.4597244968390495,
+        "effective_n_required": 1.4865748322796832,
+        "factor_vs_now": 0.04955249440932277
+      },
+      "for_observed_effect": {
+        "n_required": 2883.639820161933,
+        "effective_n_required": 961.213273387311,
+        "factor_vs_now": 32.0404424462437
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 4448.990750634714,
+        "effective_n_required": 1482.996916878238,
+        "factor_vs_now": 49.433230562607925
+      }
+    },
+    "ZN-FUT|var_limit|W+3|daily|central": {
+      "instrument": "ZN-FUT",
+      "edge_net_bps": -0.4230243446335444,
+      "observed_effect_bps": 0.42302434463354394,
+      "se_bps": 0.2998974685392212,
+      "p_value": 0.0936,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 7.059164043415555,
+        "effective_n_required": 2.3530546811385182,
+        "factor_vs_now": 0.0784351560379506
+      },
+      "for_observed_effect": {
+        "n_required": 355.0300070895296,
+        "effective_n_required": 118.34333569650987,
+        "factor_vs_now": 3.944777856550329
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 547.753990181199,
+        "effective_n_required": 182.584663393733,
+        "factor_vs_now": 6.086155446457767
+      }
+    },
+    "BTC-SPOT|var_limit|W+1|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 0.42724601156961844,
+      "observed_effect_bps": 0.42724601156961917,
+      "se_bps": 1.4315685794390187,
+      "p_value": 0.7752,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 160.8540463179954,
+        "effective_n_required": 53.6180154393318,
+        "factor_vs_now": 1.7872671813110599
+      },
+      "for_observed_effect": {
+        "n_required": 7930.826794960378,
+        "effective_n_required": 2643.6089316534594,
+        "factor_vs_now": 88.12029772178198
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 12235.985510036155,
+        "effective_n_required": 4078.6618366787184,
+        "factor_vs_now": 135.95539455595727
+      }
+    },
+    "BTC-SPOT|var_limit|W+1|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": -4.651758021785543,
+      "observed_effect_bps": 4.651758021785545,
+      "se_bps": 3.746477842511119,
+      "p_value": 0.1852,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 1101.6763120527703,
+        "effective_n_required": 367.2254373509234,
+        "factor_vs_now": 12.240847911697449
+      },
+      "for_observed_effect": {
+        "n_required": 458.20760227133445,
+        "effective_n_required": 152.73586742377816,
+        "factor_vs_now": 5.091195580792605
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 706.940364092073,
+        "effective_n_required": 235.646788030691,
+        "factor_vs_now": 7.854892934356366
+      }
+    },
+    "BTC-SPOT|var_limit|W+2|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 1.0114011239350627,
+      "observed_effect_bps": 1.011401123935063,
+      "se_bps": 1.208000533720145,
+      "p_value": 0.3732,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 114.53597757545658,
+        "effective_n_required": 38.17865919181886,
+        "factor_vs_now": 1.2726219730606287
+      },
+      "for_observed_effect": {
+        "n_required": 1007.7146505150408,
+        "effective_n_required": 335.90488350501363,
+        "factor_vs_now": 11.19682945016712
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1554.7410352964075,
+        "effective_n_required": 518.2470117654692,
+        "factor_vs_now": 17.274900392182307
+      }
+    },
+    "BTC-SPOT|var_limit|W+2|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": -3.010503528053277,
+      "observed_effect_bps": 3.010503528053276,
+      "se_bps": 4.152527426983739,
+      "p_value": 0.3884,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 1353.420323671768,
+        "effective_n_required": 451.1401078905894,
+        "factor_vs_now": 15.03800359635298
+      },
+      "for_observed_effect": {
+        "n_required": 1343.9927384074406,
+        "effective_n_required": 447.99757946914684,
+        "factor_vs_now": 14.933252648971562
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 2073.563841187053,
+        "effective_n_required": 691.1879470623511,
+        "factor_vs_now": 23.039598235411702
+      }
+    },
+    "BTC-SPOT|var_limit|W+3|weekly|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": 1.7177839150830796,
+      "observed_effect_bps": 1.7177839150830798,
+      "se_bps": 1.757499953596845,
+      "p_value": 0.2984,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 242.43667498747888,
+        "effective_n_required": 80.8122249958263,
+        "factor_vs_now": 2.6937408331942096
+      },
+      "for_observed_effect": {
+        "n_required": 739.4414044319986,
+        "effective_n_required": 246.48046814399956,
+        "factor_vs_now": 8.216015604799985
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 1140.8387226285304,
+        "effective_n_required": 380.27957420951014,
+        "factor_vs_now": 12.67598580698367
+      }
+    },
+    "BTC-SPOT|var_limit|W+3|daily|central": {
+      "instrument": "BTC-SPOT",
+      "edge_net_bps": -4.048819466440151,
+      "observed_effect_bps": 4.048819466440152,
+      "se_bps": 10.005606653356299,
+      "p_value": 0.5318,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 7857.683391191197,
+        "effective_n_required": 2619.2277970637324,
+        "factor_vs_now": 87.30759323545774
+      },
+      "for_observed_effect": {
+        "n_required": 4314.000693278301,
+        "effective_n_required": 1438.0002310927669,
+        "factor_vs_now": 47.93334103642557
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 6655.806681691998,
+        "effective_n_required": 2218.602227230666,
+        "factor_vs_now": 73.95340757435554
+      }
+    },
+    "ETH-SPOT|var_limit|W+1|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 1.251978475252334,
+      "observed_effect_bps": 1.2519784752523324,
+      "se_bps": 5.318686747668366,
+      "p_value": 0.8142,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 2220.3247489559826,
+        "effective_n_required": 740.1082496519942,
+        "factor_vs_now": 24.670274988399807
+      },
+      "for_observed_effect": {
+        "n_required": 12748.681893473933,
+        "effective_n_required": 4249.560631157978,
+        "factor_vs_now": 141.65202103859926
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 19669.158204253356,
+        "effective_n_required": 6556.386068084452,
+        "factor_vs_now": 218.54620226948174
+      }
+    },
+    "ETH-SPOT|var_limit|W+1|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 0.7090491587547882,
+      "observed_effect_bps": 0.7090491587547878,
+      "se_bps": 3.1150304790757932,
+      "p_value": 0.8906,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 761.6093644934082,
+        "effective_n_required": 253.86978816446938,
+        "factor_vs_now": 8.46232627214898
+      },
+      "for_observed_effect": {
+        "n_required": 13633.962420136102,
+        "effective_n_required": 4544.654140045367,
+        "factor_vs_now": 151.48847133484557
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 21035.003150386696,
+        "effective_n_required": 7011.667716795565,
+        "factor_vs_now": 233.72225722651885
+      }
+    },
+    "ETH-SPOT|var_limit|W+2|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 0.02557723064971018,
+      "observed_effect_bps": 0.025577230649710854,
+      "se_bps": 7.024125948607663,
+      "p_value": 0.926,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 3872.5073888038314,
+        "effective_n_required": 1290.8357962679438,
+        "factor_vs_now": 43.027859875598125
+      },
+      "for_observed_effect": {
+        "n_required": 53275523.36185114,
+        "effective_n_required": 17758507.787283715,
+        "factor_vs_now": 591950.2595761238
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 82195532.54011773,
+        "effective_n_required": 27398510.84670591,
+        "factor_vs_now": 913283.6948901969
+      }
+    },
+    "ETH-SPOT|var_limit|W+2|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": 0.6866039648421285,
+      "observed_effect_bps": 0.6866039648421305,
+      "se_bps": 2.91670475687362,
+      "p_value": 0.9066,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 667.7172782776626,
+        "effective_n_required": 222.5724260925542,
+        "factor_vs_now": 7.419080869751806
+      },
+      "for_observed_effect": {
+        "n_required": 12747.426306760855,
+        "effective_n_required": 4249.142102253619,
+        "factor_vs_now": 141.63807007512062
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 19667.221036638304,
+        "effective_n_required": 6555.740345546102,
+        "factor_vs_now": 218.52467818487006
+      }
+    },
+    "ETH-SPOT|var_limit|W+3|weekly|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": -1.2650296235185747,
+      "observed_effect_bps": 1.2650296235185778,
+      "se_bps": 8.106822290207402,
+      "p_value": 0.994,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 5158.32831518787,
+        "effective_n_required": 1719.4427717292901,
+        "factor_vs_now": 57.31475905764301
+      },
+      "for_observed_effect": {
+        "n_required": 29010.15830419804,
+        "effective_n_required": 9670.052768066014,
+        "factor_vs_now": 322.33509226886713
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 44757.99129538241,
+        "effective_n_required": 14919.330431794137,
+        "factor_vs_now": 497.3110143931379
+      }
+    },
+    "ETH-SPOT|var_limit|W+3|daily|central": {
+      "instrument": "ETH-SPOT",
+      "edge_net_bps": -0.6491560832717428,
+      "observed_effect_bps": 0.6491560832717433,
+      "se_bps": 8.967007321711073,
+      "p_value": 0.8194,
+      "n_now": 90,
+      "for_declared_target_3bps": {
+        "n_required": 6311.066019678209,
+        "effective_n_required": 2103.6886732260696,
+        "factor_vs_now": 70.12295577420232
+      },
+      "for_observed_effect": {
+        "n_required": 134786.67818900954,
+        "effective_n_required": 44928.892729669846,
+        "factor_vs_now": 1497.6297576556617
+      },
+      "for_observed_effect_at_holm": {
+        "n_required": 207954.08649128955,
+        "effective_n_required": 69318.02883042984,
+        "factor_vs_now": 2310.6009610143283
+      }
+    }
+  },
+  "origins_available": {
+    "SPY": {
+      "n_weekly_total": 604,
+      "span": "2015-01-02 -> 2026-07-23",
+      "by_start": {
+        "2015-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 601,
+          "effective_n": 200
+        },
+        "2018-01-01": {
+          "n_train_weeks": 157,
+          "n_test_origins": 444,
+          "effective_n": 148
+        },
+        "2020-01-01": {
+          "n_train_weeks": 261,
+          "n_test_origins": 340,
+          "effective_n": 113
+        },
+        "2022-01-01": {
+          "n_train_weeks": 366,
+          "n_test_origins": 235,
+          "effective_n": 78
+        },
+        "2024-10-18": {
+          "n_train_weeks": 511,
+          "n_test_origins": 90,
+          "effective_n": 30
+        }
+      }
+    },
+    "BTC-USD": {
+      "n_weekly_total": 604,
+      "span": "2015-01-02 -> 2026-07-23",
+      "by_start": {
+        "2015-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 601,
+          "effective_n": 200
+        },
+        "2018-01-01": {
+          "n_train_weeks": 157,
+          "n_test_origins": 444,
+          "effective_n": 148
+        },
+        "2020-01-01": {
+          "n_train_weeks": 261,
+          "n_test_origins": 340,
+          "effective_n": 113
+        },
+        "2022-01-01": {
+          "n_train_weeks": 366,
+          "n_test_origins": 235,
+          "effective_n": 78
+        },
+        "2024-10-18": {
+          "n_train_weeks": 511,
+          "n_test_origins": 90,
+          "effective_n": 30
+        }
+      }
+    },
+    "ETH-USD": {
+      "n_weekly_total": 455,
+      "span": "2017-11-10 -> 2026-07-23",
+      "by_start": {
+        "2015-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 452,
+          "effective_n": 150
+        },
+        "2018-01-01": {
+          "n_train_weeks": 8,
+          "n_test_origins": 444,
+          "effective_n": 148
+        },
+        "2020-01-01": {
+          "n_train_weeks": 112,
+          "n_test_origins": 340,
+          "effective_n": 113
+        },
+        "2022-01-01": {
+          "n_train_weeks": 217,
+          "n_test_origins": 235,
+          "effective_n": 78
+        },
+        "2024-10-18": {
+          "n_train_weeks": 362,
+          "n_test_origins": 90,
+          "effective_n": 30
+        }
+      }
+    },
+    "ZN=F": {
+      "n_weekly_total": 604,
+      "span": "2015-01-02 -> 2026-07-23",
+      "by_start": {
+        "2015-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 601,
+          "effective_n": 200
+        },
+        "2018-01-01": {
+          "n_train_weeks": 157,
+          "n_test_origins": 444,
+          "effective_n": 148
+        },
+        "2020-01-01": {
+          "n_train_weeks": 261,
+          "n_test_origins": 340,
+          "effective_n": 113
+        },
+        "2022-01-01": {
+          "n_train_weeks": 366,
+          "n_test_origins": 235,
+          "effective_n": 78
+        },
+        "2024-10-18": {
+          "n_train_weeks": 511,
+          "n_test_origins": 90,
+          "effective_n": 30
+        }
+      }
+    },
+    "TLT": {
+      "n_weekly_total": 441,
+      "span": "2018-02-16 -> 2026-07-23",
+      "by_start": {
+        "2015-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 438,
+          "effective_n": 146
+        },
+        "2018-01-01": {
+          "n_train_weeks": 0,
+          "n_test_origins": 438,
+          "effective_n": 146
+        },
+        "2020-01-01": {
+          "n_train_weeks": 98,
+          "n_test_origins": 340,
+          "effective_n": 113
+        },
+        "2022-01-01": {
+          "n_train_weeks": 203,
+          "n_test_origins": 235,
+          "effective_n": 78
+        },
+        "2024-10-18": {
+          "n_train_weeks": 348,
+          "n_test_origins": 90,
+          "effective_n": 30
+        }
+      }
+    }
+  },
+  "reachability_by_start_date": {
+    "2015-01-01": {
+      "n_test_origins": 601,
+      "effective_n": 200,
+      "n_train_weeks": 0,
+      "n_cells_detectable_at_3bps": 14,
+      "n_cells_detectable_at_observed_effect_under_holm": 13,
+      "cells_detectable_under_holm": [
+        "BTC-SPOT|inverse_width|W+1|daily|central",
+        "BTC-SPOT|inverse_width|W+1|weekly|central",
+        "SPY-ES|var_limit|W+1|weekly|central",
+        "SPY-ES|var_limit|W+2|daily|central",
+        "SPY-ES|var_limit|W+2|weekly|central",
+        "SPY-ES|var_limit|W+3|daily|central",
+        "SPY-ES|var_limit|W+3|weekly|central",
+        "SPY-ETF|var_limit|W+1|weekly|central",
+        "SPY-ETF|var_limit|W+2|daily|central",
+        "SPY-ETF|var_limit|W+2|weekly|central",
+        "SPY-ETF|var_limit|W+3|daily|central",
+        "SPY-ETF|var_limit|W+3|weekly|central"
+      ]
+    },
+    "2018-01-01": {
+      "n_test_origins": 444,
+      "effective_n": 148,
+      "n_train_weeks": 157,
+      "n_cells_detectable_at_3bps": 12,
+      "n_cells_detectable_at_observed_effect_under_holm": 11,
+      "cells_detectable_under_holm": [
+        "SPY-ES|var_limit|W+1|weekly|central",
+        "SPY-ES|var_limit|W+2|daily|central",
+        "SPY-ES|var_limit|W+2|weekly|central",
+        "SPY-ES|var_limit|W+3|daily|central",
+        "SPY-ES|var_limit|W+3|weekly|central",
+        "SPY-ETF|var_limit|W+1|weekly|central",
+        "SPY-ETF|var_limit|W+2|daily|central",
+        "SPY-ETF|var_limit|W+2|weekly|central",
+        "SPY-ETF|var_limit|W+3|daily|central",
+        "SPY-ETF|var_limit|W+3|weekly|central",
+        "ZN-FUT|var_limit|W+2|weekly|central"
+      ]
+    },
+    "2020-01-01": {
+      "n_test_origins": 340,
+      "effective_n": 113,
+      "n_train_weeks": 261,
+      "n_cells_detectable_at_3bps": 11,
+      "n_cells_detectable_at_observed_effect_under_holm": 6,
+      "cells_detectable_under_holm": [
+        "SPY-ES|var_limit|W+2|weekly|central",
+        "SPY-ES|var_limit|W+3|daily|central",
+        "SPY-ES|var_limit|W+3|weekly|central",
+        "SPY-ETF|var_limit|W+2|weekly|central",
+        "SPY-ETF|var_limit|W+3|daily|central",
+        "SPY-ETF|var_limit|W+3|weekly|central"
+      ]
+    },
+    "2022-01-01": {
+      "n_test_origins": 235,
+      "effective_n": 78,
+      "n_train_weeks": 366,
+      "n_cells_detectable_at_3bps": 9,
+      "n_cells_detectable_at_observed_effect_under_holm": 2,
+      "cells_detectable_under_holm": [
+        "SPY-ES|var_limit|W+2|weekly|central",
+        "SPY-ETF|var_limit|W+2|weekly|central"
+      ]
+    },
+    "2024-10-18": {
+      "n_test_origins": 90,
+      "effective_n": 30,
+      "n_train_weeks": 511,
+      "n_cells_detectable_at_3bps": 4,
+      "n_cells_detectable_at_observed_effect_under_holm": 0,
+      "cells_detectable_under_holm": []
+    }
+  },
+  "candidate_assets": {
+    "QQQ": {
+      "exposition": "actions technologiques (Nasdaq-100)",
+      "vehicule": "ETF ou future NQ",
+      "frais_ar_bps": 3.5,
+      "historique": "1999-",
+      "correle_a": "SPY (~0,9)"
+    },
+    "GLD": {
+      "exposition": "or",
+      "vehicule": "ETF ou future GC",
+      "frais_ar_bps": 4.0,
+      "historique": "2004-",
+      "correle_a": "aucun actif du panier"
+    },
+    "IEF": {
+      "exposition": "taux 7-10 ans (2e point de courbe)",
+      "vehicule": "ETF",
+      "frais_ar_bps": 4.0,
+      "historique": "2002-",
+      "correle_a": "TLT, ZN=F (~0,9)"
+    },
+    "EFA": {
+      "exposition": "actions hors Amerique du Nord",
+      "vehicule": "ETF",
+      "frais_ar_bps": 5.0,
+      "historique": "2001-",
+      "correle_a": "SPY (~0,8)"
+    },
+    "USO": {
+      "exposition": "petrole",
+      "vehicule": "ETF ou future CL",
+      "frais_ar_bps": 5.0,
+      "historique": "2006-",
+      "correle_a": "aucun actif du panier"
+    }
+  }
+}

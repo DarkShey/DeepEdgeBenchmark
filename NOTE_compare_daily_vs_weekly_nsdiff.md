@@ -1,5 +1,15 @@
 # NOTE — NsDiff : régime daily (B) vs régime weekly-natif (C), cible W+1
 
+> **⚠️ 2026-08-05 — verdict partiellement superseded.**
+> `NOTE_nsdiff_consolidation_daily_vs_weekly.md` rejoue ce chantier à
+> `n_samples=200` (au lieu de 50) et teste formellement ce qui n'était ici
+> que descriptif. Résultat : l'avantage **Winkler** du weekly (§3.1, §4.2,
+> §6bis, §7 ci-dessous) **ne survit pas** au budget d'échantillonnage — à la
+> graine 42, W+1, global, p passe de 0.0100 à 0.0500, et le poolé 5 graines
+> donne p=0.3180. L'avantage de **couverture**, lui, est confirmé et
+> désormais établi formellement. Cette note reste valable comme description
+> de l'artefact `n_samples=50` ; ne pas en citer le §7 seul.
+
 *2026-08-04, mise à jour suite à `BRIEF_nsdiff_ameliorer_limites.md` (Fix 1 :
 récupération de TLT, 5/5 actifs ; Fix 2 : robustesse multi-graines 42-46).
 Suite de `BRIEF_synthese_daily_vs_weekly_nsdiff.md`, de

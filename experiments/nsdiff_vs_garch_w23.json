@@ -1,0 +1,3872 @@
+{
+  "config": {
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "assets": [
+      "SPY",
+      "BTC-USD",
+      "ETH-USD",
+      "ZN=F",
+      "TLT"
+    ],
+    "epochs": 40,
+    "n_samples": 200,
+    "k_denoise": 20,
+    "horizon_units": [
+      "W+1",
+      "W+2",
+      "W+3"
+    ],
+    "n_rows": 13500,
+    "n_origins_per_asset": {
+      "BTC-USD": 90,
+      "ETH-USD": 90,
+      "SPY": 90,
+      "TLT": 90,
+      "ZN=F": 90
+    },
+    "mechanism": "train-once-forward, reuses oos_nsdiff_daily_weekly.generate_nsdiff_asset (collect_samples=True) -- identical to the oos path except n_samples",
+    "note": "artefact ISOLE : jamais ecrit dans tracking.db (la piste oos reste single-seed 42).",
+    "elapsed_s": 244.8,
+    "challenger": "ARIMA-GARCH",
+    "challenger_source": "tracking.db source='oos' (lecture seule)",
+    "challenger_intervals": "ANALYTIQUES (arima_model.py : last_price*exp(mu+sigma*ppf)) -- aucun tirage, donc aucun biais de quantile empirique",
+    "pairing": "par (actif, horizon, target_date), a l'interieur d'un meme regime",
+    "protocol_asymmetry": "ARIMA-GARCH refit a chaque origine, deterministe (pas de graine) ; NsDiff train-once-forward, dependant d'une graine. L'ecart mesure melange modele et protocole d'entrainement -- meme reserve que tout classement inter-modeles de ce repo."
+  },
+  "horizons": {
+    "W+1": {
+      "per_regime": {
+        "weekly": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 5254.55007265295,
+              "rmse_ARIMA-GARCH": 5140.371025212343,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1186882.1891745315,
+                "ci95_lo": -256766.8762371542,
+                "ci95_hi": 2698322.8603433548,
+                "p_value": 0.1052,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 30428.648471354172,
+              "winkler_ARIMA-GARCH": 30661.06116844757,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -232.41269709341177,
+                "ci95_lo": -1531.5996265262459,
+                "ci95_hi": 838.4509288397463,
+                "p_value": 0.7146,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9666666666666667,
+              "cov95_ARIMA-GARCH": 0.9777777777777777,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.016666666666666708,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.018888888888888847,
+                "ci95_hi": 0.04555555555555559,
+                "p_value": 0.3334,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9777777777777777,
+                "target": 0.95,
+                "coverage_gap": 0.027777777777777818,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0055555555555555115,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0984,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.011111111111111113,
+                "ci95_lo": -0.0044444444444444444,
+                "ci95_hi": 0.03333333333333334,
+                "p_value": 0.3308,
+                "significant_at_05": false
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 273.9849607947938,
+              "rmse_ARIMA-GARCH": 269.0962073465486,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 2654.9899334280262,
+                "ci95_lo": -2454.3021122886435,
+                "ci95_hi": 8909.126861270663,
+                "p_value": 0.3058,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 1366.093194607205,
+              "winkler_ARIMA-GARCH": 1344.6974950924825,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 21.395699514722477,
+                "ci95_lo": -168.20169415053175,
+                "ci95_hi": 177.9120192196081,
+                "p_value": 0.8202,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9466666666666665,
+              "cov95_ARIMA-GARCH": 0.9,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9466666666666665,
+                "target": 0.95,
+                "coverage_gap": -0.003333333333333288,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.04777777777777774,
+                "ci95_hi": 0.03222222222222226,
+                "p_value": 0.864,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9,
+                "target": 0.95,
+                "coverage_gap": -0.04999999999999996,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.11666666666666663,
+                "ci95_hi": 0.0055555555555556,
+                "p_value": 0.0706,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "NsDiff_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.04666666666666667,
+                "ci95_lo": -0.09333333333333334,
+                "ci95_hi": -0.011111111111111112,
+                "p_value": 0.0028,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 12.947688206933496,
+              "rmse_ARIMA-GARCH": 12.978497683063592,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.7987722053223308,
+                "ci95_lo": -8.613984999317362,
+                "ci95_hi": 7.396183498663437,
+                "p_value": 0.8708,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 70.7096448805067,
+              "winkler_ARIMA-GARCH": 67.74811787035874,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 2.961527010147967,
+                "ci95_lo": -3.389070639900075,
+                "ci95_hi": 9.597442937826976,
+                "p_value": 0.3526,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9444444444444444,
+              "cov95_ARIMA-GARCH": 0.9777777777777777,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.005555555555555512,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0633333333333333,
+                "ci95_hi": 0.03444444444444449,
+                "p_value": 0.8652,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9777777777777777,
+                "target": 0.95,
+                "coverage_gap": 0.027777777777777818,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0055555555555555115,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.1006,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.03333333333333333,
+                "ci95_lo": 0.0022222222222222222,
+                "ci95_hi": 0.07555555555555554,
+                "p_value": 0.028,
+                "significant_at_05": true
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.402218876164851,
+              "rmse_ARIMA-GARCH": 1.359265234723225,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.11861579834583388,
+                "ci95_lo": -0.017597066321274397,
+                "ci95_hi": 0.26116258503560813,
+                "p_value": 0.0874,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 8.014913725111223,
+              "winkler_ARIMA-GARCH": 6.997625596403228,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1.0172881287079927,
+                "ci95_lo": 0.5791564299084887,
+                "ci95_hi": 1.5660955505309508,
+                "p_value": 0.0,
+                "significant_at_05": true
+              },
+              "cov95_NsDiff": 0.9644444444444444,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9644444444444444,
+                "target": 0.95,
+                "coverage_gap": 0.014444444444444489,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0344444444444444,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.4478,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.0055555555555555115,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.07222222222222219,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.8612,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.02,
+                "ci95_lo": -0.05111111111111111,
+                "ci95_hi": 0.0,
+                "p_value": 0.2398,
+                "significant_at_05": false
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 0.7725271335117918,
+              "rmse_ARIMA-GARCH": 0.7674791979225234,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.007773852768145718,
+                "ci95_lo": -0.018433157781568257,
+                "ci95_hi": 0.034588092896203765,
+                "p_value": 0.5728,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 4.322790633731417,
+              "winkler_ARIMA-GARCH": 4.112794403271706,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.20999623045971197,
+                "ci95_lo": -0.11893996619880777,
+                "ci95_hi": 0.685931067899924,
+                "p_value": 0.276,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9333333333333333,
+              "cov95_ARIMA-GARCH": 0.9555555555555556,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9333333333333333,
+                "target": 0.95,
+                "coverage_gap": -0.01666666666666662,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06999999999999997,
+                "ci95_hi": 0.02333333333333338,
+                "p_value": 0.4684,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9555555555555556,
+                "target": 0.95,
+                "coverage_gap": 0.0055555555555556,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.04999999999999996,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.7868,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.022222222222222223,
+                "ci95_lo": -1.2335811384723962e-18,
+                "ci95_hi": 0.048888888888888885,
+                "p_value": 0.0636,
+                "significant_at_05": false
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1482,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6232
+              },
+              "43": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0042,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0764
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.662,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6986
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2984,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0388
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.333,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.266
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0692,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7442
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3386,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4196
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.761,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9272
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4034,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.8006
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5098,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9818
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7732,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2496
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7232,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7902
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5314,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4036
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7996,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3384
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.777,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3626
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2686,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.211,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0024,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1896,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3566,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5858,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9946
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4902,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.029
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7362,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.8366
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.73,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1272
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7098,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7378
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.10276531455725188,
+                "ci95_lo": -0.20592921654658716,
+                "ci95_hi": -0.0100579004451527,
+                "p_value": 0.0298,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.041543651580978086,
+                "ci95_lo": -0.09536699621229937,
+                "ci95_hi": 0.010054787992632175,
+                "p_value": 0.1156,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.14340789812754995,
+                "ci95_lo": -0.35220389748299397,
+                "ci95_hi": 0.030943433057371565,
+                "p_value": 0.1028,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.004723120951574477,
+                "ci95_lo": -0.06482150578140769,
+                "ci95_hi": 0.06663049666176156,
+                "p_value": 0.8984,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.009594751691995907,
+                "ci95_lo": -0.08884202988695221,
+                "ci95_hi": 0.10347010899518716,
+                "p_value": 0.8708,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.050398673202358565,
+                "ci95_lo": -0.16332736069749998,
+                "ci95_hi": 0.05767452501859772,
+                "p_value": 0.3526,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.1111167713325582,
+                "ci95_lo": -0.23139274652467226,
+                "ci95_hi": 0.010444650671798906,
+                "p_value": 0.0792,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.10682843663461969,
+                "ci95_lo": -0.19098763807156915,
+                "ci95_hi": -0.04203233348612674,
+                "p_value": 0.0002,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              }
+            }
+          }
+        },
+        "daily": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 5337.8840685463865,
+              "rmse_ARIMA-GARCH": 5133.595584387981,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 2139202.705193561,
+                "ci95_lo": 1413879.7807880235,
+                "ci95_hi": 2967363.605174165,
+                "p_value": 0.0,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 30536.27222265625,
+              "winkler_ARIMA-GARCH": 31160.30173729402,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -624.0295146377711,
+                "ci95_lo": -4706.488608443129,
+                "ci95_hi": 4693.3955006296255,
+                "p_value": 0.7738,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9333333333333333,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9333333333333333,
+                "target": 0.95,
+                "coverage_gap": -0.01666666666666662,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0655555555555555,
+                "ci95_hi": 0.021111111111111157,
+                "p_value": 0.434,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777728,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.3716,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.03333333333333333,
+                "ci95_lo": 0.01111111111111111,
+                "ci95_hi": 0.06666666666666667,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 271.8864963807491,
+              "rmse_ARIMA-GARCH": 265.50043085238633,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 3431.7881313963135,
+                "ci95_lo": 125.73003782759992,
+                "ci95_hi": 7904.440453015253,
+                "p_value": 0.0402,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 1556.882719719781,
+              "winkler_ARIMA-GARCH": 1421.0569884029183,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 135.82573131686237,
+                "ci95_lo": -62.209467719736736,
+                "ci95_hi": 378.5406035724573,
+                "p_value": 0.2004,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.8977777777777779,
+              "cov95_ARIMA-GARCH": 0.9555555555555556,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.8977777777777779,
+                "target": 0.95,
+                "coverage_gap": -0.05222222222222218,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.10111111111111107,
+                "ci95_hi": -0.005555555555555509,
+                "p_value": 0.0244,
+                "significant_at_05": true
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9555555555555556,
+                "target": 0.95,
+                "coverage_gap": 0.0055555555555556,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.03888888888888885,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.78,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.05777777777777777,
+                "ci95_lo": 0.024444444444444442,
+                "ci95_hi": 0.09333333333333334,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 13.256377672307606,
+              "rmse_ARIMA-GARCH": 12.87603109045322,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 9.939372348537681,
+                "ci95_lo": -2.5249791131367605,
+                "ci95_hi": 23.29401720596515,
+                "p_value": 0.1236,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 81.17589083014592,
+              "winkler_ARIMA-GARCH": 64.719566811128,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 16.45632401901791,
+                "ci95_lo": -0.23489472306256695,
+                "ci95_hi": 43.858664513322196,
+                "p_value": 0.0584,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.88,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.88,
+                "target": 0.95,
+                "coverage_gap": -0.06999999999999997,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.1366666666666666,
+                "ci95_hi": -0.01666666666666662,
+                "p_value": 0.0094,
+                "significant_at_05": true
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.0055555555555555115,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06111111111111106,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.8138,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.06444444444444444,
+                "ci95_lo": 0.03111111111111111,
+                "ci95_hi": 0.10888888888888888,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.4054814888801819,
+              "rmse_ARIMA-GARCH": 1.3795335461342564,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.07226541067509583,
+                "ci95_lo": 0.012020420557732696,
+                "ci95_hi": 0.1423202620358791,
+                "p_value": 0.0202,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 7.800442854987253,
+              "winkler_ARIMA-GARCH": 7.169151254699444,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.6312916002878082,
+                "ci95_lo": -0.11492349386442323,
+                "ci95_hi": 1.6435215851044929,
+                "p_value": 0.1124,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9333333333333333,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9333333333333333,
+                "target": 0.95,
+                "coverage_gap": -0.01666666666666663,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0722222222222222,
+                "ci95_hi": 0.025555555555555592,
+                "p_value": 0.4976,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777738,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.409,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.03333333333333334,
+                "ci95_lo": 0.008888888888888889,
+                "ci95_hi": 0.06444444444444444,
+                "p_value": 0.006,
+                "significant_at_05": true
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 0.7793108174507055,
+              "rmse_ARIMA-GARCH": 0.7643319693089452,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.023121990887996623,
+                "ci95_lo": 0.0017321788589649784,
+                "ci95_hi": 0.04514136142370061,
+                "p_value": 0.0368,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 4.150055969238282,
+              "winkler_ARIMA-GARCH": 3.791602379647769,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.35845358959051293,
+                "ci95_lo": -0.2698480080758423,
+                "ci95_hi": 1.1734973635679713,
+                "p_value": 0.3222,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9222222222222223,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9222222222222223,
+                "target": 0.95,
+                "coverage_gap": -0.027777777777777738,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.08333333333333331,
+                "ci95_hi": 0.01449999999999924,
+                "p_value": 0.2288,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.0055555555555555115,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06111111111111108,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.847,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.022222222222222223,
+                "ci95_lo": -0.015555555555555557,
+                "ci95_hi": 0.06222222222222223,
+                "p_value": 0.2744,
+                "significant_at_05": false
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2482
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5398,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0936
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9576
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.52,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0778
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3902,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3258
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.007,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0362
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.9436,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9428
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0598,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2052
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.842,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9388
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.612,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.259
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0236,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0132
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.961,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1918
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1724,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0356
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0836,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1212
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3482,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3598
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1138,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1192
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3822,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0128
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1188,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1524
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1522,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.595
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0224,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1166
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.177,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.08
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1296,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.324
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1634,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6292
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4764,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9458
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0384,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1234
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.18428057915418586,
+                "ci95_lo": -0.26286998595732364,
+                "ci95_hi": -0.11146684961049483,
+                "p_value": 0.0,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.1088252672467888,
+                "ci95_lo": -0.237283329022492,
+                "ci95_hi": -0.013601054398604595,
+                "p_value": 0.0194,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.23100786901310777,
+                "ci95_lo": -0.3581752473107648,
+                "ci95_hi": -0.1234823530817447,
+                "p_value": 0.0,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.04108837508453915,
+                "ci95_lo": -0.17499281687248555,
+                "ci95_hi": 0.06892247812344525,
+                "p_value": 0.5186,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.1193904958423359,
+                "ci95_lo": -0.27980481733227824,
+                "ci95_hi": 0.030329732878282892,
+                "p_value": 0.1236,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.2800504244954256,
+                "ci95_lo": -0.7463779639100321,
+                "ci95_hi": 0.0039973913268469335,
+                "p_value": 0.0584,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.12018979669793281,
+                "ci95_lo": -0.22148289657076806,
+                "ci95_hi": -0.02727877771938248,
+                "p_value": 0.0128,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.09915893937782161,
+                "ci95_lo": -0.2671784820475263,
+                "ci95_hi": 0.020124264023808847,
+                "p_value": 0.1226,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            }
+          }
+        }
+      }
+    },
+    "W+2": {
+      "per_regime": {
+        "weekly": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 8118.058026711533,
+              "rmse_ARIMA-GARCH": 7806.7222154659285,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 4957954.375606283,
+                "ci95_lo": 1409390.9012417519,
+                "ci95_hi": 8786213.74555332,
+                "p_value": 0.0056,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 44257.00443142362,
+              "winkler_ARIMA-GARCH": 43825.148672715164,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 431.85575870845867,
+                "ci95_lo": -1081.3556919914076,
+                "ci95_hi": 2185.7632357734333,
+                "p_value": 0.6496,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.948888888888889,
+              "cov95_ARIMA-GARCH": 0.9555555555555556,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.948888888888889,
+                "target": 0.95,
+                "coverage_gap": -0.0011111111111110651,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.052222222222222184,
+                "ci95_hi": 0.0366666666666667,
+                "p_value": 1.0,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9555555555555556,
+                "target": 0.95,
+                "coverage_gap": 0.0055555555555556,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.04999999999999996,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.7684,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.006666666666666665,
+                "ci95_lo": -0.00888888888888889,
+                "ci95_hi": 0.024444444444444446,
+                "p_value": 0.516,
+                "significant_at_05": false
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 413.59524561966737,
+              "rmse_ARIMA-GARCH": 397.1057680860243,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 13368.036152001721,
+                "ci95_lo": -7579.076040699312,
+                "ci95_hi": 36607.460056356686,
+                "p_value": 0.1976,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 1903.6755855238173,
+              "winkler_ARIMA-GARCH": 1961.7644699960035,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -58.08888447218604,
+                "ci95_lo": -438.76322462268104,
+                "ci95_hi": 238.31495488266833,
+                "p_value": 0.7528,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9622222222222222,
+              "cov95_ARIMA-GARCH": 0.8888888888888888,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9622222222222222,
+                "target": 0.95,
+                "coverage_gap": 0.012222222222222268,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777738,
+                "ci95_hi": 0.043333333333333376,
+                "p_value": 0.4882,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.8888888888888888,
+                "target": 0.95,
+                "coverage_gap": -0.06111111111111106,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.13888888888888884,
+                "ci95_hi": 0.0055555555555556,
+                "p_value": 0.058,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "NsDiff_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.07333333333333333,
+                "ci95_lo": -0.13111111111111112,
+                "ci95_hi": -0.02888888888888889,
+                "p_value": 0.0008,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 17.065954036275187,
+              "rmse_ARIMA-GARCH": 17.255330677738442,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -6.499649629844091,
+                "ci95_lo": -24.522659158877282,
+                "ci95_hi": 10.693043673306008,
+                "p_value": 0.4106,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 101.89164172702363,
+              "winkler_ARIMA-GARCH": 91.53630899463339,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 10.35533273239023,
+                "ci95_lo": -6.9273665319685565,
+                "ci95_hi": 36.12892352575038,
+                "p_value": 0.3802,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.951111111111111,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.951111111111111,
+                "target": 0.95,
+                "coverage_gap": 0.0011111111111111564,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.054444444444444406,
+                "ci95_hi": 0.041111111111111154,
+                "p_value": 0.903,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777738,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.369,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.015555555555555555,
+                "ci95_lo": -0.024444444444444446,
+                "ci95_hi": 0.06888888888888889,
+                "p_value": 0.53,
+                "significant_at_05": false
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.8320737667424825,
+              "rmse_ARIMA-GARCH": 1.7781477446720948,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.1946848849035318,
+                "ci95_lo": -0.11505985897387526,
+                "ci95_hi": 0.49883711408983267,
+                "p_value": 0.229,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 9.911345930311416,
+              "winkler_ARIMA-GARCH": 8.765417868182455,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1.1459280621289591,
+                "ci95_lo": 0.3870738959626621,
+                "ci95_hi": 1.882037461752881,
+                "p_value": 0.0058,
+                "significant_at_05": true
+              },
+              "cov95_NsDiff": 0.9755555555555557,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9755555555555557,
+                "target": 0.95,
+                "coverage_gap": 0.025555555555555592,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.007777777777777734,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.112,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777738,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.3804,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.008888888888888889,
+                "ci95_lo": -0.042222222222222223,
+                "ci95_hi": 0.020000000000000004,
+                "p_value": 0.6378,
+                "significant_at_05": false
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 0.9721756538464775,
+              "rmse_ARIMA-GARCH": 0.9724430440715797,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.0005199720313739536,
+                "ci95_lo": -0.03703806040919528,
+                "ci95_hi": 0.027977695425181106,
+                "p_value": 0.8322,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 4.56358958943685,
+              "winkler_ARIMA-GARCH": 4.645899132140651,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.08230954270380203,
+                "ci95_lo": -0.329269397638618,
+                "ci95_hi": 0.11197409909859336,
+                "p_value": 0.3586,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9622222222222222,
+              "cov95_ARIMA-GARCH": 0.9888888888888889,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9622222222222222,
+                "target": 0.95,
+                "coverage_gap": 0.012222222222222268,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.018888888888888844,
+                "ci95_hi": 0.041111111111111154,
+                "p_value": 0.344,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9888888888888889,
+                "target": 0.95,
+                "coverage_gap": 0.03888888888888893,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": 0.01666666666666671,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0064,
+                "significant_at_05": true
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.026666666666666665,
+                "ci95_lo": 0.006666666666666666,
+                "ci95_hi": 0.044444444444444446,
+                "p_value": 0.0028,
+                "significant_at_05": true
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1296,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.8508
+              },
+              "43": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0014,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9136
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.503,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7008
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1656,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7954
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0052,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1658
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1512,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.895
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1176,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.976
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6306,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7538
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2472,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6304
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.225,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4942
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3808,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5112
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6378,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4762
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0726,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.403
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.587,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.186
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.859,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3962
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3392,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.044
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3884,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.01
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1094,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0304
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5608,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1312,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0122
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5878,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0294
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7628,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9226
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.823,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0232
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.057,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4882
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.611,
+                "winkler": "indistinguishable",
+                "winkler_p": 1.0
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.17551808403117863,
+                "ci95_lo": -0.37840812461392137,
+                "ci95_hi": 0.012421522692232486,
+                "p_value": 0.066,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.05673892046086798,
+                "ci95_lo": -0.18996052608191594,
+                "ci95_hi": 0.04282062476367547,
+                "p_value": 0.3646,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.3578639519819319,
+                "ci95_lo": -0.7894722276622803,
+                "ci95_hi": 0.011305952376914332,
+                "p_value": 0.0562,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.009963958240060992,
+                "ci95_lo": -0.0604310581269473,
+                "ci95_hi": 0.10026006261403506,
+                "p_value": 0.8204,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.05698488612362406,
+                "ci95_lo": -0.0937499574193045,
+                "ci95_hi": 0.21499942599991947,
+                "p_value": 0.4106,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.1288445667691716,
+                "ci95_lo": -0.44952833673335424,
+                "ci95_hi": 0.08619264708616721,
+                "p_value": 0.3802,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.0812944572990574,
+                "ci95_lo": -0.19078095504089507,
+                "ci95_hi": 0.040945057382793706,
+                "p_value": 0.2032,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.05244038809959156,
+                "ci95_lo": -0.10569094509992044,
+                "ci95_hi": 0.005527278692070869,
+                "p_value": 0.0786,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            }
+          }
+        },
+        "daily": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 8077.46684663907,
+              "rmse_ARIMA-GARCH": 7765.457037019537,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 4943147.664757083,
+                "ci95_lo": 3163797.061615015,
+                "ci95_hi": 7238646.2355521,
+                "p_value": 0.0,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 46446.14639539931,
+              "winkler_ARIMA-GARCH": 45673.50921757597,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 772.6371778233381,
+                "ci95_lo": -4982.635426489492,
+                "ci95_hi": 8077.487451778401,
+                "p_value": 0.8366,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9111111111111111,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9111111111111111,
+                "target": 0.95,
+                "coverage_gap": -0.03888888888888885,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.10999999999999996,
+                "ci95_hi": 0.014444444444444492,
+                "p_value": 0.1802,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777738,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.3606,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.05555555555555555,
+                "ci95_lo": 0.022222222222222223,
+                "ci95_hi": 0.09777777777777777,
+                "p_value": 0.0002,
+                "significant_at_05": true
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 401.8586503266464,
+              "rmse_ARIMA-GARCH": 390.53746408698254,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 8970.86398686267,
+                "ci95_lo": 2046.1643696091737,
+                "ci95_hi": 16651.99843843439,
+                "p_value": 0.0094,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 2129.537652882894,
+              "winkler_ARIMA-GARCH": 1964.87759512443,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 164.66005775846403,
+                "ci95_lo": -54.96367018797971,
+                "ci95_hi": 422.5675530332978,
+                "p_value": 0.1606,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.8888888888888888,
+              "cov95_ARIMA-GARCH": 0.9555555555555556,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.8888888888888888,
+                "target": 0.95,
+                "coverage_gap": -0.06111111111111106,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.12999999999999995,
+                "ci95_hi": -0.0055000000000007595,
+                "p_value": 0.033,
+                "significant_at_05": true
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9555555555555556,
+                "target": 0.95,
+                "coverage_gap": 0.0055555555555556,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.03888888888888885,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.783,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.06666666666666667,
+                "ci95_lo": 0.02888888888888889,
+                "ci95_hi": 0.1088888888888889,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 17.32713886271125,
+              "rmse_ARIMA-GARCH": 17.146301706004156,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 6.234078974357659,
+                "ci95_lo": -21.0130020273195,
+                "ci95_hi": 31.962948483577968,
+                "p_value": 0.5778,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 88.75846929253473,
+              "winkler_ARIMA-GARCH": 87.6051608763797,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1.1533084161550244,
+                "ci95_lo": -7.446276740450595,
+                "ci95_hi": 13.118232609577385,
+                "p_value": 0.8776,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9266666666666665,
+              "cov95_ARIMA-GARCH": 0.9888888888888889,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9266666666666665,
+                "target": 0.95,
+                "coverage_gap": -0.02333333333333329,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0833333333333333,
+                "ci95_hi": 0.025555555555555592,
+                "p_value": 0.3986,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9888888888888889,
+                "target": 0.95,
+                "coverage_gap": 0.03888888888888893,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": 0.01666666666666671,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0066,
+                "significant_at_05": true
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.06222222222222222,
+                "ci95_lo": 0.017777777777777778,
+                "ci95_hi": 0.12000000000000001,
+                "p_value": 0.0006,
+                "significant_at_05": true
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.8433850552142,
+              "rmse_ARIMA-GARCH": 1.801401517578205,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.1530210342539994,
+                "ci95_lo": 0.007668984454650814,
+                "ci95_hi": 0.3489653139481884,
+                "p_value": 0.0392,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 9.185011424594457,
+              "winkler_ARIMA-GARCH": 8.801687724193757,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.38332370040070096,
+                "ci95_lo": -0.2987778453126313,
+                "ci95_hi": 1.271731111565005,
+                "p_value": 0.3218,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.951111111111111,
+              "cov95_ARIMA-GARCH": 0.9555555555555556,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.951111111111111,
+                "target": 0.95,
+                "coverage_gap": 0.0011111111111111564,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.04111111111111107,
+                "ci95_hi": 0.03222222222222226,
+                "p_value": 0.9576,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9555555555555556,
+                "target": 0.95,
+                "coverage_gap": 0.0055555555555556,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.03888888888888885,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.7816,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.004444444444444442,
+                "ci95_lo": -0.006666666666666668,
+                "ci95_hi": 0.015555555555555552,
+                "p_value": 0.537,
+                "significant_at_05": false
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 0.9850147996237777,
+              "rmse_ARIMA-GARCH": 0.9642466536887236,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.040482546327969514,
+                "ci95_lo": 0.006125006388756424,
+                "ci95_hi": 0.08491453461426482,
+                "p_value": 0.0232,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 4.875893801371257,
+              "winkler_ARIMA-GARCH": 4.487368511925448,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.38852528944580933,
+                "ci95_lo": -0.0888877694466384,
+                "ci95_hi": 1.025520393824777,
+                "p_value": 0.1436,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9422222222222223,
+              "cov95_ARIMA-GARCH": 0.9777777777777777,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9422222222222223,
+                "target": 0.95,
+                "coverage_gap": -0.0077777777777777325,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.05888888888888886,
+                "ci95_hi": 0.03444444444444448,
+                "p_value": 0.7574,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9777777777777777,
+                "target": 0.95,
+                "coverage_gap": 0.027777777777777818,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0055555555555555115,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0988,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.035555555555555556,
+                "ci95_lo": 0.006666666666666665,
+                "ci95_hi": 0.07333333333333333,
+                "p_value": 0.008,
+                "significant_at_05": true
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0874
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.152,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0336
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4484
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5072,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5914
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.833,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.546
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0058,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0528
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5656,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5452
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0174,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2794
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.8806,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5996
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.8186,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3074
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.9324,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9734
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6552,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1996
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5916,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.8262
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.591,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.997
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1096,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5242
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4448,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1058
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0628,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2076
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2774,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5552
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1846,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.732
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1888,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.784
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6058,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1326
+              },
+              "43": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0088,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1118
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0906,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2896
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3048,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.1524
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.046,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3446
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.173366214091337,
+                "ci95_lo": -0.29296934648669576,
+                "ci95_hi": -0.04730956630939926,
+                "p_value": 0.008,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.039163359557400364,
+                "ci95_lo": -0.10687074338826862,
+                "ci95_hi": 0.016233371082981122,
+                "p_value": 0.1688,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.288347144556867,
+                "ci95_lo": -0.4619271335662621,
+                "ci95_hi": -0.15005914013985028,
+                "p_value": 0.0,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.04642331130031895,
+                "ci95_lo": -0.15569518105533395,
+                "ci95_hi": 0.0425412472076285,
+                "p_value": 0.34,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.05465652776240056,
+                "ci95_lo": -0.2802312560278182,
+                "ci95_hi": 0.18422893476351956,
+                "p_value": 0.5778,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.01434985500426642,
+                "ci95_lo": -0.16322150538644076,
+                "ci95_hi": 0.09264910413412311,
+                "p_value": 0.8776,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.10938944351366801,
+                "ci95_lo": -0.22599469015910068,
+                "ci95_hi": -0.02421848241037031,
+                "p_value": 0.0076,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.06245594539026765,
+                "ci95_lo": -0.16744194153435357,
+                "ci95_hi": 0.01858550289233458,
+                "p_value": 0.1498,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            }
+          }
+        }
+      }
+    },
+    "W+3": {
+      "per_regime": {
+        "weekly": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 10609.158718284432,
+              "rmse_ARIMA-GARCH": 10086.4289619807,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 10818199.504667547,
+                "ci95_lo": 4239306.596953385,
+                "ci95_hi": 18071187.79001863,
+                "p_value": 0.001,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 58681.4446781684,
+              "winkler_ARIMA-GARCH": 58835.03736035835,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -153.59268218994063,
+                "ci95_lo": -2365.1313566517456,
+                "ci95_hi": 2425.7171033740633,
+                "p_value": 0.7278,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9422222222222222,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9422222222222222,
+                "target": 0.95,
+                "coverage_gap": -0.007777777777777731,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06777777777777773,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.8618,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.005555555555555509,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06111111111111108,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.87,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.0022222222222222205,
+                "ci95_lo": -0.013333333333333336,
+                "ci95_hi": 0.015555555555555555,
+                "p_value": 1.0,
+                "significant_at_05": false
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 525.8293868646474,
+              "rmse_ARIMA-GARCH": 496.81403958633814,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 29672.354160355506,
+                "ci95_lo": -804.569387020559,
+                "ci95_hi": 66008.38765054212,
+                "p_value": 0.057,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 2472.6195469292534,
+              "winkler_ARIMA-GARCH": 2823.89581874289,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -351.27627181363624,
+                "ci95_lo": -1041.4978838709048,
+                "ci95_hi": 188.8314981457815,
+                "p_value": 0.2388,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9355555555555555,
+              "cov95_ARIMA-GARCH": 0.8333333333333334,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9355555555555555,
+                "target": 0.95,
+                "coverage_gap": -0.014444444444444399,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.07222222222222219,
+                "ci95_hi": 0.03000000000000004,
+                "p_value": 0.574,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.8333333333333334,
+                "target": 0.95,
+                "coverage_gap": -0.11666666666666663,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.21666666666666662,
+                "ci95_hi": -0.03888888888888885,
+                "p_value": 0.002,
+                "significant_at_05": true
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "NsDiff_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.10222222222222223,
+                "ci95_lo": -0.16444444444444445,
+                "ci95_hi": -0.04888888888888889,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 20.81649070185061,
+              "rmse_ARIMA-GARCH": 21.281275451297642,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -19.566399693770666,
+                "ci95_lo": -54.30858904818327,
+                "ci95_hi": 14.851088069267234,
+                "p_value": 0.242,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 121.01122423807777,
+              "winkler_ARIMA-GARCH": 109.35437024556167,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 11.656853992516133,
+                "ci95_lo": -13.616385753080438,
+                "ci95_hi": 47.52326344146955,
+                "p_value": 0.5136,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9199999999999999,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9199999999999999,
+                "target": 0.95,
+                "coverage_gap": -0.029999999999999964,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.10111111111111105,
+                "ci95_hi": 0.025555555555555592,
+                "p_value": 0.328,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.0055555555555555115,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.061111111111111074,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.8648,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.024444444444444446,
+                "ci95_lo": -0.006666666666666668,
+                "ci95_hi": 0.06666666666666667,
+                "p_value": 0.1652,
+                "significant_at_05": false
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 2.0725603504008685,
+              "rmse_ARIMA-GARCH": 2.0064351160483036,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.26972453114200184,
+                "ci95_lo": -0.1320525471342518,
+                "ci95_hi": 0.6476814982988486,
+                "p_value": 0.2088,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 11.828355772230358,
+              "winkler_ARIMA-GARCH": 10.493351004401474,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1.335004767828886,
+                "ci95_lo": 0.8989288244761656,
+                "ci95_hi": 1.7886717396937086,
+                "p_value": 0.0,
+                "significant_at_05": true
+              },
+              "cov95_NsDiff": 0.9866666666666666,
+              "cov95_ARIMA-GARCH": 0.9888888888888889,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9866666666666666,
+                "target": 0.95,
+                "coverage_gap": 0.0366666666666667,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": 0.010000000000000044,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0256,
+                "significant_at_05": true
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9888888888888889,
+                "target": 0.95,
+                "coverage_gap": 0.03888888888888893,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": 0.01666666666666671,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0048,
+                "significant_at_05": true
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.002222222222222222,
+                "ci95_lo": 0.0,
+                "ci95_hi": 0.006666666666666665,
+                "p_value": 0.702,
+                "significant_at_05": false
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.143202573138412,
+              "rmse_ARIMA-GARCH": 1.1348280916512217,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.01907732562953205,
+                "ci95_lo": -0.04728656004053777,
+                "ci95_hi": 0.07403180496447355,
+                "p_value": 0.7154,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 5.682794029659695,
+              "winkler_ARIMA-GARCH": 5.833893652094936,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.15109962243524008,
+                "ci95_lo": -0.46773566619735396,
+                "ci95_hi": 0.2067239148494274,
+                "p_value": 0.388,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9644444444444444,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9644444444444444,
+                "target": 0.95,
+                "coverage_gap": 0.014444444444444489,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.029999999999999954,
+                "ci95_hi": 0.043333333333333376,
+                "p_value": 0.4572,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.03888888888888885,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.4524,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.002222222222222222,
+                "ci95_lo": -0.026666666666666672,
+                "ci95_hi": 0.03333333333333333,
+                "p_value": 0.9536,
+                "significant_at_05": false
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0328,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0
+              },
+              "43": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0004,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7788
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2096,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.098,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9754
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0002,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.201
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0618,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2118
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0506,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.252
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1202,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.184
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0934,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3338
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.092,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3018
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3848,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4522
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5614,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4814
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1428,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6346
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1948,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5386
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3494,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5438
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2588,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.8594,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.052,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4086,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.1088,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5954,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0152
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 1.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9574
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4842,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2392
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7606,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.912
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5214,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4324
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.18130816056478924,
+                "ci95_lo": -0.3569578740092257,
+                "ci95_hi": -0.017970416456769226,
+                "p_value": 0.03,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.004950212112318724,
+                "ci95_lo": -0.13626239066997037,
+                "ci95_hi": 0.11630635239624783,
+                "p_value": 1.0,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.41254537756643384,
+                "ci95_lo": -0.7462276450979584,
+                "ci95_hi": -0.13522689849327663,
+                "p_value": 0.002,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.06651454881945247,
+                "ci95_lo": -0.03506850185161739,
+                "ci95_hi": 0.19547239593291824,
+                "p_value": 0.2256,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.13422795486408884,
+                "ci95_lo": -0.10188032597938078,
+                "ci95_hi": 0.3725637293309876,
+                "p_value": 0.242,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.11885794360663925,
+                "ci95_lo": -0.48456619339626933,
+                "ci95_hi": 0.13883811283944422,
+                "p_value": 0.5136,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.08563056198119315,
+                "ci95_lo": -0.21224594180026157,
+                "ci95_hi": 0.055730303534835185,
+                "p_value": 0.272,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.04648342425305691,
+                "ci95_lo": -0.09285291690046173,
+                "ci95_hi": -0.0037878886051445695,
+                "p_value": 0.0318,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              }
+            }
+          }
+        },
+        "daily": {
+          "per_cell_seed_pooled": {
+            "BTC-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 10049.079794609384,
+              "rmse_ARIMA-GARCH": 10008.581624324956,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 812298.5876514326,
+                "ci95_lo": -3443327.186715774,
+                "ci95_hi": 4452915.843018628,
+                "p_value": 0.7212,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 66272.92767382812,
+              "winkler_ARIMA-GARCH": 60864.98581979257,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 5407.941854035559,
+                "ci95_lo": -12851.571419637172,
+                "ci95_hi": 26445.31560504062,
+                "p_value": 0.7356,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.8844444444444444,
+              "cov95_ARIMA-GARCH": 0.9444444444444444,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.8844444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.06555555555555552,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.14999999999999994,
+                "ci95_hi": 0.0055555555555556,
+                "p_value": 0.0758,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9444444444444444,
+                "target": 0.95,
+                "coverage_gap": -0.005555555555555509,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06111111111111108,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.87,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.05999999999999999,
+                "ci95_lo": 0.02,
+                "ci95_hi": 0.10222222222222221,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "ETH-USD": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 502.36871200683737,
+              "rmse_ARIMA-GARCH": 492.0196561623321,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 10290.98075330911,
+                "ci95_lo": 1493.8317169145876,
+                "ci95_hi": 19502.716781037667,
+                "p_value": 0.0224,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 3363.5268129272463,
+              "winkler_ARIMA-GARCH": 2510.225559223722,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 853.301253703524,
+                "ci95_lo": 143.1616884324811,
+                "ci95_hi": 1657.2663605127677,
+                "p_value": 0.0162,
+                "significant_at_05": true
+              },
+              "cov95_NsDiff": 0.8155555555555556,
+              "cov95_ARIMA-GARCH": 0.9333333333333333,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.8155555555555556,
+                "target": 0.95,
+                "coverage_gap": -0.13444444444444442,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.22777777777777775,
+                "ci95_hi": -0.04999999999999997,
+                "p_value": 0.0006,
+                "significant_at_05": true
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9333333333333333,
+                "target": 0.95,
+                "coverage_gap": -0.01666666666666662,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0833333333333333,
+                "ci95_hi": 0.03888888888888893,
+                "p_value": 0.5888,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_covers_more",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.11777777777777777,
+                "ci95_lo": 0.05555555555555555,
+                "ci95_hi": 0.18666666666666668,
+                "p_value": 0.0,
+                "significant_at_05": true
+              }
+            },
+            "SPY": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 21.16042648673887,
+              "rmse_ARIMA-GARCH": 21.02623234884992,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 5.661202312857067,
+                "ci95_lo": -49.30054080699519,
+                "ci95_hi": 59.88945141500357,
+                "p_value": 0.821,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 105.368953125,
+              "winkler_ARIMA-GARCH": 104.3327780906208,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 1.0361750343792064,
+                "ci95_lo": -9.275974670184365,
+                "ci95_hi": 14.04604389024311,
+                "p_value": 0.8932,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9377777777777778,
+              "cov95_ARIMA-GARCH": 0.9666666666666667,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9377777777777778,
+                "target": 0.95,
+                "coverage_gap": -0.01222222222222218,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.06555555555555552,
+                "ci95_hi": 0.03000000000000004,
+                "p_value": 0.6232,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9666666666666667,
+                "target": 0.95,
+                "coverage_gap": 0.01666666666666671,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.027777777777777735,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.372,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.02888888888888889,
+                "ci95_lo": 0.0,
+                "ci95_hi": 0.06444444444444446,
+                "p_value": 0.0528,
+                "significant_at_05": false
+              }
+            },
+            "TLT": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 2.069327735803115,
+              "rmse_ARIMA-GARCH": 2.0056340808496342,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "ARIMA-GARCH_significantly_better",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.25954921189848884,
+                "ci95_lo": 0.04205134609266782,
+                "ci95_hi": 0.5559062920849492,
+                "p_value": 0.011,
+                "significant_at_05": true
+              },
+              "winkler_NsDiff": 10.354139253404405,
+              "winkler_ARIMA-GARCH": 10.352347810579014,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.0017914428253922507,
+                "ci95_lo": -0.47859398337429276,
+                "ci95_hi": 0.7016665549738645,
+                "p_value": 1.0,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9755555555555555,
+              "cov95_ARIMA-GARCH": 0.9777777777777777,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9755555555555555,
+                "target": 0.95,
+                "coverage_gap": 0.025555555555555592,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0077777777777777325,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.1138,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9777777777777777,
+                "target": 0.95,
+                "coverage_gap": 0.027777777777777818,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0055555555555555115,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0988,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.002222222222222222,
+                "ci95_lo": 0.0,
+                "ci95_hi": 0.006666666666666665,
+                "p_value": 0.71,
+                "significant_at_05": false
+              }
+            },
+            "ZN=F": {
+              "status": "tested",
+              "n": 90,
+              "rmse_NsDiff": 1.145462413598355,
+              "rmse_ARIMA-GARCH": 1.1219530202238246,
+              "rmse_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.05330556137720711,
+                "ci95_lo": -0.004767345227778684,
+                "ci95_hi": 0.11762290364794813,
+                "p_value": 0.0714,
+                "significant_at_05": false
+              },
+              "winkler_NsDiff": 5.931320940229628,
+              "winkler_ARIMA-GARCH": 5.645613144614611,
+              "winkler_test": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.2857077956150158,
+                "ci95_lo": -0.21612234228766666,
+                "ci95_hi": 0.9850693968989914,
+                "p_value": 0.3664,
+                "significant_at_05": false
+              },
+              "cov95_NsDiff": 0.9755555555555555,
+              "cov95_ARIMA-GARCH": 0.9777777777777777,
+              "coverage_gap_NsDiff": {
+                "status": "tested",
+                "coverage": 0.9755555555555555,
+                "target": 0.95,
+                "coverage_gap": 0.025555555555555592,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.009999999999999962,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.14,
+                "significant_at_05": false
+              },
+              "coverage_gap_ARIMA-GARCH": {
+                "status": "tested",
+                "coverage": 0.9777777777777777,
+                "target": 0.95,
+                "coverage_gap": 0.027777777777777818,
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "ci95_lo": -0.0055555555555555115,
+                "ci95_hi": 0.05000000000000004,
+                "p_value": 0.0988,
+                "significant_at_05": false
+              },
+              "coverage_head_to_head": {
+                "status": "tested",
+                "verdict": "indistinguishable",
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": 0.002222222222222222,
+                "ci95_lo": 0.0,
+                "ci95_hi": 0.006666666666666665,
+                "p_value": 0.7116,
+                "significant_at_05": false
+              }
+            }
+          },
+          "per_seed_verdicts": {
+            "BTC-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2842
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.0996,
+                "winkler": "indistinguishable",
+                "winkler_p": 1.0
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0034,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7068
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.11,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.9752
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3768,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7646
+              }
+            },
+            "ETH-USD": {
+              "42": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.01,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.009
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.3928,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0792
+              },
+              "44": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0376,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.016
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7162,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.0594
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.4338,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0114
+              }
+            },
+            "SPY": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 1.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3844
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6858,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.853
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.6486,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7176
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 1.0,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.7082
+              },
+              "46": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5206,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.694
+              }
+            },
+            "TLT": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5942,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.4892
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.5396,
+                "winkler": "ARIMA-GARCH_significantly_better",
+                "winkler_p": 0.0076
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.165,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.3282
+              },
+              "45": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.008,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6198
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.0072,
+                "winkler": "NsDiff_significantly_better",
+                "winkler_p": 0.0
+              }
+            },
+            "ZN=F": {
+              "42": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.7364,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2786
+              },
+              "43": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2886,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.2204
+              },
+              "44": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2082,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.5872
+              },
+              "45": {
+                "rmse": "indistinguishable",
+                "rmse_p": 0.2938,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.6064
+              },
+              "46": {
+                "rmse": "ARIMA-GARCH_significantly_better",
+                "rmse_p": 0.002,
+                "winkler": "indistinguishable",
+                "winkler_p": 0.486
+              }
+            }
+          },
+          "pooled_across_assets": {
+            "global": {
+              "status": "tested",
+              "n_origins": 95,
+              "n_contributions": 361,
+              "skill_sqerror": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.074732785354788,
+                "ci95_lo": -0.18509013974894362,
+                "ci95_hi": 0.0505468525238097,
+                "p_value": 0.2332,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 95,
+                "block_length": 3,
+                "effective_n": 31,
+                "mean_diff": -0.11367179494319665,
+                "ci95_lo": -0.23753831280179824,
+                "ci95_hi": -0.0004907761916593652,
+                "p_value": 0.0484,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              }
+            },
+            "crypto": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 180,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.08045683201774761,
+                "ci95_lo": -0.16417782050891613,
+                "ci95_hi": 0.01957331825174027,
+                "p_value": 0.1098,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.1971218720410305,
+                "ci95_lo": -0.44233262668661705,
+                "ci95_hi": 0.02791440525889559,
+                "p_value": 0.0956,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "index": {
+              "status": "tested",
+              "n_origins": 90,
+              "n_contributions": 90,
+              "skill_sqerror": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.03883655758951809,
+                "ci95_lo": -0.4108491448187813,
+                "ci95_hi": 0.33820789055655076,
+                "p_value": 0.821,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              },
+              "skill_winkler": {
+                "n": 90,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.010565254903417358,
+                "ci95_lo": -0.1432190789791764,
+                "ci95_hi": 0.09458154618332036,
+                "p_value": 0.8932,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            },
+            "bond": {
+              "status": "tested",
+              "n_origins": 91,
+              "n_contributions": 91,
+              "skill_sqerror": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.11603570638563074,
+                "ci95_lo": -0.23643371493952559,
+                "ci95_hi": -0.020531526032482428,
+                "p_value": 0.0166,
+                "significant_at_05": true,
+                "verdict": "ARIMA-GARCH_significantly_better"
+              },
+              "skill_winkler": {
+                "n": 91,
+                "block_length": 3,
+                "effective_n": 30,
+                "mean_diff": -0.02514753345776142,
+                "ci95_lo": -0.12067569550335285,
+                "ci95_hi": 0.03997694930010991,
+                "p_value": 0.589,
+                "significant_at_05": false,
+                "verdict": "indistinguishable"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

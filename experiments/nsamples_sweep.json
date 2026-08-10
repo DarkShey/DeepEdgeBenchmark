@@ -1,0 +1,747 @@
+{
+  "question": "200 tirages est-il un optimum, ou seulement un point de fonctionnement ?",
+  "config": {
+    "budgets": [
+      50,
+      100,
+      200,
+      400,
+      800
+    ],
+    "artifact": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/diffusion_multiseed_n800/NsDiff",
+    "method": "sous-echantillonnage EMBOITE : un artefact unique a 800 tirages, decoupe en 800//N blocs disjoints par nuage, metriques moyennees sur les blocs -- tous les budgets sont lus sur le MEME materiel, l'ecart entre eux ne melange pas l'effet de N avec du bruit de tirage",
+    "stop_rule": "plus petit N dont la couverture ET le Winkler sont a moins de 0.5 ecart-type bootstrap de leur valeur a 800",
+    "bootstrap": "paired_test.paired_block_bootstrap_test (block_length=3), ecart-type deduit de l'IC95 -- aucun reechantillonnage reimplemente",
+    "theoretical_bound": "couverture d'un modele PARFAIT lue sur N tirages : N=50 -> 91.27 %, N=100 -> 93.12 %, N=200 -> 94.05 %, N=400 -> 94.53 %, N=800 -> 94.76 %",
+    "elapsed_s": 59.0
+  },
+  "cells": {
+    "weekly|W+1": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.004535230728219147,
+        "winkler": 463.32655769035273
+      },
+      "stop_tolerance": {
+        "cov95": 0.0022676153641095734,
+        "winkler": 231.66327884517636,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.9371944444444444,
+          "pi_width_pct_of_price": 16.879557645553838,
+          "winkler_mean": 6344.377490524006,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.948,
+          "pi_width_pct_of_price": 17.559107183810116,
+          "winkler_mean": 6343.998644360011,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9528888888888889,
+          "pi_width_pct_of_price": 17.89225437261772,
+          "winkler_mean": 6370.552654461628,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9557777777777777,
+          "pi_width_pct_of_price": 18.093263628334604,
+          "winkler_mean": 6373.307114302612,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9582222222222222,
+          "pi_width_pct_of_price": 18.238508610015938,
+          "winkler_mean": 6388.129709576415,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 800
+    },
+    "weekly|W+2": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.00396832688719175,
+        "winkler": 672.8001714533091
+      },
+      "stop_tolerance": {
+        "cov95": 0.001984163443595875,
+        "winkler": 336.40008572665454,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.9375833333333333,
+          "pi_width_pct_of_price": 24.287664087180794,
+          "winkler_mean": 9564.41505943451,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.9514444444444444,
+          "pi_width_pct_of_price": 25.28486153979893,
+          "winkler_mean": 9415.548205088653,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9592222222222222,
+          "pi_width_pct_of_price": 25.800062362546427,
+          "winkler_mean": 9290.052054819744,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9622222222222222,
+          "pi_width_pct_of_price": 26.08342972490462,
+          "winkler_mean": 9208.096216413665,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9671111111111111,
+          "pi_width_pct_of_price": 26.212202865387628,
+          "winkler_mean": 9219.796937306213,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 800
+    },
+    "weekly|W+3": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.005215515337452029,
+        "winkler": 904.1021530382569
+      },
+      "stop_tolerance": {
+        "cov95": 0.0026077576687260147,
+        "winkler": 452.05107651912846,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.9305277777777777,
+          "pi_width_pct_of_price": 30.195336028703966,
+          "winkler_mean": 12498.097230274741,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.9427777777777778,
+          "pi_width_pct_of_price": 31.443296759636276,
+          "winkler_mean": 12223.909563107129,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.946,
+          "pi_width_pct_of_price": 31.986435004853625,
+          "winkler_mean": 12147.281153407564,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9486666666666667,
+          "pi_width_pct_of_price": 32.452541518968204,
+          "winkler_mean": 11993.784908344436,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9515555555555556,
+          "pi_width_pct_of_price": 32.637942624229574,
+          "winkler_mean": 11986.36873457133,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 800
+    },
+    "daily|W+1": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.0057824191784793975,
+        "winkler": 557.6351460718283
+      },
+      "stop_tolerance": {
+        "cov95": 0.0028912095892396988,
+        "winkler": 278.81757303591417,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.8928888888888888,
+          "pi_width_pct_of_price": 14.347112026085876,
+          "winkler_mean": 6701.282918708324,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.9053333333333333,
+          "pi_width_pct_of_price": 14.92228889791648,
+          "winkler_mean": 6535.727961135006,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9132222222222223,
+          "pi_width_pct_of_price": 15.224278998070455,
+          "winkler_mean": 6461.260089613025,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9173333333333333,
+          "pi_width_pct_of_price": 15.403718284971578,
+          "winkler_mean": 6432.217659037568,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9195555555555556,
+          "pi_width_pct_of_price": 15.511668664717597,
+          "winkler_mean": 6368.373975862968,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400
+    },
+    "daily|W+2": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.005555657642068456,
+        "winkler": 757.1126237395865
+      },
+      "stop_tolerance": {
+        "cov95": 0.002777828821034228,
+        "winkler": 378.55631186979326,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.9045555555555556,
+          "pi_width_pct_of_price": 21.564611103997265,
+          "winkler_mean": 10089.446652776807,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.9195555555555556,
+          "pi_width_pct_of_price": 22.446346943232776,
+          "winkler_mean": 9697.69156195525,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9275555555555556,
+          "pi_width_pct_of_price": 22.911653188401132,
+          "winkler_mean": 9470.71841357,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9317777777777778,
+          "pi_width_pct_of_price": 23.164230535813086,
+          "winkler_mean": 9351.595056312433,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9346666666666666,
+          "pi_width_pct_of_price": 23.297369847273533,
+          "winkler_mean": 9272.134107239957,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 800
+    },
+    "daily|W+3": {
+      "n_origins": 2250,
+      "reference_budget": 800,
+      "bootstrap_sd_at_reference": {
+        "cov95": 0.007029607628739677,
+        "winkler": 1459.266118124409
+      },
+      "stop_tolerance": {
+        "cov95": 0.0035148038143698384,
+        "winkler": 729.6330590622046,
+        "rule": "|metrique(N) - metrique(800)| <= 0.5 x ecart-type bootstrap"
+      },
+      "by_budget": {
+        "50": {
+          "n_blocks_averaged": 16,
+          "cov95": 0.8963888888888889,
+          "pi_width_pct_of_price": 23.505186484654388,
+          "winkler_mean": 14788.645861923644,
+          "theoretical_coverage_of_a_perfect_model": 0.912745,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": false,
+          "converged": false
+        },
+        "100": {
+          "n_blocks_averaged": 8,
+          "cov95": 0.9074444444444445,
+          "pi_width_pct_of_price": 24.40306934010428,
+          "winkler_mean": 14288.218861492305,
+          "theoretical_coverage_of_a_perfect_model": 0.931188,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "200": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9122222222222223,
+          "pi_width_pct_of_price": 24.88272284660625,
+          "winkler_mean": 14108.740235159452,
+          "theoretical_coverage_of_a_perfect_model": 0.940547,
+          "within_half_sd_coverage": false,
+          "within_half_sd_winkler": true,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9142222222222223,
+          "pi_width_pct_of_price": 25.21230181947945,
+          "winkler_mean": 13989.276843902882,
+          "theoretical_coverage_of_a_perfect_model": 0.945262,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        },
+        "800": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.916,
+          "pi_width_pct_of_price": 25.336673828129907,
+          "winkler_mean": 13888.529911406962,
+          "theoretical_coverage_of_a_perfect_model": 0.947628,
+          "within_half_sd_coverage": true,
+          "within_half_sd_winkler": true,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400
+    }
+  },
+  "ensemble_cells": {
+    "weekly|W+1": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.004818682648732846,
+        "winkler": 516.7778828442501
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.9557777777777778,
+          "pi_width_pct_of_price": 17.951376039734484,
+          "winkler_mean": 6339.663436489868,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.9582222222222223,
+          "pi_width_pct_of_price": 18.173869924786906,
+          "winkler_mean": 6367.999082817161,
+          "converged": true
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9611111111111111,
+          "pi_width_pct_of_price": 18.28362251316747,
+          "winkler_mean": 6369.458547883033,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9611111111111111,
+          "pi_width_pct_of_price": 18.32792809696776,
+          "winkler_mean": 6375.872361703024,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9622222222222222,
+          "pi_width_pct_of_price": 18.3491537234073,
+          "winkler_mean": 6368.383796533373,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400,
+      "production_budget": 1000,
+      "production_is_converged": true
+    },
+    "weekly|W+2": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.004251778807705449,
+        "winkler": 737.2001976041978
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.9602222222222223,
+          "pi_width_pct_of_price": 25.914316371451076,
+          "winkler_mean": 9298.568367875545,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.9644444444444444,
+          "pi_width_pct_of_price": 26.200812899060484,
+          "winkler_mean": 9263.52134114295,
+          "converged": false
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9688888888888889,
+          "pi_width_pct_of_price": 26.382965405165837,
+          "winkler_mean": 9201.327867967711,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.97,
+          "pi_width_pct_of_price": 26.444973587655667,
+          "winkler_mean": 9182.68320574527,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9688888888888889,
+          "pi_width_pct_of_price": 26.46519439092786,
+          "winkler_mean": 9184.691980841742,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 1000,
+      "production_budget": 1000,
+      "production_is_converged": true
+    },
+    "weekly|W+3": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.005669038410273941,
+        "winkler": 988.9045559740119
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.9465555555555555,
+          "pi_width_pct_of_price": 32.11542867704882,
+          "winkler_mean": 12023.837035536259,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.952,
+          "pi_width_pct_of_price": 32.49701374312068,
+          "winkler_mean": 11954.42581054238,
+          "converged": true
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9511111111111111,
+          "pi_width_pct_of_price": 32.76392131808353,
+          "winkler_mean": 12001.317725902023,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.95,
+          "pi_width_pct_of_price": 32.85584874485465,
+          "winkler_mean": 11929.647037793475,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9533333333333334,
+          "pi_width_pct_of_price": 32.90576043247954,
+          "winkler_mean": 11949.658361761305,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400,
+      "production_budget": 1000,
+      "production_is_converged": true
+    },
+    "daily|W+1": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.005952490330787625,
+        "winkler": 575.7691764405886
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.9208888888888889,
+          "pi_width_pct_of_price": 15.58417433874683,
+          "winkler_mean": 6181.68664563889,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.9251111111111111,
+          "pi_width_pct_of_price": 15.755428073645536,
+          "winkler_mean": 6172.2511034536565,
+          "converged": true
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9266666666666666,
+          "pi_width_pct_of_price": 15.859116146293276,
+          "winkler_mean": 6174.9771502041285,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9288888888888889,
+          "pi_width_pct_of_price": 15.901796381980878,
+          "winkler_mean": 6175.30486371676,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9288888888888889,
+          "pi_width_pct_of_price": 15.919870132755767,
+          "winkler_mean": 6175.681926414064,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400,
+      "production_budget": 1000,
+      "production_is_converged": true
+    },
+    "daily|W+2": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.005385586489760228,
+        "winkler": 776.3344022811765
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.9377777777777778,
+          "pi_width_pct_of_price": 23.31145563558842,
+          "winkler_mean": 9132.522116688348,
+          "converged": false
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.9422222222222222,
+          "pi_width_pct_of_price": 23.5820465217227,
+          "winkler_mean": 9025.09222153799,
+          "converged": true
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.945,
+          "pi_width_pct_of_price": 23.722559878319615,
+          "winkler_mean": 8951.713293195513,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9444444444444444,
+          "pi_width_pct_of_price": 23.774674524139684,
+          "winkler_mean": 8932.526927261353,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9444444444444444,
+          "pi_width_pct_of_price": 23.80354384068281,
+          "winkler_mean": 8913.311059146883,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 400,
+      "production_budget": 1000,
+      "production_is_converged": true
+    },
+    "daily|W+3": {
+      "n_origins": 450,
+      "reference_budget": 4000,
+      "stop_tolerance": {
+        "cov95": 0.007653201853869816,
+        "winkler": 1543.9582473868545
+      },
+      "by_budget": {
+        "200": {
+          "n_blocks_averaged": 20,
+          "cov95": 0.921888888888889,
+          "pi_width_pct_of_price": 25.38083440709717,
+          "winkler_mean": 13627.60384337525,
+          "converged": true
+        },
+        "400": {
+          "n_blocks_averaged": 10,
+          "cov95": 0.9219999999999999,
+          "pi_width_pct_of_price": 25.670917682878585,
+          "winkler_mean": 13531.550360061474,
+          "converged": true
+        },
+        "1000": {
+          "n_blocks_averaged": 4,
+          "cov95": 0.9244444444444444,
+          "pi_width_pct_of_price": 25.8112460433077,
+          "winkler_mean": 13504.472484856708,
+          "converged": true
+        },
+        "2000": {
+          "n_blocks_averaged": 2,
+          "cov95": 0.9244444444444444,
+          "pi_width_pct_of_price": 25.873079947236224,
+          "winkler_mean": 13502.773534726035,
+          "converged": true
+        },
+        "4000": {
+          "n_blocks_averaged": 1,
+          "cov95": 0.9244444444444444,
+          "pi_width_pct_of_price": 25.914516971388565,
+          "winkler_mean": 13499.946705781726,
+          "converged": true
+        }
+      },
+      "smallest_converged_budget": 200,
+      "production_budget": 1000,
+      "production_is_converged": true
+    }
+  },
+  "hypothesis_daily_converges_slower": {
+    "W+1": {
+      "daily_gain_50_to_200_points": 2.033,
+      "weekly_gain_50_to_200_points": 1.569,
+      "daily_gain_200_to_800_points": 0.633,
+      "weekly_gain_200_to_800_points": 0.533,
+      "daily_smallest_converged": 400,
+      "weekly_smallest_converged": 800,
+      "daily_converges_slower": false
+    },
+    "W+2": {
+      "daily_gain_50_to_200_points": 2.3,
+      "weekly_gain_50_to_200_points": 2.164,
+      "daily_gain_200_to_800_points": 0.711,
+      "weekly_gain_200_to_800_points": 0.789,
+      "daily_smallest_converged": 800,
+      "weekly_smallest_converged": 800,
+      "daily_converges_slower": false
+    },
+    "W+3": {
+      "daily_gain_50_to_200_points": 1.583,
+      "weekly_gain_50_to_200_points": 1.547,
+      "daily_gain_200_to_800_points": 0.378,
+      "weekly_gain_200_to_800_points": 0.556,
+      "daily_smallest_converged": 400,
+      "weekly_smallest_converged": 800,
+      "daily_converges_slower": false
+    }
+  },
+  "retained_budget_by_regime": {
+    "weekly": 800,
+    "daily": 800
+  },
+  "production_config_converged": {
+    "weekly|W+1": true,
+    "weekly|W+2": true,
+    "weekly|W+3": true,
+    "daily|W+1": true,
+    "daily|W+2": true,
+    "daily|W+3": true
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "run_id": "20260806-oos-repoint-m200",
+  "applied": true,
+  "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
+  "targets": [
+    "NsDiff"
+  ],
+  "retired_not_repointed": [
+    "TSDiff"
+  ],
+  "left_as_is": {
+    "ARIMA-GARCH": {
+      "intervals": "analytic",
+      "sampling_reference": null
+    },
+    "SARIMA": {
+      "intervals": "analytic",
+      "sampling_reference": null
+    },
+    "Naive": {
+      "intervals": "analytic",
+      "sampling_reference": null
+    },
+    "LSTM": {
+      "intervals": "analytic",
+      "sampling_reference": null
+    },
+    "Prophet": {
+      "intervals": "sampled_internally",
+      "sampling_reference": 1000
+    }
+  },
+  "per_model": {
+    "NsDiff": {
+      "n_rows": 2700,
+      "alignment_checks": {
+        "n_oos": 2700,
+        "n_v2": 2700,
+        "origins_identical": true,
+        "n_shared_origins": 2700,
+        "y_true_max_abs_rel_diff": 0.0,
+        "last_close_max_abs_rel_diff": 2.1514576717376882e-07,
+        "prices_aligned": true,
+        "targets_aligned": true,
+        "y_pred_rel_shift_median_pct": 0.26546691391456284,
+        "y_pred_rel_shift_p95_pct": 2.5519116386094267,
+        "width_ratio_v2_over_oos_median": 1.0592954939028876
+      },
+      "before": {
+        "n_rows": 2700,
+        "cov95_recomputed": 0.9088888888888889,
+        "cov95_stored_column": 0.9088888888888889,
+        "pi_width_pct_of_price": 22.143206526188663,
+        "per_cell_cov95": {
+          "daily|W+1": 0.8666666666666667,
+          "daily|W+2": 0.8911111111111111,
+          "daily|W+3": 0.8933333333333333,
+          "weekly|W+1": 0.9311111111111111,
+          "weekly|W+2": 0.9266666666666666,
+          "weekly|W+3": 0.9444444444444444
+        }
+      },
+      "expected_after": {
+        "n": 2700,
+        "cov95": 0.9314814814814815,
+        "pi_width_mean": 7300.345598788368,
+        "pi_width_pct_of_price": 23.260797196471376,
+        "winkler_mean": 10307.21601806316,
+        "rmse": 3815.2471248329716
+      },
+      "n_upserted": 2700,
+      "n_derived_nulled": 2700,
+      "after": {
+        "n_rows": 2700,
+        "cov95_recomputed": 0.9314814814814815,
+        "cov95_stored_column": 0.9314814814814815,
+        "pi_width_pct_of_price": 23.26079716323885,
+        "per_cell_cov95": {
+          "daily|W+1": 0.9088888888888889,
+          "daily|W+2": 0.9111111111111111,
+          "daily|W+3": 0.9066666666666666,
+          "weekly|W+1": 0.9555555555555556,
+          "weekly|W+2": 0.96,
+          "weekly|W+3": 0.9466666666666667
+        }
+      }
+    }
+  },
+  "backup": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db.bak_repoint_m200_2026-08-06T064808",
+  "backfill_stdout": "Rows to backfill (source='oos', y_true known, abs_error still NULL): 2700\nUpdated 2700 rows.\nRemaining unbackfilled (source='oos', y_true known): 0",
+  "elapsed_s": 0.9
+}

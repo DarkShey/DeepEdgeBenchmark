@@ -1,0 +1,581 @@
+{
+  "scope": "chantier 0a -- signal directionnel CTA de DEITA, gele point-in-time",
+  "engine": {
+    "source": "/Users/mikamoto/Documents/GitLocal/Projects/LocalProjectTimeSeries1/cta_quant_engine.py",
+    "sha256": "233373e9c26a76b46b3ded47174f3c353932bbd6ed613f2bab8f111bd67b88e2",
+    "retained": "conviction",
+    "retained_why": "porte 0-bis : moteur corrige, hierarchie non degeneree -> conviction retenue",
+    "universe_version": "v4",
+    "hull_period": 20,
+    "corr_lookback": 63,
+    "calendar": "own",
+    "calendar_note": "'deita' reproduit le ffill que compute_cta_signal applique sur un panel mixte crypto/actions ; 'own' calcule sur les jours de cotation propres. L'ecart retourne le signe sur 7,3 % des cellules (origine x actif) -- la porte est jugee sous les deux conventions.",
+    "parameters_touched": "aucun -- moteur DEITA tel quel"
+  },
+  "decision_conviction_rejetee": {
+    "mecanisme": "sous-secteur a un membre -> deux niveaux sur trois valent la serie lissee de l'actif -> conv = (2/3) smooth^2 + smooth x mkt/3, dont le terme dominant est un carre : le signe ne change plus",
+    "mesure": {
+      "SPY": {
+        "part_long_conviction": 0.5818030050083473,
+        "part_long_direction_hull": 0.6029143897996357,
+        "sous_secteur_singleton": true
+      },
+      "QQQ": {
+        "part_long_conviction": 0.5692821368948247,
+        "part_long_direction_hull": 0.5980570734669095,
+        "sous_secteur_singleton": true
+      },
+      "IWM": {
+        "part_long_conviction": 0.5676126878130217,
+        "part_long_direction_hull": 0.5525197328476017,
+        "sous_secteur_singleton": true
+      },
+      "EFA": {
+        "part_long_conviction": 0.5688647746243739,
+        "part_long_direction_hull": 0.5537340619307832,
+        "sous_secteur_singleton": true
+      },
+      "EEM": {
+        "part_long_conviction": 0.5601001669449082,
+        "part_long_direction_hull": 0.5476624165148756,
+        "sous_secteur_singleton": true
+      },
+      "ZN=F": {
+        "part_long_conviction": 0.48831385642737896,
+        "part_long_direction_hull": 0.4727272727272727,
+        "sous_secteur_singleton": true
+      },
+      "TLT": {
+        "part_long_conviction": 0.4974958263772955,
+        "part_long_direction_hull": 0.4990892531876138,
+        "sous_secteur_singleton": true
+      },
+      "GLD": {
+        "part_long_conviction": 0.5463272120200334,
+        "part_long_direction_hull": 0.5616272009714632,
+        "sous_secteur_singleton": false
+      },
+      "SI=F": {
+        "part_long_conviction": 0.5605175292153589,
+        "part_long_direction_hull": 0.5469981807155853,
+        "sous_secteur_singleton": false
+      },
+      "HG=F": {
+        "part_long_conviction": 0.5221202003338898,
+        "part_long_direction_hull": 0.5624242424242424,
+        "sous_secteur_singleton": true
+      },
+      "USO": {
+        "part_long_conviction": 0.5617696160267112,
+        "part_long_direction_hull": 0.5725561627200971,
+        "sous_secteur_singleton": true
+      },
+      "ZC=F": {
+        "part_long_conviction": 0.5296327212020033,
+        "part_long_direction_hull": 0.5424757281553398,
+        "sous_secteur_singleton": true
+      },
+      "BTC-USD": {
+        "part_long_conviction": 0.4974958263772955,
+        "part_long_direction_hull": 0.5392320534223706,
+        "sous_secteur_singleton": true
+      },
+      "ETH-USD": {
+        "part_long_conviction": 0.48747913188647746,
+        "part_long_direction_hull": 0.5488313856427379,
+        "sous_secteur_singleton": false
+      },
+      "SOL-USD": {
+        "part_long_conviction": 0.513355592654424,
+        "part_long_direction_hull": 0.5134183897932248,
+        "sous_secteur_singleton": false
+      },
+      "BNB-USD": {
+        "part_long_conviction": 0.493322203672788,
+        "part_long_direction_hull": 0.5338063439065108,
+        "sous_secteur_singleton": true
+      },
+      "LINK-USD": {
+        "part_long_conviction": 0.48080133555926546,
+        "part_long_direction_hull": 0.5354757929883138,
+        "sous_secteur_singleton": true
+      },
+      "VXX": {
+        "part_long_conviction": 0.43989983305509184,
+        "part_long_direction_hull": 0.3910139647844566,
+        "sous_secteur_singleton": true
+      }
+    },
+    "univers_elargi_ne_sauve_pas": "SPY et BTC-USD sont deja seuls dans leur sous-secteur dans l'univers de 16 actifs de DEITA ; SPY et ZN=F, les deux instruments de l'hypothese primaire, restent degeneres. Et les prix de la base DEITA s'ecartent de prices_v3 jusqu'a 2,6e-03 en log-rendement sur SPY (tolerance de gel du benchmark : 1e-5).",
+    "conservee_en": "conviction.parquet -- descriptif, jamais utilisee pour decider"
+  },
+  "universe": {
+    "assets": [
+      "SPY",
+      "QQQ",
+      "IWM",
+      "EFA",
+      "EEM",
+      "ZN=F",
+      "TLT",
+      "GLD",
+      "SI=F",
+      "HG=F",
+      "USO",
+      "ZC=F",
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "BNB-USD",
+      "LINK-USD",
+      "VXX"
+    ],
+    "note": "la direction Hull est univariee : elle ne depend d'aucun univers, seulement de la serie de l'actif. Calculee entierement sur prices_v3.",
+    "asset_map": {
+      "SPY": {
+        "sector": "Equity",
+        "subsector": "US Large-Cap"
+      },
+      "QQQ": {
+        "sector": "Equity",
+        "subsector": "US Tech Index"
+      },
+      "IWM": {
+        "sector": "Equity",
+        "subsector": "US Small-Cap"
+      },
+      "EFA": {
+        "sector": "Equity",
+        "subsector": "International Developed"
+      },
+      "EEM": {
+        "sector": "Equity",
+        "subsector": "Emerging Markets"
+      },
+      "ZN=F": {
+        "sector": "Bond",
+        "subsector": "US Treasury Future"
+      },
+      "TLT": {
+        "sector": "Bond",
+        "subsector": "US Treasury ETF"
+      },
+      "GLD": {
+        "sector": "Commodity",
+        "subsector": "Precious Metals"
+      },
+      "SI=F": {
+        "sector": "Commodity",
+        "subsector": "Precious Metals"
+      },
+      "HG=F": {
+        "sector": "Commodity",
+        "subsector": "Industrial Metals"
+      },
+      "USO": {
+        "sector": "Commodity",
+        "subsector": "Energy"
+      },
+      "ZC=F": {
+        "sector": "Commodity",
+        "subsector": "Agriculture"
+      },
+      "BTC-USD": {
+        "sector": "Crypto",
+        "subsector": "Large-Cap Crypto"
+      },
+      "ETH-USD": {
+        "sector": "Crypto",
+        "subsector": "L1 Smart Contract"
+      },
+      "SOL-USD": {
+        "sector": "Crypto",
+        "subsector": "L1 Smart Contract"
+      },
+      "BNB-USD": {
+        "sector": "Crypto",
+        "subsector": "Exchange Token"
+      },
+      "LINK-USD": {
+        "sector": "Crypto",
+        "subsector": "DeFi Oracle"
+      },
+      "VXX": {
+        "sector": "Crypto",
+        "subsector": "Volatility"
+      }
+    },
+    "prices_dir": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v4"
+  },
+  "prices": {
+    "dir": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v4",
+    "sha256": {
+      "SPY": "01b0d27a64f39839b11a315f012d6f437a45763ca51db12f578a2c1de3173c74",
+      "QQQ": "c0f47739a02d3490959ead354915c3d9d8acbb4c73163840c6c91aa217cb510b",
+      "IWM": "73d60b695c661fe6995c7ae2f42e86b1dba5d6440f3b914243a946b1709dd0e9",
+      "EFA": "6e765929f030303d8c723254fc134c0640d7d330d5b66a8f4383eb52fbb6e261",
+      "EEM": "2cbc3b2c0a2c0753775b3d08459dcba0d585f439b9dcea2d998b75f564c3b7d7",
+      "ZN=F": "e4cd2ac514997810ccc1e985939aef475fc0878052565e06b074237f97f6d4c2",
+      "TLT": "d9e651154f4f9aa925d928980b8f06adb426b72a1afdd7ea96bb2f3b37a1744e",
+      "GLD": "5d4f5f625a1a63a8557c9b58d420d6a5be5a837eef3cc07ea18850790f80687c",
+      "SI=F": "3e21025ebad7f51683326b94833156d24d3fca2c234ffc6331cce738f480e06c",
+      "HG=F": "46b158accf00d0f0bb7ed3f1c31960e310cb4d4d78de615a8049e8c3ea7b6467",
+      "USO": "7d579109528162f1baf7293d1fd9cf142ebebc7b09002913019541ce826ee690",
+      "ZC=F": "8d678601b41d42d1391f856e3d7dfe8f53ca99f4e0ec60f0ca795810e40b6cab",
+      "BTC-USD": "080e8505b106ae67a7e4717a4ebe50b18380facb94632a52ece3606a77444b95",
+      "ETH-USD": "5a28f381d0bdf87f3abba7fa0a78f8a2f842d02981268cd543e0e3f1985f7744",
+      "SOL-USD": "1a146102d18583106905c06769cfd7e2c776e4007bd4aebe4b56bb779b96d81f",
+      "BNB-USD": "cbfa06f7495ab658ad2fea32f0e665b36f13084f36581335d41b2d947cbe61db",
+      "LINK-USD": "e5f724ab5744bcd61e4b08d801e56042c688ff53ab911b8567078a6c9253e482",
+      "VXX": "ba31c38a1101831ab51404b0133ce92ba6506c53b2b489a7af3dd07d449fb09d"
+    },
+    "span": "2011-05-02 -> 2026-07-23"
+  },
+  "signal_sha256": {
+    "SPY": "6ee8767c828e87e3e4caf8c4e07af0d03a8529ef63c3f87df69891b521672b9d",
+    "QQQ": "a90e7b065f3d04a8d1d18fa74e1f134e9bdfb829584202ce35f8cf8d28fd316a",
+    "IWM": "a2c6eaefbf9a1fdb1a4be024d20b76a26eaf8871d87b70be8e7e71d65590e403",
+    "EFA": "b06034f79c5edfb3baeceb2e8abb7c4675b90940db783e826de0324730d5d1b1",
+    "EEM": "37b55377012a63547f822bd618f386423e24ab00bb5d5f4e25fe2045da851a1a",
+    "ZN=F": "c3e8655ccb8aae284db7cf05bd6106d119db6e898eee494c2a7527731fb0563d",
+    "TLT": "78bae12a1f6ef99d3dd87c50f09643760ee36b82c7d1e962ec7cfc27d2327681",
+    "GLD": "334ec7ca0b29cc46a8a478cc8e4d9b1300c03947ef222e60cf6871ec1de32a4e",
+    "SI=F": "51964e3fee581aba4dec64b3ff73bf15c6b48e746a7888b7a6c8f46a00e0aa2d",
+    "HG=F": "08e7732ee6ec8d44cff81e10128e20441079e05a3093e05cf481230aa1611b3d",
+    "USO": "f2576f79b881aee98923001b776372462768654b9add52e965ae4283e43ec720",
+    "ZC=F": "b76289da41ddfb618e930249b58ccc843bd8744692d98a0dfe02aed31d922cca",
+    "BTC-USD": "ba844e250d03d386be15a2b73694332846a50cd94dea7559f9c4a5b3fd2d6cd9",
+    "ETH-USD": "449338495067de51c03156e05c9d48658910855d93438bdc83b37e813b04e040",
+    "SOL-USD": "b6a99e4ad28bd76aa0573bfedbecd8ae0dacbb5d6511b5c8f1b9fa252c7170ec",
+    "BNB-USD": "8ebf746a7a7f5ca657832b1dea28085eafe27569d46d0f2d86152ba7e399a15d",
+    "LINK-USD": "b5e9335ce32415ed64c2e1f8f4363efc0d128622194956e6252f270a68d9c323",
+    "VXX": "d35eccbf42418fdc25e7819bcf9fced106809cfc291531e82ad482fd4555ad31"
+  },
+  "lookahead_check": {
+    "tolerance": 1e-12,
+    "n_dates": 5,
+    "max_abs_diff_overall": 0.0,
+    "per_date": {
+      "2020-01-03": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 2785
+      },
+      "2021-08-13": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 3373
+      },
+      "2023-03-31": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 3968
+      },
+      "2024-11-15": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 4563
+      },
+      "2026-07-02": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 5157
+      }
+    },
+    "passes": true
+  },
+  "descriptive": {
+    "direction_hull_retenue": {
+      "SPY": {
+        "n": 1647,
+        "share_long": 0.6029143897996357,
+        "share_short": 0.3970856102003643,
+        "share_flat": 0.0,
+        "n_sign_flips": 177,
+        "abs_mean": 0.0036855753931676776
+      },
+      "QQQ": {
+        "n": 1647,
+        "share_long": 0.5980570734669095,
+        "share_short": 0.4019429265330905,
+        "share_flat": 0.0,
+        "n_sign_flips": 173,
+        "abs_mean": 0.004799602640637344
+      },
+      "IWM": {
+        "n": 1647,
+        "share_long": 0.5525197328476017,
+        "share_short": 0.4474802671523983,
+        "share_flat": 0.0,
+        "n_sign_flips": 172,
+        "abs_mean": 0.005210590661765239
+      },
+      "EFA": {
+        "n": 1647,
+        "share_long": 0.5537340619307832,
+        "share_short": 0.44626593806921677,
+        "share_flat": 0.0,
+        "n_sign_flips": 189,
+        "abs_mean": 0.0037325491702855868
+      },
+      "EEM": {
+        "n": 1647,
+        "share_long": 0.5476624165148756,
+        "share_short": 0.4523375834851245,
+        "share_flat": 0.0,
+        "n_sign_flips": 179,
+        "abs_mean": 0.004333321361712662
+      },
+      "ZN=F": {
+        "n": 1650,
+        "share_long": 0.4727272727272727,
+        "share_short": 0.5272727272727272,
+        "share_flat": 0.0,
+        "n_sign_flips": 193,
+        "abs_mean": 0.0012153386036441735
+      },
+      "TLT": {
+        "n": 1647,
+        "share_long": 0.4990892531876138,
+        "share_short": 0.5009107468123861,
+        "share_flat": 0.0,
+        "n_sign_flips": 181,
+        "abs_mean": 0.003184852598009121
+      },
+      "GLD": {
+        "n": 1647,
+        "share_long": 0.5616272009714632,
+        "share_short": 0.4383727990285367,
+        "share_flat": 0.0,
+        "n_sign_flips": 176,
+        "abs_mean": 0.003773757488444768
+      },
+      "SI=F": {
+        "n": 1649,
+        "share_long": 0.5469981807155853,
+        "share_short": 0.4530018192844148,
+        "share_flat": 0.0,
+        "n_sign_flips": 174,
+        "abs_mean": 0.008068997940415502
+      },
+      "HG=F": {
+        "n": 1650,
+        "share_long": 0.5624242424242424,
+        "share_short": 0.43757575757575756,
+        "share_flat": 0.0,
+        "n_sign_flips": 187,
+        "abs_mean": 0.005489446985526014
+      },
+      "USO": {
+        "n": 1647,
+        "share_long": 0.5725561627200971,
+        "share_short": 0.42744383727990287,
+        "share_flat": 0.0,
+        "n_sign_flips": 181,
+        "abs_mean": 0.008657422982043495
+      },
+      "ZC=F": {
+        "n": 1648,
+        "share_long": 0.5424757281553398,
+        "share_short": 0.4575242718446602,
+        "share_flat": 0.0,
+        "n_sign_flips": 187,
+        "abs_mean": 0.0053178185298429935
+      },
+      "BTC-USD": {
+        "n": 2396,
+        "share_long": 0.5392320534223706,
+        "share_short": 0.4607679465776294,
+        "share_flat": 0.0,
+        "n_sign_flips": 259,
+        "abs_mean": 0.010087653065150793
+      },
+      "ETH-USD": {
+        "n": 2396,
+        "share_long": 0.5488313856427379,
+        "share_short": 0.4511686143572621,
+        "share_flat": 0.0,
+        "n_sign_flips": 256,
+        "abs_mean": 0.013603153632383621
+      },
+      "SOL-USD": {
+        "n": 2273,
+        "share_long": 0.5134183897932248,
+        "share_short": 0.4865816102067752,
+        "share_flat": 0.0,
+        "n_sign_flips": 238,
+        "abs_mean": 0.020269664683494018
+      },
+      "BNB-USD": {
+        "n": 2396,
+        "share_long": 0.5338063439065108,
+        "share_short": 0.4661936560934892,
+        "share_flat": 0.0,
+        "n_sign_flips": 245,
+        "abs_mean": 0.012472965876518024
+      },
+      "LINK-USD": {
+        "n": 2396,
+        "share_long": 0.5354757929883138,
+        "share_short": 0.4645242070116861,
+        "share_flat": 0.0,
+        "n_sign_flips": 255,
+        "abs_mean": 0.01734319870404664
+      },
+      "VXX": {
+        "n": 1647,
+        "share_long": 0.3910139647844566,
+        "share_short": 0.6089860352155434,
+        "share_flat": 0.0,
+        "n_sign_flips": 180,
+        "abs_mean": 0.013697456955696507
+      }
+    },
+    "conviction_descriptive": {
+      "SPY": {
+        "n": 2396,
+        "share_long": 0.5818030050083473,
+        "share_short": 0.41819699499165275,
+        "share_flat": 0.0,
+        "n_sign_flips": 290,
+        "abs_mean": 0.08645671731324762
+      },
+      "QQQ": {
+        "n": 2396,
+        "share_long": 0.5692821368948247,
+        "share_short": 0.4307178631051753,
+        "share_flat": 0.0,
+        "n_sign_flips": 330,
+        "abs_mean": 0.10644313325070219
+      },
+      "IWM": {
+        "n": 2396,
+        "share_long": 0.5676126878130217,
+        "share_short": 0.4323873121869783,
+        "share_flat": 0.0,
+        "n_sign_flips": 317,
+        "abs_mean": 0.10772595730693955
+      },
+      "EFA": {
+        "n": 2396,
+        "share_long": 0.5688647746243739,
+        "share_short": 0.43113522537562604,
+        "share_flat": 0.0,
+        "n_sign_flips": 339,
+        "abs_mean": 0.08039271263101064
+      },
+      "EEM": {
+        "n": 2396,
+        "share_long": 0.5601001669449082,
+        "share_short": 0.43989983305509184,
+        "share_flat": 0.0,
+        "n_sign_flips": 320,
+        "abs_mean": 0.0936385804588038
+      },
+      "ZN=F": {
+        "n": 2396,
+        "share_long": 0.48831385642737896,
+        "share_short": 0.511686143572621,
+        "share_flat": 0.0,
+        "n_sign_flips": 362,
+        "abs_mean": 0.015545334694928001
+      },
+      "TLT": {
+        "n": 2396,
+        "share_long": 0.4974958263772955,
+        "share_short": 0.5025041736227045,
+        "share_flat": 0.0,
+        "n_sign_flips": 363,
+        "abs_mean": 0.04026696099738678
+      },
+      "GLD": {
+        "n": 2396,
+        "share_long": 0.5463272120200334,
+        "share_short": 0.45367278797996663,
+        "share_flat": 0.0,
+        "n_sign_flips": 306,
+        "abs_mean": 0.09947291590634952
+      },
+      "SI=F": {
+        "n": 2396,
+        "share_long": 0.5605175292153589,
+        "share_short": 0.4394824707846411,
+        "share_flat": 0.0,
+        "n_sign_flips": 274,
+        "abs_mean": 0.19992041984714062
+      },
+      "HG=F": {
+        "n": 2396,
+        "share_long": 0.5221202003338898,
+        "share_short": 0.47787979966611016,
+        "share_flat": 0.0,
+        "n_sign_flips": 412,
+        "abs_mean": 0.10821242397507734
+      },
+      "USO": {
+        "n": 2396,
+        "share_long": 0.5617696160267112,
+        "share_short": 0.43823038397328884,
+        "share_flat": 0.0,
+        "n_sign_flips": 409,
+        "abs_mean": 0.1670499360420847
+      },
+      "ZC=F": {
+        "n": 2396,
+        "share_long": 0.5296327212020033,
+        "share_short": 0.47036727879799667,
+        "share_flat": 0.0,
+        "n_sign_flips": 438,
+        "abs_mean": 0.09428705553850786
+      },
+      "BTC-USD": {
+        "n": 2396,
+        "share_long": 0.4974958263772955,
+        "share_short": 0.4511686143572621,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 481,
+        "abs_mean": 0.19377888967347542
+      },
+      "ETH-USD": {
+        "n": 2396,
+        "share_long": 0.48747913188647746,
+        "share_short": 0.4611853088480801,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 343,
+        "abs_mean": 0.40367157550619626
+      },
+      "SOL-USD": {
+        "n": 2396,
+        "share_long": 0.513355592654424,
+        "share_short": 0.43530884808013354,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 347,
+        "abs_mean": 0.5687333945509905
+      },
+      "BNB-USD": {
+        "n": 2396,
+        "share_long": 0.493322203672788,
+        "share_short": 0.45534223706176963,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 486,
+        "abs_mean": 0.23293756027022336
+      },
+      "LINK-USD": {
+        "n": 2396,
+        "share_long": 0.48080133555926546,
+        "share_short": 0.46786310517529217,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 478,
+        "abs_mean": 0.328865533198452
+      },
+      "VXX": {
+        "n": 2396,
+        "share_long": 0.43989983305509184,
+        "share_short": 0.5087646076794657,
+        "share_flat": 0.05133555926544241,
+        "n_sign_flips": 532,
+        "abs_mean": 0.26443077651826224
+      }
+    }
+  }
+}

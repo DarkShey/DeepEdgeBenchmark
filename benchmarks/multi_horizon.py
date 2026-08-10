@@ -95,7 +95,7 @@ def fit_arima(train: pd.Series, dist: str = None):
 
 
 def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons: list,
-                               dist: str = None) -> dict:
+                               dist: str = None, level: float = 0.95) -> dict:
     """Multi-step via ARIMA.forecast(steps=h) (retours cumulés) + variance GARCH
     cumulée (somme des variances par pas, hypothèse d'indépendance approx.),
     à partir d'objets déjà fittés (aucun nouveau fit ici).
@@ -106,7 +106,18 @@ def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons
     code (aucun passage par les quantiles de la loi, donc aucun risque de dérive
     numérique 1.96 vs norm.ppf(0.975)=1.959964) ; toute autre valeur -> quantiles de
     la loi réellement ajustée (`arima_model._dist_shape`/`_std_quantiles`), donc bande
-    asymétrique pour skew-t/GED."""
+    asymétrique pour skew-t/GED.
+
+    `level` (défaut 0.95 = comportement historique, bit-for-bit pour tous les
+    appelants existants) : niveau de couverture nominal de la bande. Ajouté
+    (opt-in) pour le chantier 1.3 du BRIEF edge/frais, qui a besoin de la bande
+    à 80 % du modèle -- la RECONSTRUIRE à partir de la bande à 95 % supposerait
+    une loi d'innovation gaussienne, alors que le GARCH est ajusté en skew-t et
+    expose son propre `ppf`. On demande donc la bande au niveau voulu au modèle
+    lui-même, plutôt que de l'inventer à partir de sa sortie.
+    `level=0.95` conserve le raccourci `Z_95` du chemin `dist="normal"` ; tout
+    autre niveau passe par les quantiles de la loi ajustée, y compris en normal
+    (aucun raccourci codé en dur n'existe pour les autres niveaux)."""
     dist = arima_model.GARCH_DIST if dist is None else dist
     max_h = max(horizons)
     mean_fc = np.asarray(arima_res.forecast(steps=max_h), dtype=float) / 100.0
@@ -116,11 +127,11 @@ def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons
     cum_return = np.cumsum(mean_fc)
     cum_sigma = np.sqrt(np.cumsum(var_per_step))
 
-    if dist == "normal":
+    if dist == "normal" and level == 0.95:
         q_lo, q_hi = -arima_model.Z_95, arima_model.Z_95
     else:
         dist_obj, shape = arima_model._dist_shape(garch_res)
-        q_lo, q_hi = arima_model._std_quantiles(dist_obj, shape, (0.95,))[0.95]
+        q_lo, q_hi = arima_model._std_quantiles(dist_obj, shape, (level,))[level]
 
     results = {}
     for h in horizons:
@@ -132,15 +143,19 @@ def forecast_from_fitted_arima(arima_res, garch_res, last_price: float, horizons
     return results
 
 
-def forecast_horizons_arima(train: pd.Series, horizons: list, dist: str = None) -> dict:
+def forecast_horizons_arima(train: pd.Series, horizons: list, dist: str = None,
+                            level: float = 0.95) -> dict:
     """Fit once (fit_arima) puis forecast (forecast_from_fitted_arima) — inchangé
     pour les appelants existants, juste réorganisé en 2 fonctions réutilisables.
     Résout `dist` une seule fois ici pour garantir que fit et forecast utilisent
-    exactement la même loi (cf. docstring de forecast_from_fitted_arima)."""
+    exactement la même loi (cf. docstring de forecast_from_fitted_arima).
+
+    `level` : cf. `forecast_from_fitted_arima` -- opt-in, défaut 0.95."""
     dist = arima_model.GARCH_DIST if dist is None else dist
     arima_res, garch_res = fit_arima(train, dist=dist)
     last_price = train.astype(float).values[-1]
-    return forecast_from_fitted_arima(arima_res, garch_res, last_price, horizons, dist=dist)
+    return forecast_from_fitted_arima(arima_res, garch_res, last_price, horizons,
+                                      dist=dist, level=level)
 
 
 # ── SARIMA ────────────────────────────────────────────────────────────────────

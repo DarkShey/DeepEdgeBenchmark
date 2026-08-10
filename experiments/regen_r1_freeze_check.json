@@ -1,0 +1,234 @@
+{
+  "scope": "chantier R1 -- gel des donnees verifie hors ligne avant la phase W",
+  "read_only": true,
+  "network": "aucun appel",
+  "origin_start": "2020-01-01",
+  "prices": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3",
+  "panel_unbalanced": {
+    "declared": true,
+    "rule": "chaque actif a son historique maximal propre, aucune troncature au plus court",
+    "starts": {
+      "SPY": "2011-05-02",
+      "ZN=F": "2011-05-02",
+      "TLT": "2011-05-02",
+      "BTC-USD": "2014-09-17",
+      "ETH-USD": "2017-11-09",
+      "GLD": "2011-05-02",
+      "USO": "2011-05-02"
+    }
+  },
+  "source": "yfinance, source unique pour les sept actifs",
+  "blocking_criterion": {
+    "brief_says": "~2e-7 relatif sur les prix",
+    "retained": {
+      "logret_tolerance": 1e-05,
+      "price_ratio_dispersion_tolerance": 0.0001
+    },
+    "why": "le critere du brief bloque sur un changement de base d'ajustement de dividendes (TLT, ratio CONSTANT 0.99598782), qui ne deplace aucun log-rendement donc aucun modele. Le critere retenu porte sur les log-rendements et sur la DISPERSION du ratio -- une revision d'historique reste bloquante, un changement de base ne l'est plus."
+  },
+  "per_asset": {
+    "SPY": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/SPY.parquet",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2905,
+        "span_common": "2015-01-02 -> 2026-07-23",
+        "logret_max_abs_diff": 1.1245621500677316e-06,
+        "logret_median_abs_diff": 1.1962863766257215e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 1.3838946334443492e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 924,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ZN=F": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/ZN_F.parquet",
+      "counts": {
+        "n_daily": 3828,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2133,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2905,
+        "span_common": "2015-01-02 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 923,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "TLT": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/TLT.parquet",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2121,
+        "span_common": "2018-02-13 -> 2026-07-23",
+        "logret_max_abs_diff": 1.8964537931154268e-06,
+        "logret_median_abs_diff": 3.857565786802297e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 0.9959878214766184,
+        "price_ratio_dispersion": 2.5016711329151065e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 1708,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true,
+        "price_level_shift": "ratio constant 0.99598782 -- base d'ajustement de dividendes differente (ancienne serie : source offline `fetch_tlt_patched` ; nouvelle : yfinance). Sans effet sur les log-rendements, donc sans effet sur les modeles ; mais les NIVEAUX de prix ne sont pas comparables d'un jeu a l'autre."
+      }
+    },
+    "BTC-USD": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/BTC-USD.parquet",
+      "counts": {
+        "n_daily": 4328,
+        "n_weekly": 619,
+        "n_monthly": 143,
+        "span": "2014-09-17 -> 2026-07-23",
+        "n_train_weeks_before_origin": 276,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 1887,
+        "n_train_windows_weekly": 243,
+        "meets_daily_target": false
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 4222,
+        "span_common": "2015-01-01 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 106,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ETH-USD": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/ETH-USD.parquet",
+      "counts": {
+        "n_daily": 3179,
+        "n_weekly": 455,
+        "n_monthly": 105,
+        "span": "2017-11-09 -> 2026-07-23",
+        "n_train_weeks_before_origin": 112,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 738,
+        "n_train_windows_weekly": 79,
+        "meets_daily_target": false
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 3179,
+        "span_common": "2017-11-09 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "GLD": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/GLD.parquet",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "no_previous_series",
+        "asset": "GLD"
+      }
+    },
+    "USO": {
+      "status": "frozen",
+      "path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3/USO.parquet",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "no_previous_series",
+        "asset": "USO"
+      }
+    }
+  },
+  "blocking": [],
+  "gate": "PASS"
+}

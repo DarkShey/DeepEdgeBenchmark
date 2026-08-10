@@ -1,0 +1,443 @@
+{
+  "scope": "chantier C -- faisabilite du regime mensuel, avant tout benchmark",
+  "month_definition": "derniere observation hebdomadaire (grille W-FRI) de chaque mois calendaire -- la grille mensuelle est incluse dans l'hebdomadaire, donc les trois voies partagent origines et cibles",
+  "inventory": {
+    "SPY": {
+      "n_daily": 3829,
+      "n_weekly": 795,
+      "n_monthly": 183,
+      "monthly_span": "2011-05-27 -> 2026-07-24",
+      "n_train_months_before_test": 147,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 132,
+          "weekly_equivalent": 624,
+          "ratio_weekly_over_monthly": 5.8
+        },
+        "30": {
+          "monthly": 114,
+          "weekly_equivalent": 606,
+          "ratio_weekly_over_monthly": 6.6
+        }
+      }
+    },
+    "ZN=F": {
+      "n_daily": 3828,
+      "n_weekly": 795,
+      "n_monthly": 183,
+      "monthly_span": "2011-05-27 -> 2026-07-24",
+      "n_train_months_before_test": 147,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 132,
+          "weekly_equivalent": 624,
+          "ratio_weekly_over_monthly": 5.8
+        },
+        "30": {
+          "monthly": 114,
+          "weekly_equivalent": 606,
+          "ratio_weekly_over_monthly": 6.6
+        }
+      }
+    },
+    "TLT": {
+      "n_daily": 3829,
+      "n_weekly": 795,
+      "n_monthly": 183,
+      "monthly_span": "2011-05-27 -> 2026-07-24",
+      "n_train_months_before_test": 147,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 132,
+          "weekly_equivalent": 624,
+          "ratio_weekly_over_monthly": 5.8
+        },
+        "30": {
+          "monthly": 114,
+          "weekly_equivalent": 606,
+          "ratio_weekly_over_monthly": 6.6
+        }
+      }
+    },
+    "BTC-USD": {
+      "n_daily": 4328,
+      "n_weekly": 619,
+      "n_monthly": 143,
+      "monthly_span": "2014-09-26 -> 2026-07-24",
+      "n_train_months_before_test": 107,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 92,
+          "weekly_equivalent": 448,
+          "ratio_weekly_over_monthly": 6.4
+        },
+        "30": {
+          "monthly": 74,
+          "weekly_equivalent": 430,
+          "ratio_weekly_over_monthly": 7.8
+        }
+      }
+    },
+    "ETH-USD": {
+      "n_daily": 3179,
+      "n_weekly": 455,
+      "n_monthly": 105,
+      "monthly_span": "2017-11-24 -> 2026-07-24",
+      "n_train_months_before_test": 69,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 54,
+          "weekly_equivalent": 284,
+          "ratio_weekly_over_monthly": 7.9
+        },
+        "30": {
+          "monthly": 36,
+          "weekly_equivalent": 266,
+          "ratio_weekly_over_monthly": 11.4
+        }
+      }
+    },
+    "GLD": {
+      "n_daily": 3829,
+      "n_weekly": 795,
+      "n_monthly": 183,
+      "monthly_span": "2011-05-27 -> 2026-07-24",
+      "n_train_months_before_test": 147,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 132,
+          "weekly_equivalent": 624,
+          "ratio_weekly_over_monthly": 5.8
+        },
+        "30": {
+          "monthly": 114,
+          "weekly_equivalent": 606,
+          "ratio_weekly_over_monthly": 6.6
+        }
+      }
+    },
+    "USO": {
+      "n_daily": 3829,
+      "n_weekly": 795,
+      "n_monthly": 183,
+      "monthly_span": "2011-05-27 -> 2026-07-24",
+      "n_train_months_before_test": 147,
+      "training_windows_by_seq_len": {
+        "12": {
+          "monthly": 132,
+          "weekly_equivalent": 624,
+          "ratio_weekly_over_monthly": 5.8
+        },
+        "30": {
+          "monthly": 114,
+          "weekly_equivalent": 606,
+          "ratio_weekly_over_monthly": 6.6
+        }
+      }
+    }
+  },
+  "protocol": {
+    "pilot": "SPY",
+    "n_test_origins": 36,
+    "n_val_origins": 12,
+    "horizons": [
+      "M+1",
+      "M+2",
+      "M+3"
+    ],
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "n_samples": 200,
+    "block_length": 3,
+    "effective_n": 12,
+    "hyperparameter_selection": "seq_len et epoques par argmin CRPS sur un bloc de validation STRICTEMENT anterieur a la grille de test",
+    "synthetic_augmentation": {
+      "generator": "kernelsynth.py (recette Chronos : composition aleatoire de noyaux GP, tirage dans le prior)",
+      "pool": 200,
+      "series_length": 160,
+      "ratio_synthetic_over_real_windows": 5,
+      "caveat": "une serie KernelSynth n'a ni queues lourdes ni clustering de volatilite : elle apporte de la diversite de FORMES, pas du realisme stylise"
+    },
+    "go_no_go": {
+      "coverage_band": [
+        0.9,
+        0.98
+      ],
+      "winkler": "non significativement pire que garch_monthly (bootstrap par blocs, 5 %)",
+      "declared": "avant tout resultat"
+    }
+  },
+  "sweeps": {
+    "monthly_native": {
+      "records": [
+        {
+          "seq_len": 12,
+          "epochs": 20,
+          "n": 36,
+          "cov95": 1.0,
+          "pi_width_pct_of_price": 97.54683696634407,
+          "winkler_mean": 370.37604423522953,
+          "rmse": 49.383420293960576,
+          "crps_mean": 34.28559826874733
+        },
+        {
+          "seq_len": 12,
+          "epochs": 40,
+          "n": 36,
+          "cov95": 1.0,
+          "pi_width_pct_of_price": 71.95463926387569,
+          "winkler_mean": 273.20696848975297,
+          "rmse": 26.544371706532356,
+          "crps_mean": 19.999129220938155
+        },
+        {
+          "seq_len": 12,
+          "epochs": 80,
+          "n": 36,
+          "cov95": 0.9722222222222222,
+          "pi_width_pct_of_price": 37.80729516626689,
+          "winkler_mean": 145.6311089155409,
+          "rmse": 21.95406168410353,
+          "crps_mean": 14.165788596405454
+        },
+        {
+          "seq_len": 12,
+          "epochs": 160,
+          "n": 36,
+          "cov95": 0.9444444444444444,
+          "pi_width_pct_of_price": 27.415126242817255,
+          "winkler_mean": 133.94266630384652,
+          "rmse": 21.26378655398813,
+          "crps_mean": 12.514196410658094
+        },
+        {
+          "seq_len": 12,
+          "epochs": 320,
+          "n": 36,
+          "cov95": 0.9722222222222222,
+          "pi_width_pct_of_price": 36.27018905496557,
+          "winkler_mean": 147.1635144848294,
+          "rmse": 22.350058481626128,
+          "crps_mean": 13.9766324664349
+        },
+        {
+          "seq_len": 12,
+          "epochs": 640,
+          "n": 36,
+          "cov95": 0.9722222222222222,
+          "pi_width_pct_of_price": 34.34445226426701,
+          "winkler_mean": 133.65302800920273,
+          "rmse": 23.132306509622495,
+          "crps_mean": 14.873695465918647
+        },
+        {
+          "seq_len": 30,
+          "epochs": 20,
+          "n": 36,
+          "cov95": 1.0,
+          "pi_width_pct_of_price": 80.10454861577931,
+          "winkler_mean": 304.2365899997287,
+          "rmse": 28.288293230061,
+          "crps_mean": 22.008564356091817
+        },
+        {
+          "seq_len": 30,
+          "epochs": 40,
+          "n": 36,
+          "cov95": 1.0,
+          "pi_width_pct_of_price": 57.880401065895846,
+          "winkler_mean": 219.7654203054641,
+          "rmse": 22.91717930357512,
+          "crps_mean": 17.186286313559215
+        },
+        {
+          "seq_len": 30,
+          "epochs": 80,
+          "n": 36,
+          "cov95": 0.9444444444444444,
+          "pi_width_pct_of_price": 29.381934526204063,
+          "winkler_mean": 136.2600754589505,
+          "rmse": 21.91972241789328,
+          "crps_mean": 13.121258094291688
+        },
+        {
+          "seq_len": 30,
+          "epochs": 160,
+          "n": 36,
+          "cov95": 0.8888888888888888,
+          "pi_width_pct_of_price": 26.37095115165204,
+          "winkler_mean": 153.42885115305583,
+          "rmse": 21.366105186628655,
+          "crps_mean": 13.133786200642055
+        },
+        {
+          "seq_len": 30,
+          "epochs": 320,
+          "n": 36,
+          "cov95": 0.9166666666666666,
+          "pi_width_pct_of_price": 32.47994382674121,
+          "winkler_mean": 163.78590134938557,
+          "rmse": 24.989015648887214,
+          "crps_mean": 15.81028005545934
+        },
+        {
+          "seq_len": 30,
+          "epochs": 640,
+          "n": 36,
+          "cov95": 0.8888888888888888,
+          "pi_width_pct_of_price": 34.76485722340688,
+          "winkler_mean": 181.31549306657587,
+          "rmse": 29.93836055020684,
+          "crps_mean": 19.60693130619049
+        }
+      ],
+      "selected": {
+        "seq_len": 12,
+        "epochs": 160
+      },
+      "criterion": "argmin CRPS sur le bloc de validation (12 origines strictement anterieures a la premiere origine de test)"
+    }
+  },
+  "results": {
+    "garch_monthly": {
+      "n": 108,
+      "cov95": 0.9259259259259259,
+      "pi_width_pct_of_price": 21.573391809753026,
+      "winkler_mean": 140.62036533586675,
+      "rmse": 30.416994489235087,
+      "crps_mean": null
+    },
+    "monthly_native": {
+      "n": 108,
+      "cov95": 0.8518518518518519,
+      "pi_width_pct_of_price": 20.293163220888996,
+      "winkler_mean": 174.35709175392438,
+      "rmse": 31.201300560422048,
+      "crps_mean": 17.66541051018185
+    }
+  },
+  "per_horizon": {
+    "garch_monthly": {
+      "M+1": {
+        "n": 36,
+        "cov95": 0.8888888888888888,
+        "pi_width_pct_of_price": 15.35594879090681,
+        "winkler_mean": 118.1123821334839,
+        "rmse": 23.35521630077747,
+        "crps_mean": null
+      },
+      "M+2": {
+        "n": 36,
+        "cov95": 0.9166666666666666,
+        "pi_width_pct_of_price": 21.998187797669615,
+        "winkler_mean": 146.31591730214635,
+        "rmse": 32.01100682984031,
+        "crps_mean": null
+      },
+      "M+3": {
+        "n": 36,
+        "cov95": 0.9722222222222222,
+        "pi_width_pct_of_price": 27.366038840682666,
+        "winkler_mean": 157.43279657197002,
+        "rmse": 34.719014596590846,
+        "crps_mean": null
+      }
+    },
+    "monthly_native": {
+      "M+1": {
+        "n": 36,
+        "cov95": 0.8888888888888888,
+        "pi_width_pct_of_price": 14.324766893000618,
+        "winkler_mean": 139.76318678961857,
+        "rmse": 23.59004336062347,
+        "crps_mean": 13.25878835688273
+      },
+      "M+2": {
+        "n": 36,
+        "cov95": 0.8055555555555556,
+        "pi_width_pct_of_price": 20.717664543293406,
+        "winkler_mean": 206.47991105397554,
+        "rmse": 32.98275159459879,
+        "crps_mean": 18.635451911154853
+      },
+      "M+3": {
+        "n": 36,
+        "cov95": 0.8611111111111112,
+        "pi_width_pct_of_price": 25.83705822637298,
+        "winkler_mean": 176.8281774181789,
+        "rmse": 35.72410140896864,
+        "crps_mean": 21.10199126250797
+      }
+    }
+  },
+  "go_no_go": {
+    "monthly_native": {
+      "per_horizon": {
+        "M+1": {
+          "cov95": 0.8888888888888888,
+          "coverage_in_band": false,
+          "winkler_voie": 139.76318678961857,
+          "winkler_garch": 118.1123821334839,
+          "winkler_test_vs_garch": {
+            "n": 36,
+            "block_length": 3,
+            "effective_n": 12,
+            "mean_diff": 21.650804656134678,
+            "ci95_lo": -13.558385245480252,
+            "ci95_hi": 64.20121985839398,
+            "p_value": 0.3146,
+            "significant_at_05": false,
+            "voie_significantly_worse": false
+          },
+          "winkler_not_worse": true
+        },
+        "M+2": {
+          "cov95": 0.8055555555555556,
+          "coverage_in_band": false,
+          "winkler_voie": 206.47991105397554,
+          "winkler_garch": 146.31591730214635,
+          "winkler_test_vs_garch": {
+            "n": 36,
+            "block_length": 3,
+            "effective_n": 12,
+            "mean_diff": 60.16399375182914,
+            "ci95_lo": -1.2182057925798404,
+            "ci95_hi": 129.747036571167,
+            "p_value": 0.0632,
+            "significant_at_05": false,
+            "voie_significantly_worse": false
+          },
+          "winkler_not_worse": true
+        },
+        "M+3": {
+          "cov95": 0.8611111111111112,
+          "coverage_in_band": false,
+          "winkler_voie": 176.8281774181789,
+          "winkler_garch": 157.43279657197002,
+          "winkler_test_vs_garch": {
+            "n": 36,
+            "block_length": 3,
+            "effective_n": 12,
+            "mean_diff": 19.3953808462089,
+            "ci95_lo": -5.305035229617673,
+            "ci95_hi": 53.98594591621808,
+            "p_value": 0.1228,
+            "significant_at_05": false,
+            "voie_significantly_worse": false
+          },
+          "winkler_not_worse": true
+        }
+      },
+      "criterion_coverage": false,
+      "criterion_winkler": true,
+      "verdict": "NO-GO"
+    }
+  },
+  "overall": "NO-GO",
+  "elapsed_min": 4.9
+}

@@ -85,6 +85,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -205,23 +206,74 @@ def fetch_verified(ticker: str, origins_c: pd.DataFrame, origins_b: pd.DataFrame
     return None
 
 
-# ── 3. NsDiff generation (train-once-forward, mirrors weekly_headtohead_v2) ──
+# ── 3. diffusion generation (train-once-forward, mirrors weekly_headtohead_v2) ──
 
-def _standardized_returns(prices: pd.Series, mu: float, sd: float) -> np.ndarray:
-    r = nm._log_returns(prices.values.astype(float))
+class DiffusionEngine(NamedTuple):
+    """Ce qui distingue NsDiff de TSDiff dans la boucle de generation -- rien
+    d'autre. Les deux modules exposent la meme API (`set_seed`,
+    `_log_returns`, `forecast_from_fitted`) ; seuls le nom du fit et le
+    traitement de `k_denoise` different (fit-time pour NsDiff, sampling-time
+    pour TSDiff). Parametrer ce triplet est ce qui permet de generer les deux
+    modeles par LA MEME boucle, au meme grain d'origines et avec la meme
+    lecture des quantiles -- condition d'un match a budget egal (un duel dont
+    les deux bras passent par deux codes differents n'en est pas un)."""
+    name: str                # valeur du champ `model` des lignes produites
+    module: object           # nsdiff_model / tsdiff_model
+    fit: object              # (train, horizon, epochs, k_denoise) -> (model, mu, sd)
+    forecast: object         # (model, hist_z, mu, sd, last_price, horizons, n_samples, k_denoise) -> {h: samples}
+
+
+def nsdiff_engine() -> DiffusionEngine:
+    """Moteur par defaut -- reproduit exactement les appels d'origine (en
+    particulier `forecast_from_fitted` SANS `k_denoise`, que NsDiff absorbe
+    dans `**_ignored` : il est fit-time pour lui, pas sampling-time)."""
+    return DiffusionEngine(
+        "NsDiff", nm,
+        lambda train, horizon, epochs, k: nm.fit_nsdiff(train, horizon=horizon, epochs=epochs, k_denoise=k),
+        lambda model, hist, mu, sd, last_price, horizons, n_samples, k: nm.forecast_from_fitted(
+            model, hist, mu, sd, last_price, horizons=horizons, n_samples=n_samples),
+    )
+
+
+def _standardized_returns(prices: pd.Series, mu: float, sd: float, module=nm) -> np.ndarray:
+    r = module._log_returns(prices.values.astype(float))
     return (r - mu) / sd
 
 
 def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekly_dates: pd.Series,
                           origins_c: pd.DataFrame, origins_b: pd.DataFrame, epochs: int, seed: int,
-                          n_samples: int, k_denoise: int, collect_samples: bool = False) -> tuple:
+                          n_samples: int, k_denoise: int, collect_samples: bool = False,
+                          engine: DiffusionEngine = None, epochs_daily: int = None) -> tuple:
     """`collect_samples=True` (additive, default False -> bit-for-bit unchanged
     behaviour for every existing caller) stashes the raw sample cloud used for
     each row's point/quantiles under row["_samples"] (list[float], length
-    n_samples), on top of the already-computed y_pred/y_lower/y_upper -- needed
-    by the multi-seed ENSEMBLE (BRIEF_dashboard_multiseed_200.md §4): concatenate
-    the 5 seeds' clouds into 1 of 5*n_samples before reading quantiles, instead
-    of averaging 5 already-quantiled bounds."""
+    n_samples), on top of the already-computed y_pred/y_lower/y_upper. The
+    leading underscore is the convention the whole oos/DB path relies on:
+    `insert_oos_predictions` never sees the key because the ensemble scripts
+    strip `k != "_samples"` before inserting. Needed by the multi-seed ENSEMBLE
+    (BRIEF_dashboard_multiseed_200.md §4) and by any consumer that must
+    recompute quantiles at other levels or warp the cloud (conformal
+    recalibration) rather than re-fit: concatenate the 5 seeds' clouds into 1
+    of 5*n_samples before reading quantiles, instead of averaging 5
+    already-quantiled bounds.
+
+    `engine=None` -> `nsdiff_engine()`, i.e. the original NsDiff code path,
+    call for call. Passing another `DiffusionEngine` (e.g. TSDiff) runs the
+    SAME loop, same origins, same quantile reading, only swapping the model --
+    see the class docstring.
+
+    `epochs_daily=None` -> `epochs`, i.e. le meme budget pour les deux regimes
+    (comportement d'origine). Le dissocier est necessaire des lors que le
+    modele est sensible au sur-entrainement : la serie QUOTIDIENNE compte ~5x
+    plus d'observations que l'hebdomadaire, donc a nombre d'epoques egal elle
+    subit ~5x plus de pas de gradient. Mesure sur TSDiff-D/SPY : la largeur du
+    PI a 95% s'effondre de 12.4% du prix a 10 epoques, a 3.4% a 20, 0.46% a 40
+    et 0.12% a 80 -- au-dela de ~20 l'echantillonneur perd sa variance et la
+    couverture tombe a quelques pour cent. NsDiff ne montre pas cette
+    fragilite, mais la reutilisation aveugle du budget hebdomadaire cote daily
+    n'est donc PAS une convention sure en general."""
+    engine = engine or nsdiff_engine()
+    epochs_daily = epochs if epochs_daily is None else epochs_daily
     sym_diff = set(origins_c["cutoff_date"]) ^ set(origins_b["cutoff_date"])
     if sym_diff:
         raise SystemExit(f"[{asset}] regime B/C cutoff sets differ ({len(sym_diff)} dates not shared) -- "
@@ -245,17 +297,18 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
          f"{len(cutoffs)} origins {cutoffs[0]} -> {cutoffs[-1]}")
 
     t0 = time.time()
-    nm.set_seed(seed)
-    model_w, mu_w, sd_w = nm.fit_nsdiff(train_weekly, horizon=HORIZON_WEEKLY, epochs=epochs, k_denoise=k_denoise)
-    print(f"[{asset}] NsDiff-W (regime C) fitted in {time.time() - t0:.0f}s (mu={mu_w:.6f}, sd={sd_w:.6f})")
+    engine.module.set_seed(seed)
+    model_w, mu_w, sd_w = engine.fit(train_weekly, HORIZON_WEEKLY, epochs, k_denoise)
+    print(f"[{asset}] {engine.name}-W (regime C) fitted in {time.time() - t0:.0f}s (mu={mu_w:.6f}, sd={sd_w:.6f})")
 
     t0 = time.time()
-    nm.set_seed(seed)
-    model_d, mu_d, sd_d = nm.fit_nsdiff(train_daily, horizon=HORIZON_DAILY, epochs=epochs, k_denoise=k_denoise)
-    print(f"[{asset}] NsDiff-D (regime B) fitted in {time.time() - t0:.0f}s (mu={mu_d:.6f}, sd={sd_d:.6f})")
+    engine.module.set_seed(seed)
+    model_d, mu_d, sd_d = engine.fit(train_daily, HORIZON_DAILY, epochs_daily, k_denoise)
+    print(f"[{asset}] {engine.name}-D (regime B, epochs={epochs_daily}) fitted in "
+         f"{time.time() - t0:.0f}s (mu={mu_d:.6f}, sd={sd_d:.6f})")
 
-    weekly_z = _standardized_returns(weekly, mu_w, sd_w)
-    daily_z = _standardized_returns(daily, mu_d, sd_d)
+    weekly_z = _standardized_returns(weekly, mu_w, sd_w, engine.module)
+    daily_z = _standardized_returns(daily, mu_d, sd_d, engine.module)
 
     origins_c_by_cutoff = dict(tuple(origins_c.groupby("cutoff_date")))
     origins_b_by_cutoff = dict(tuple(origins_b.groupby("cutoff_date")))
@@ -271,12 +324,12 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
         needed_h = sorted(int(h) for h in set(grp_c["horizon"]) | set(grp_b["horizon"]))
         h_d_needed = [daily_horizons[h - 1] for h in needed_h]
 
-        nm.set_seed(seed + k)
-        samples_w = nm.forecast_from_fitted(model_w, weekly_z[:m], mu_w, sd_w, last_price,
-                                            horizons=needed_h, n_samples=n_samples)
-        nm.set_seed(seed + k)
-        samples_d = nm.forecast_from_fitted(model_d, daily_z[:daily_pos], mu_d, sd_d, last_price,
-                                            horizons=h_d_needed, n_samples=n_samples)
+        engine.module.set_seed(seed + k)
+        samples_w = engine.forecast(model_w, weekly_z[:m], mu_w, sd_w, last_price,
+                                    needed_h, n_samples, k_denoise)
+        engine.module.set_seed(seed + k)
+        samples_d = engine.forecast(model_d, daily_z[:daily_pos], mu_d, sd_d, last_price,
+                                    h_d_needed, n_samples, k_denoise)
 
         for h in needed_h:
             wi = h - 1
@@ -293,7 +346,7 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
                 point = float(np.mean(s))
                 lo, hi = (float(q) for q in np.quantile(s, [0.025, 0.975]))
                 row_out = {
-                    "run_id": RUN_ID, "model": "NsDiff", "asset": asset, "horizon": h,
+                    "run_id": RUN_ID, "model": engine.name, "asset": asset, "horizon": h,
                     "regime": "unknown", "cutoff_date": cutoff_date, "target_date": stored_target,
                     "last_close": last_price, "y_pred": point, "y_lower": lo, "y_upper": hi,
                     "y_true": float(row_c["y_true"].iloc[0]), "source": "oos",
@@ -313,7 +366,7 @@ def generate_nsdiff_asset(asset: str, daily: pd.Series, weekly: pd.Series, weekl
                 point = float(np.mean(s))
                 lo, hi = (float(q) for q in np.quantile(s, [0.025, 0.975]))
                 row_out = {
-                    "run_id": RUN_ID, "model": "NsDiff", "asset": asset, "horizon": h,
+                    "run_id": RUN_ID, "model": engine.name, "asset": asset, "horizon": h,
                     "regime": "unknown", "cutoff_date": cutoff_date, "target_date": stored_target,
                     "last_close": last_price, "y_pred": point, "y_lower": lo, "y_upper": hi,
                     "y_true": float(row_b["y_true"].iloc[0]), "source": "oos",

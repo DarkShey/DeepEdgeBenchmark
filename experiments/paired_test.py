@@ -21,7 +21,7 @@ import numpy as np
 
 
 def paired_block_bootstrap_test(diffs, block_length: int = 3, n_boot: int = 10000,
-                                seed: int = 0) -> dict:
+                                seed: int = 0, return_boot_means: bool = False) -> dict:
     """Moving-block bootstrap version of paired_bootstrap_test — MANDATORY
     (BRIEF_soir_D7_tests_apparies.md §2) whenever `diffs` are ordered by walk-forward
     origin and consecutive origins share overlapping target windows (our 30 weekly
@@ -41,7 +41,15 @@ def paired_block_bootstrap_test(diffs, block_length: int = 3, n_boot: int = 1000
     Returns the same fields as paired_bootstrap_test, PLUS `effective_n` = n //
     block_length (the number of roughly-independent blocks -- report this
     alongside n so a reader doesn't mistake n=30 for the true statistical power,
-    per brief: "~10-15", not 30)."""
+    per brief: "~10-15", not 30).
+
+    `return_boot_means=True` adds the raw bootstrap replicate means under the
+    key `boot_means` -- opt-in, default off, nothing else changes. Callers
+    needing a ONE-SIDED p-value (equivalence/TOST, where both tails carry a
+    different hypothesis) can then read the tail they need off the same
+    resampling instead of re-implementing the block bootstrap; the two-sided
+    `p_value` returned here is capped at 1.0 and so cannot be halved back into
+    a reliable one-sided value."""
     diffs = np.asarray(diffs, dtype=float)
     n = diffs.size
     if n == 0:
@@ -68,12 +76,15 @@ def paired_block_bootstrap_test(diffs, block_length: int = 3, n_boot: int = 1000
         p = 2.0 * float(np.mean(boot_means >= 0))
     p = min(p, 1.0)
 
-    return {
+    out = {
         "n": int(n), "block_length": int(block_length),
         "effective_n": int(n // block_length),
         "mean_diff": mean_diff, "ci95_lo": ci_lo, "ci95_hi": ci_hi,
         "p_value": p, "significant_at_05": bool(p < 0.05),
     }
+    if return_boot_means:
+        out["boot_means"] = boot_means
+    return out
 
 
 def paired_bootstrap_test(diffs, n_boot: int = 10000, seed: int = 0) -> dict:

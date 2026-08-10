@@ -1,0 +1,35 @@
+# SYNTHÈSE FINALE — Programme NsDiff : le verdict, ce qui est établi, ce qui reste
+
+2026-08-08. Conclut le cycle ouvert par la synthèse daily vs weekly de Maeva et fermé par NOTE_nsdiff_regeneration_oos_et_famille3.md. Sources : les notes du programme (consolidation, duel TsDiff, backtest éco & re-cadrage, edge vs frais, régénération) et leurs artefacts JSON.
+
+## Le verdict, en une phrase
+
+Sur la grille longue — 354 origines, 7 actifs, effective_n ≈ 118, champion GARCH vérifié à sa meilleure configuration — NsDiff n'apporte ni avantage économique, ni avantage de calibration, ni signal directionnel exploitable : le volet économique du programme est clos définitivement, par le critère d'arrêt déclaré avant les runs, et plus rien ne peut être attribué à un manque de puissance ou à un adversaire mal réglé.
+
+## Ce qui est établi, par force décroissante
+
+**1. Le mur GARCH tient — et la puissance l'a renforcé.** L'hypothèse primaire pré-déclarée (var_limit / SPY / W+2-W+3 weekly) ne produit 0 rejet sur 4, même au seuil non corrigé (p = 0,087-0,136). Les deux échappatoires ont été fermées une à une : ce n'est pas la puissance (effective_n a presque quadruplé, 31 → 118) ni la loi du champion (H1 : gaussien et skew-t sont indistinguables sur 21 cellules, RMSE identique à 0 près — le mur tient avec l'une comme avec l'autre). Ni la fraîcheur du fit (refit ×24,6 : rien), ni les trajectoires (B3 : GARCH gagne le pricing d'option 7/10), ni les frais (ils pèsent 2 % de l'edge différentiel) n'expliquaient l'écart.
+
+**2. L'avantage de calibration de NsDiff — le seul apport défendable du programme — ne survit pas à la grille longue.** L'histoire est celle d'un domaine qui rétrécit à chaque gain de rigueur : l'avantage Winkler était un artefact de n_samples=50 ; restait la couverture ; sur 354 origines, elle se renverse — Cov95 NsDiff 0,929 (dernier des six modèles), GARCH 0,947, et GARCH gagne le Winkler sur 16 cellules contre 0. Le monitoring glissant confirme en continu ce que l'agrégé dit en bloc : NsDiff est le modèle le plus souvent en alerte de couverture sur la nouvelle piste (12 cellules, à égalité avec Prophet). Les 16 renversements ne sont pas des changements de direction mais des absences de preuve devenues preuves — l'effet attendu de la puissance, et aucune cellule n'a basculé vers NsDiff.
+
+**3. Le signal directionnel n'existe pas à ces horizons — fait mécanique, pas statistique.** La famille reposée (|médiane − prix| > k × largeur, k pré-déclarés) émet enfin, mais sur 0,4 % des origines, 0 survivant Holm. Le diagnostic est structurel : à l'échelle d'incertitude des modèles, le drift à 1-3 semaines franchit si rarement un quart de la largeur interquantile qu'aucune stratégie ne peut s'y construire. La question est close sans autre reformulation, comme le critère le prévoyait.
+
+**4. L'edge économique n'était pas répliquable.** De +1,33 bps moyen sur l'ancienne grille à +0,33 sur la nouvelle ; l'edge crypto daily change de signe entre les deux échantillons (BTC W+3 : −4,05 → +15,80 bps) — la définition d'un résultat non répliqué. Rappel des étapes antérieures : 0 survivant à Holm sur 54 familles, et les 4 seuls survivants du programme disaient « acheter-et-garder bat la stratégie » (non répliqués eux non plus sur la grille longue).
+
+## Décision pratique
+
+Pour les intervalles de prévision du benchmark, **ARIMA-GARCH (variante gaussienne, config actée) reste le modèle de référence**. NsDiff est archivé comme référence de recherche : c'est la meilleure diffusion testée (il domine TsDiff 29/0 au Winkler, TsDiff est retiré), mais il ne bat l'arbitre nulle part. **NO-GO trading définitif** dans le périmètre testé — actifs, horizons 1-3 semaines, stratégies dérivées des intervalles — par critère d'arrêt pré-déclaré, pas par lassitude. Le mensuel reste hors périmètre (NO-GO antérieur, réversible mais privé de justification économique).
+
+## Ce que le programme laisse de durable
+
+La valeur du cycle n'est pas le modèle, c'est l'infrastructure et la méthode. La grille oos2020 : 42 840 lignes, 7 actifs (GLD/USO intégrés), effective_n 118, piste séparée sans mélange avec l'historique, 729 tests verts. Le monitoring de couverture glissante (H3) — la seule brique immédiatement opérationnelle — a trouvé dès son premier branchement ce qu'aucun verdict rétrospectif ne pouvait voir : 79 cellules sur 180 hors bande sur la piste actuelle, dont Prophet/BTC daily à 0 % de couverture sur les 26 dernières origines. Et trois contrôles ont payé pendant le chantier lui-même : la vérification 1:1 a intercepté 28 560 lignes à horizon mal étiqueté avant écriture, la resélection du SEQ_LEN* du LSTM a évité d'importer une fuite, et le critère de gel des prix a distingué un changement de base de dividendes (TLT, bénin) d'une révision d'historique (interdite).
+
+Leçons de méthode, confirmées trois fois dans le cycle : les verdicts single-seed et petits échantillons ne survivent pas (BTC weekly, Winkler à n=50, « le daily converge plus lentement » — tous renversés par la mesure propre) ; les critères d'arrêt déclarés avant les runs sont ce qui permet de conclure au lieu de prolonger ; et la puissance ne crée pas d'avantage — elle révèle ceux qui existent, ici celui de GARCH.
+
+## La seule porte encore ouverte
+
+Elle ne concerne pas le duel NsDiff/GARCH : les alertes de couverture se concentrent sur le régime daily de la piste oos actuelle (51 cellules sur 90) — un défaut opérationnel des modèles de référence, hors critère du brief, qui demande une décision explicite. **Mise à jour du 2026-08-08** : ces 51 cellules ont été caractérisées (DECISION_derive_couverture_daily.md) et le comptage confondait deux choses — **35 défauts permanents** (plein échantillon lui aussi hors bande, jusqu'à 0,289 de couverture sur 65 origines consécutives) et **16 dérives réelles**, dont 12 en sur-couverture : il ne reste que 4 vraies dérives en sous-couverture. Ce n'est donc pas un problème de dérive mais deux problèmes distincts, qui n'appellent pas la même réponse. Des trois entretiens courants annoncés ici, deux sont **faits** : le dashboard est sur l'ensemble 5×200 depuis le run `20260808-oos-repoint-ensemble` (le « chantier C toujours ouvert » ci-dessus était périmé — vérifié en base, Cov95 0,9452), et H3 tourne en routine dans le job quotidien `evaluate-daily.yml`, avec un résumé d'alertes dans le résumé de job. Reste le troisième : verser des bordereaux de frais réels si la question économique devait un jour être rouverte — ce que le critère d'arrêt n'autorise plus dans le périmètre actuel.
+
+## Limites à citer avec cette synthèse
+
+Les frais restent des hypothèses déclarées (sensibilité mesurée : < 0,2 bps, sans effet sur les verdicts). La base ES/SPY n'est pas modélisée (argument financé/non-financé, réserve résiduelle étroite). F3 conclut sur un test à très faible puissance — ce qui est établi est le fait mécanique drift ≪ incertitude, pas une absence démontrée au sens fort. TLT a changé de base de prix entre les deux jeux : ses anciens verdicts ne se comparent pas ligne à ligne. GLD et USO sont premiers entrants, sans historique de verdict.

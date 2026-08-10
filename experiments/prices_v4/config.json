@@ -1,0 +1,575 @@
+{
+  "scope": "chantier 0-bis-A -- socle de prix unique pour le signal ET le PnL",
+  "config": {
+    "common_start": "2011-05-01",
+    "fetch_end": "2026-07-24",
+    "origin_start": "2020-01-01",
+    "source": "yfinance, source unique -- meme pipeline que prices_v3",
+    "calendars": "calendriers de cotation propres a chaque actif ; aucun ffill de prix (cf. bug 2 du ticket DEITA)",
+    "substitutions": {
+      "GC=F": {
+        "remplace_par": "GLD",
+        "exposition": "or",
+        "motif": "le panel du benchmark trade l'ETF ; le chantier 1 conditionnel ne peut trader que les instruments du panel (les nuages NsDiff n'existent que la)"
+      },
+      "CL=F": {
+        "remplace_par": "USO",
+        "exposition": "petrole",
+        "motif": "idem or ; reserve declaree : USO porte un roulement mensuel, proxy moins pur que CL=F"
+      }
+    },
+    "classes_branche_2": [
+      "actions",
+      "taux",
+      "matieres",
+      "crypto"
+    ],
+    "hors_classes": [
+      "VXX"
+    ],
+    "blocking_tolerances": {
+      "logret": 1e-05,
+      "price_ratio_dispersion": 0.0001
+    },
+    "panel_is_strict_subset": true
+  },
+  "per_asset": {
+    "SPY": {
+      "sector": "Equity",
+      "subsector": "US Large-Cap",
+      "classe": "actions",
+      "origine": "DEITA + benchmark",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "01b0d27a64f39839b11a315f012d6f437a45763ca51db12f578a2c1de3173c74",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3829,
+        "span_common": "2011-05-02 -> 2026-07-23",
+        "logret_max_abs_diff": 1.2741364701085445e-06,
+        "logret_median_abs_diff": 1.4873885634258954e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 1.6126326646270783e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "QQQ": {
+      "sector": "Equity",
+      "subsector": "US Tech Index",
+      "classe": "actions",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "c0f47739a02d3490959ead354915c3d9d8acbb4c73163840c6c91aa217cb510b",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "QQQ"
+      }
+    },
+    "IWM": {
+      "sector": "Equity",
+      "subsector": "US Small-Cap",
+      "classe": "actions",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "73d60b695c661fe6995c7ae2f42e86b1dba5d6440f3b914243a946b1709dd0e9",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "IWM"
+      }
+    },
+    "EFA": {
+      "sector": "Equity",
+      "subsector": "International Developed",
+      "classe": "actions",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "6e765929f030303d8c723254fc134c0640d7d330d5b66a8f4383eb52fbb6e261",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "EFA"
+      }
+    },
+    "EEM": {
+      "sector": "Equity",
+      "subsector": "Emerging Markets",
+      "classe": "actions",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "2cbc3b2c0a2c0753775b3d08459dcba0d585f439b9dcea2d998b75f564c3b7d7",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "EEM"
+      }
+    },
+    "ZN=F": {
+      "sector": "Bond",
+      "subsector": "US Treasury Future",
+      "classe": "taux",
+      "origine": "benchmark",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3828,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2133,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "e4cd2ac514997810ccc1e985939aef475fc0878052565e06b074237f97f6d4c2",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3828,
+        "span_common": "2011-05-02 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "TLT": {
+      "sector": "Bond",
+      "subsector": "US Treasury ETF",
+      "classe": "taux",
+      "origine": "benchmark",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "d9e651154f4f9aa925d928980b8f06adb426b72a1afdd7ea96bb2f3b37a1744e",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3829,
+        "span_common": "2011-05-02 -> 2026-07-23",
+        "logret_max_abs_diff": 2.1053402310400315e-06,
+        "logret_median_abs_diff": 2.5943920034521284e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 2.9153347024246656e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "GLD": {
+      "sector": "Commodity",
+      "subsector": "Precious Metals",
+      "classe": "matieres",
+      "origine": "benchmark (substitue a GC=F)",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "5d4f5f625a1a63a8557c9b58d420d6a5be5a837eef3cc07ea18850790f80687c",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3829,
+        "span_common": "2011-05-02 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "SI=F": {
+      "sector": "Commodity",
+      "subsector": "Precious Metals",
+      "classe": "matieres",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3828,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2134,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "3e21025ebad7f51683326b94833156d24d3fca2c234ffc6331cce738f480e06c",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "SI=F"
+      }
+    },
+    "HG=F": {
+      "sector": "Commodity",
+      "subsector": "Industrial Metals",
+      "classe": "matieres",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2134,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "46b158accf00d0f0bb7ed3f1c31960e310cb4d4d78de615a8049e8c3ea7b6467",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "HG=F"
+      }
+    },
+    "USO": {
+      "sector": "Commodity",
+      "subsector": "Energy",
+      "classe": "matieres",
+      "origine": "benchmark (substitue a CL=F)",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "7d579109528162f1baf7293d1fd9cf142ebebc7b09002913019541ce826ee690",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3829,
+        "span_common": "2011-05-02 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ZC=F": {
+      "sector": "Commodity",
+      "subsector": "Agriculture",
+      "classe": "matieres",
+      "origine": "DEITA",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3826,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2133,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "sha256": "8d678601b41d42d1391f856e3d7dfe8f53ca99f4e0ec60f0ca795810e40b6cab",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "ZC=F"
+      }
+    },
+    "BTC-USD": {
+      "sector": "Crypto",
+      "subsector": "Large-Cap Crypto",
+      "classe": "crypto",
+      "origine": "DEITA + benchmark",
+      "requested_start": "2014-09-01",
+      "counts": {
+        "n_daily": 4328,
+        "n_weekly": 619,
+        "n_monthly": 143,
+        "span": "2014-09-17 -> 2026-07-23",
+        "n_train_weeks_before_origin": 276,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 1887,
+        "n_train_windows_weekly": 243,
+        "meets_daily_target": false
+      },
+      "sha256": "080e8505b106ae67a7e4717a4ebe50b18380facb94632a52ece3606a77444b95",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 4328,
+        "span_common": "2014-09-17 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ETH-USD": {
+      "sector": "Crypto",
+      "subsector": "L1 Smart Contract",
+      "classe": "crypto",
+      "origine": "DEITA + benchmark",
+      "requested_start": "2017-11-01",
+      "counts": {
+        "n_daily": 3179,
+        "n_weekly": 455,
+        "n_monthly": 105,
+        "span": "2017-11-09 -> 2026-07-23",
+        "n_train_weeks_before_origin": 112,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 738,
+        "n_train_windows_weekly": 79,
+        "meets_daily_target": false
+      },
+      "sha256": "5a28f381d0bdf87f3abba7fa0a78f8a2f842d02981268cd543e0e3f1985f7744",
+      "in_benchmark_panel": true,
+      "overlap_vs_prices_v3": {
+        "status": "checked",
+        "n_common": 3179,
+        "span_common": "2017-11-09 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "SOL-USD": {
+      "sector": "Crypto",
+      "subsector": "L1 Smart Contract",
+      "classe": "crypto",
+      "origine": "DEITA",
+      "requested_start": "2020-04-01",
+      "counts": {
+        "n_daily": 2296,
+        "n_weekly": 329,
+        "n_monthly": 76,
+        "span": "2020-04-10 -> 2026-07-23",
+        "n_train_weeks_before_origin": 0,
+        "n_test_origins_from_2020": 326,
+        "effective_n_from_2020": 108,
+        "n_train_windows_daily": 0,
+        "n_train_windows_weekly": 0,
+        "meets_daily_target": false
+      },
+      "sha256": "1a146102d18583106905c06769cfd7e2c776e4007bd4aebe4b56bb779b96d81f",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "SOL-USD"
+      }
+    },
+    "BNB-USD": {
+      "sector": "Crypto",
+      "subsector": "Exchange Token",
+      "classe": "crypto",
+      "origine": "DEITA",
+      "requested_start": "2017-11-01",
+      "counts": {
+        "n_daily": 3179,
+        "n_weekly": 455,
+        "n_monthly": 105,
+        "span": "2017-11-09 -> 2026-07-23",
+        "n_train_weeks_before_origin": 112,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 738,
+        "n_train_windows_weekly": 79,
+        "meets_daily_target": false
+      },
+      "sha256": "cbfa06f7495ab658ad2fea32f0e665b36f13084f36581335d41b2d947cbe61db",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "BNB-USD"
+      }
+    },
+    "LINK-USD": {
+      "sector": "Crypto",
+      "subsector": "DeFi Oracle",
+      "classe": "crypto",
+      "origine": "DEITA",
+      "requested_start": "2017-11-01",
+      "counts": {
+        "n_daily": 3179,
+        "n_weekly": 455,
+        "n_monthly": 105,
+        "span": "2017-11-09 -> 2026-07-23",
+        "n_train_weeks_before_origin": 112,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 738,
+        "n_train_windows_weekly": 79,
+        "meets_daily_target": false
+      },
+      "sha256": "e5f724ab5744bcd61e4b08d801e56042c688ff53ab911b8567078a6c9253e482",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "LINK-USD"
+      }
+    },
+    "VXX": {
+      "sector": "Crypto",
+      "subsector": "Volatility",
+      "classe": null,
+      "origine": "DEITA",
+      "note": "ETN de volatilite court terme, decroissance structurelle de roulement : n'appartient a aucune des quatre classes declarees. Reste dans l'univers de conviction, rapporte a part, exclu du test de classes et du portefeuille equipondere. L'etiquette secteur 'Crypto' vient de DEITA et est une erreur de son cote -- signalee, non corrigee ici.",
+      "requested_start": "2018-01-01",
+      "counts": {
+        "n_daily": 2134,
+        "n_weekly": 444,
+        "n_monthly": 103,
+        "span": "2018-01-25 -> 2026-07-23",
+        "n_train_weeks_before_origin": 101,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 442,
+        "n_train_windows_weekly": 68,
+        "meets_daily_target": false
+      },
+      "sha256": "ba31c38a1101831ab51404b0133ce92ba6506c53b2b489a7af3dd07d449fb09d",
+      "in_benchmark_panel": false,
+      "overlap_vs_prices_v3": {
+        "status": "no_previous_series",
+        "asset": "VXX"
+      }
+    }
+  },
+  "blocking": [],
+  "gate": "PASS"
+}

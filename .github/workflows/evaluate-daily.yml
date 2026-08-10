@@ -64,15 +64,40 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python -m model_artifacts.generate_taux_utilisation
 
+      # H3 en routine (NOTE_nsdiff_regeneration_oos_et_famille3.md §8). La
+      # couverture retrospective ne dit rien de la semaine en cours : ce pas
+      # recalcule chaque jour la couverture glissante (26 origines) et sa bande
+      # d'alerte sur les deux pistes, `oos` (dashboard) et `oos2020` (grille
+      # regeneree). Lecture SEULE de tracking.db.
+      #
+      # `continue-on-error` est deliberé : une alerte de couverture est une
+      # information, pas une panne. Faire echouer la resolution quotidienne des
+      # predictions parce qu'un modele sous-couvre serait confondre le thermometre
+      # et la fievre — et la premiere chose qu'on ferait serait de desactiver le pas.
+      - name: Run coverage monitor (H3)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        run: |
+          python experiments/coverage_monitor.py --source oos \
+            --out experiments/coverage_monitor.json | tail -20
+          python experiments/coverage_monitor.py --source oos2020 \
+            --out experiments/coverage_monitor_grid2020.json | tail -20
+
+      - name: Coverage alerts summary
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        run: python experiments/coverage_monitor_summary.py >> "$GITHUB_STEP_SUMMARY"
+
       - name: Commit and push results
         if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add validation/tracking.db Run/*/business_validation.json taux_utilisation.html
+          git add experiments/coverage_monitor.json experiments/coverage_monitor_grid2020.json
           if git diff --cached --quiet; then
             echo "Rien à committer."
           else
-            git commit -m "chore: résolution quotidienne des prédictions échues (evaluate_daily)"
+            git commit -m "chore: résolution quotidienne des prédictions échues (evaluate_daily) + suivi de couverture (H3)"
             git push
           fi

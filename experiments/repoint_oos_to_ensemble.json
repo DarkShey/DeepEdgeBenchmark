@@ -1,0 +1,74 @@
+{
+  "run_id": "20260808-oos-repoint-ensemble",
+  "applied": true,
+  "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
+  "from": "graine 42, 200 tirages (non converg\u00e9e : le regime weekly exige 800/graine)",
+  "to": {
+    "name": "NsDiff-ensemble-5x200",
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "n_samples_per_seed": 200,
+    "n_samples_total": 1000,
+    "epochs": 40,
+    "seq_len": 30,
+    "k_denoise": 20,
+    "aggregation": "concatenation des nuages (melange des lois predictives), PAS moyenne des bornes",
+    "point": "moyenne du nuage concatene",
+    "interval": "quantiles empiriques 0.025 / 0.975 du nuage concatene",
+    "refit": "aucun -- train-once-forward, les 5 nuages viennent du meme passage forward",
+    "residual_quantile_bias": "couverture bilaterale reelle ~94.81 % pour une etiquette 95 % (1000 tirages) -- 0.19 point, meme regime que Prophet",
+    "converged": "6/6 cellules (nsamples_sweep)"
+  },
+  "alignment_checks": {
+    "n_db": 2700,
+    "n_ensemble": 2700,
+    "same_keys": true,
+    "y_true_max_rel_diff": 0.0,
+    "last_close_max_rel_diff": 2.1514576717376882e-07,
+    "targets_aligned": true,
+    "prices_aligned": true,
+    "cov95_before": 0.9314814814814815,
+    "cov95_after_expected": 0.9451851851851852,
+    "pi_width_pct_before": 23.26079716323886,
+    "pi_width_pct_after_expected": 23.879286665145877,
+    "winkler_before": 10307.21601806316,
+    "winkler_after_expected": 9382.162538411387
+  },
+  "before": {
+    "n_rows": 2700,
+    "cov95_recomputed": 0.9314814814814815,
+    "cov95_stored_column": 0.9314814814814815,
+    "pi_width_pct_of_price": 23.26079716323885,
+    "per_cell_cov95": {
+      "daily|W+1": 0.9088888888888889,
+      "daily|W+2": 0.9111111111111111,
+      "daily|W+3": 0.9066666666666666,
+      "weekly|W+1": 0.9555555555555556,
+      "weekly|W+2": 0.96,
+      "weekly|W+3": 0.9466666666666667
+    }
+  },
+  "backup": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db.bak_repoint_ensemble_2026-08-07T232525",
+  "n_upserted": 2700,
+  "n_derived_nulled": 2700,
+  "after": {
+    "n_rows": 2700,
+    "cov95_recomputed": 0.9451851851851852,
+    "cov95_stored_column": 0.9451851851851852,
+    "pi_width_pct_of_price": 23.879286629671913,
+    "per_cell_cov95": {
+      "daily|W+1": 0.9288888888888889,
+      "daily|W+2": 0.94,
+      "daily|W+3": 0.9288888888888889,
+      "weekly|W+1": 0.9555555555555556,
+      "weekly|W+2": 0.9644444444444444,
+      "weekly|W+3": 0.9533333333333334
+    }
+  },
+  "elapsed_s": 1.8
+}

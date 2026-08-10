@@ -1,0 +1,121 @@
+<svg viewBox="0 0 1440 1010" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Helvetica, Arial, sans-serif">
+  <title>Lois statistiques de calibration des PI — DeepEdgeBenchmark vs DEITA</title>
+  <desc>Mindmap comparant les lois utilisées pour calibrer les intervalles de prédiction : approche paramétrique (DeepEdgeBenchmark) à gauche, approche distribution-free conforme (DEITA) à droite, convergences en bas.</desc>
+
+  <style>
+    .box { fill: #1c1f26; stroke-width: 1.5; }
+    .deb { stroke: #4c8df6; }
+    .dei { stroke: #3fb27f; }
+    .conv { stroke: #5f6368; stroke-dasharray: 5 4; }
+    .h { font-size: 17px; font-weight: 700; }
+    .hd { fill: #4c8df6; }
+    .hi { fill: #3fb27f; }
+    .l1 { font-size: 14px; fill: #e8eaed; }
+    .l2 { font-size: 13px; fill: #9aa0a6; }
+    .edge { fill: none; stroke-width: 1.6; opacity: 0.75; }
+    .ed { stroke: #4c8df6; }
+    .ei { stroke: #3fb27f; }
+    .ec { stroke: #5f6368; stroke-dasharray: 5 4; }
+  </style>
+
+  <rect x="0" y="0" width="1440" height="1010" fill="#0e1013"/>
+
+  <text x="720" y="34" text-anchor="middle" font-size="22" font-weight="700" fill="#e8eaed">Lois statistiques de calibration des PI</text>
+  <text x="720" y="58" text-anchor="middle" font-size="14" fill="#9aa0a6">DeepEdgeBenchmark (paramétrique + EWMA) vs DEITA (distribution-free / conforme)</text>
+
+  <line x1="530" y1="82" x2="562" y2="82" stroke="#4c8df6" stroke-width="3"/>
+  <text x="570" y="86" font-size="13" fill="#9aa0a6">DeepEdgeBenchmark</text>
+  <line x1="730" y1="82" x2="762" y2="82" stroke="#3fb27f" stroke-width="3"/>
+  <text x="770" y="86" font-size="13" fill="#9aa0a6">DEITA</text>
+
+  <rect x="600" y="480" width="240" height="86" rx="12" fill="#1c1f26" stroke="#8a8f98" stroke-width="2"/>
+  <text x="720" y="515" text-anchor="middle" class="h" fill="#e8eaed">Calibration des PI</text>
+  <text x="720" y="540" text-anchor="middle" class="l2">2 projets · 2 philosophies</text>
+
+  <path class="edge ed" d="M600 505 C 540 480, 520 200, 460 180"/>
+  <path class="edge ed" d="M600 512 C 540 500, 520 340, 460 330"/>
+  <path class="edge ed" d="M600 523 C 545 523, 520 478, 460 478"/>
+  <path class="edge ed" d="M600 534 C 540 545, 520 625, 460 625"/>
+  <path class="edge ed" d="M600 545 C 540 570, 520 775, 460 772"/>
+
+  <rect class="box deb" x="60" y="130" width="400" height="100" rx="10"/>
+  <text x="80" y="158" class="h hd">ARIMA-GARCH → Skew-t natif</text>
+  <text x="80" y="182" class="l1">Innovations GARCH skew-t, quantiles asymétriques</text>
+  <text x="80" y="202" class="l2">→ log-normale asymétrique en prix · sans EWMA</text>
+  <text x="80" y="220" class="l2">MACE 2,5–4,0 · seul robuste sur 3 fenêtres</text>
+
+  <rect class="box deb" x="60" y="280" width="400" height="100" rx="10"/>
+  <text x="80" y="308" class="h hd">SARIMA → Normale × EWMA causale</text>
+  <text x="80" y="332" class="l1">σₜ (Kalman) × √EWMA(z²), λ = 0,94</text>
+  <text x="80" y="352" class="l2">λ = 0,94^(1/7) au D+7 (garde-fou recouvrement)</text>
+  <text x="80" y="370" class="l2">MACE 9,9 → 4,0 · dynamique Kalman préservée</text>
+
+  <rect class="box deb" x="60" y="430" width="400" height="96" rx="10"/>
+  <text x="80" y="458" class="h hd">Prophet → Lognormale × EWMA</text>
+  <text x="80" y="482" class="l1">Log-espace (lognormale en prix), λ = 0,94 partout</text>
+  <text x="80" y="502" class="l2">MACE 28 → 5–7 (SPY/BTC/ETH) · ⚠ ZN/TLT à confirmer</text>
+
+  <rect class="box deb" x="60" y="576" width="400" height="96" rx="10"/>
+  <text x="80" y="604" class="h hd">LSTM &amp; Naive → Normale, σ EWMA</text>
+  <text x="80" y="628" class="l1">EWMA des résidus observés, λ = 0,94 · causal</text>
+  <text x="80" y="648" class="l2">Naive : marche aléatoire, √h pour D+7 · MACE 10–16 → 3–6</text>
+
+  <rect class="box deb" x="60" y="722" width="400" height="120" rx="10"/>
+  <text x="80" y="750" class="h hd">TSDiff-D/W → Empirique (nuage)</text>
+  <text x="80" y="774" class="l1">Quantiles du nuage d'échantillons — aucune loi imposée</text>
+  <text x="80" y="794" class="l2">Reporting : CRPS dist-aware (two-piece, lognormale, Student-t)</text>
+  <text x="80" y="822" class="l2">Écartés : swap Student-t/GED post-hoc · CQR · MDN · σ rolling</text>
+
+  <path class="edge ei" d="M840 505 C 900 480, 920 200, 980 180"/>
+  <path class="edge ei" d="M840 512 C 900 500, 920 340, 980 330"/>
+  <path class="edge ei" d="M840 523 C 895 523, 920 478, 980 478"/>
+  <path class="edge ei" d="M840 534 C 900 545, 920 625, 980 625"/>
+  <path class="edge ei" d="M840 545 C 900 570, 920 775, 980 772"/>
+
+  <rect class="box dei" x="980" y="130" width="400" height="100" rx="10"/>
+  <text x="1000" y="158" class="h hi">Sleeve 1 live → Split-conformal</text>
+  <text x="1000" y="182" class="l1">Quantile empirique des |résidus| live, fenêtre N = 60</text>
+  <text x="1000" y="202" class="l2">pred ± q̂ · fallback (actif, modèle) → pool normalisé → brut</text>
+  <text x="1000" y="220" class="l2">distribution-free · as-of strict · couverture cible [88–98 %]</text>
+
+  <rect class="box dei" x="980" y="280" width="400" height="100" rx="10"/>
+  <text x="1000" y="308" class="h hi">XGB/RF/PatchTST/NBEATS → grille conforme</text>
+  <text x="1000" y="332" class="l1">99 quantiles empiriques des résidus signés</text>
+  <text x="1000" y="352" class="l2">système prédictif conforme → axe CRPS sans ré-entraînement</text>
+  <text x="1000" y="370" class="l2">LSTM/GRU : nuage MC-Dropout (empirique)</text>
+
+  <rect class="box dei" x="980" y="430" width="400" height="96" rx="10"/>
+  <text x="1000" y="458" class="h hi">Gate → couverture conditionnelle</text>
+  <text x="1000" y="482" class="l1">Christoffersen HARD (p&lt;0,01) · Winkler · CRPS/NLL skill</text>
+  <text x="1000" y="502" class="l2">couverture marginale rétrogradée en guard (±8 pp)</text>
+
+  <rect class="box dei" x="980" y="576" width="400" height="96" rx="10"/>
+  <text x="1000" y="604" class="h hi">Sleeve 3 diffusion → Empirique</text>
+  <text x="1000" y="628" class="l1">Nuage TSDiff/TimeGrad/Mamba · shrink α (post-hoc)</text>
+  <text x="1000" y="648" class="l2">→ variance apprise (Improved DDPM) + prior N(0, Σ) (PriorGrad)</text>
+
+  <rect class="box dei" x="980" y="722" width="400" height="120" rx="10"/>
+  <text x="1000" y="750" class="h hi">Régime → conforme par régime</text>
+  <text x="1000" y="774" class="l1">Offsets conformes / scaling d'intervalle par régime HMM</text>
+  <text x="1000" y="794" class="l2">Christoffersen stratifié calm / trending / stress (Option B)</text>
+  <text x="1000" y="822" class="l2">« trop large en calme, trop étroit en turbulent » — corrigé</text>
+
+  <path class="edge ec" d="M700 566 C 680 640, 560 700, 480 890"/>
+  <path class="edge ec" d="M720 566 L 720 880"/>
+  <path class="edge ec" d="M740 566 C 760 640, 880 700, 960 890"/>
+
+  <rect class="box conv" x="285" y="890" width="290" height="92" rx="10"/>
+  <text x="305" y="918" class="h" fill="#e8eaed">Constat commun</text>
+  <text x="305" y="942" class="l1">Le gaussien natif sous-couvre partout</text>
+  <text x="305" y="962" class="l2">DEB : MACE 8–28 · DEITA : couverture 5–83 %</text>
+
+  <rect class="box conv" x="595" y="890" width="290" height="92" rx="10"/>
+  <text x="615" y="918" class="h" fill="#e8eaed">Convergences</text>
+  <text x="615" y="942" class="l1">Diffusion : quantiles empiriques du nuage</text>
+  <text x="615" y="962" class="l2">Causalité stricte · correction réversible · traçée</text>
+
+  <rect class="box conv" x="905" y="890" width="290" height="92" rx="10"/>
+  <text x="925" y="918" class="h" fill="#e8eaed">Divergence clé</text>
+  <text x="925" y="942" class="l1">Conforme : écarté (DEB) vs adopté (DEITA)</text>
+  <text x="925" y="962" class="l2">DEB corrige la loi · DEITA ignore la loi</text>
+</svg>
