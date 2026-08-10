@@ -88,6 +88,15 @@ WEEKLY_KPI_MODELS = ["TSDiff", "NsDiff"]
 # (in_interval), sans aucune hypothèse de forme -- seul chiffre "exact" pour les deux.
 WEEKLY_APPROX_CRPS_MODELS = ["TSDiff", "NsDiff"]
 
+# Monthly (régime C mensuel natif, BRIEF_dashboard_mensuel_et_maj_bdd.md) : mêmes 2
+# modèles de diffusion que le weekly -- ce sont d'ailleurs les SEULS modèles présents
+# en mensuel dans tracking.db (frequence='monthly' AND horizon_type='monthly'),
+# aucun des 5 modèles paramétriques n'y a de ligne. collect_monthly_kpis() est un
+# copie miroir de collect_weekly_kpis() (cf. sa docstring), donc la même
+# WEEKLY_APPROX_CRPS_MODELS y sert de flag crps_is_approx -- pas besoin d'une
+# variante "monthly" de cette liste, son contenu est identique par construction.
+MONTHLY_KPI_MODELS = ["TSDiff", "NsDiff"]
+
 MODEL_ORDER = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff", "NsDiff"]
 # Palette catégorielle validée (skill dataviz) — slots 1..6 dans l'ordre fixe.
 # NsDiff : slot 2 (orange) de la palette de référence (skill dataviz,
@@ -365,6 +374,86 @@ def collect_weekly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
     return out
 
 
+def collect_monthly_kpis(db_path: str = SIM_TRADES_DB_PATH, n_samples: int = 500,
+                         seed: int = 42) -> dict:
+    """KPI probabilistes monthly (régime C uniquement -- mensuel natif, comme le
+    weekly n'affiche que son régime C -- cf. BRIEF_dashboard_mensuel_et_maj_bdd.md
+    §3.1) par (actif x modèle x M+1/2/3). COPIE MIROIR de collect_weekly_kpis(),
+    trois substitutions près (brief §3.2) : (1) filtre SQL frequence='monthly'
+    AND horizon_type='monthly' au lieu de weekly/weekly ; (2) MONTHLY_KPI_MODELS
+    au lieu de WEEKLY_KPI_MODELS (mêmes 2 modèles de toute façon -- ce sont les
+    seuls présents en mensuel) ; (3) horizon_unit vaut nativement M+1/M+2/M+3 en
+    base pour ce régime, aucune hypothèse "W" codée en dur ici à corriger (cette
+    fonction, comme son miroir, groupe simplement par la colonne horizon_unit
+    telle que stockée). Réutilise _weekly_row_samples tel quel (agnostique à la
+    fréquence, cf. sa docstring) : couverture 95% EXACTE recalculée depuis les
+    bornes stockées, CRPS/couverture 50-80% via nuage gaussien -- APPROXIMATION
+    pour les 2 modèles de diffusion (crps_is_approx=True pour les deux, cf.
+    WEEKLY_APPROX_CRPS_MODELS, dont le contenu couvre déjà MONTHLY_KPI_MODELS).
+    Silencieux (dict vide) si tracking.db est absent/vide, même logique
+    défensive que collect_weekly_kpis."""
+    import numpy as np
+    import sqlite3
+
+    out = {}
+    try:
+        con = sqlite3.connect(db_path)
+        try:
+            df = pd.read_sql_query(
+                """
+                SELECT model, asset, horizon, horizon_unit, cutoff_date, target_date,
+                       last_close, y_pred, y_lower, y_upper, y_true, source, real_flag
+                FROM predictions
+                WHERE frequence = 'monthly' AND horizon_type = 'monthly'
+                      AND source IN ('oos', 'live') AND model IN ({})
+                """.format(",".join("?" * len(MONTHLY_KPI_MODELS))),
+                con, params=list(MONTHLY_KPI_MODELS),
+            )
+        finally:
+            con.close()
+    except Exception as exc:
+        print(f"[generate_dashboard] monthly KPI indisponibles ({exc})")
+        return out
+
+    if df.empty:
+        return out
+
+    rng = np.random.default_rng(seed)
+    for (asset, model, horizon_unit), g in df.groupby(["asset", "model", "horizon_unit"]):
+        realized = g[g["y_true"].notna()]
+        crps_vals, cov50, cov80 = [], [], []
+        for _, r in realized.iterrows():
+            samples = _weekly_row_samples(model, float(r.y_pred), float(r.y_lower),
+                                          float(r.y_upper), float(r.last_close),
+                                          n_samples, rng)
+            kpis = pkc.row_kpis(samples, float(r.y_true))
+            crps_vals.append(kpis["crps"])
+            cov50.append(kpis["cov50"])
+            cov80.append(kpis["cov80"])
+        cov95_direct = ((realized["y_true"] >= realized["y_lower"]) &
+                       (realized["y_true"] <= realized["y_upper"])).mean() if len(realized) else None
+
+        rows = [
+            {
+                "cutoff_date": r.cutoff_date, "target_date": r.target_date,
+                "last_close": _num(r.last_close), "y_pred": _num(r.y_pred),
+                "y_lower": _num(r.y_lower), "y_upper": _num(r.y_upper),
+                "y_true": _num(r.y_true), "source": r.source, "real_flag": r.real_flag,
+            }
+            for r in g.sort_values("cutoff_date").itertuples()
+        ]
+        out.setdefault(asset, {}).setdefault(model, {})[horizon_unit] = {
+            "n_total": int(len(g)), "n_realized": int(len(realized)),
+            "cov95_exact": _num(cov95_direct),
+            "cov50_gaussian": _num(np.mean(cov50)) if cov50 else None,
+            "cov80_gaussian": _num(np.mean(cov80)) if cov80 else None,
+            "crps_gaussian": _num(np.mean(crps_vals)) if crps_vals else None,
+            "crps_is_approx": model in WEEKLY_APPROX_CRPS_MODELS,
+            "rows": rows,
+        }
+    return out
+
+
 def collect_weekly_multiseed(assets: list) -> dict:
     """Badge de robustesse inter-graines + label de config honnête
     (BRIEF_dashboard_multiseed_200.md) pour les modèles WEEKLY_KPI_MODELS
@@ -394,6 +483,52 @@ def collect_weekly_multiseed(assets: list) -> dict:
             badge = mbc.cell_robustness_badge(artifacts, model, asset)
             if badge:
                 robustness.setdefault(asset, {})[model] = badge
+    return {"data_config": data_config, "robustness": robustness}
+
+
+# {model: chemin de l'artefact multiseed MENSUEL} -- mêmes 2 modèles échantillonnés
+# que mbc.MULTISEED_MODELS (NsDiff, TSDiff), artefacts déjà régénérés en mensuel
+# natif (BRIEF_dashboard_mensuel_et_maj_bdd.md §3.3) : experiments/
+# {nsdiff,tsdiff}_monthly_multiseed.json, à ne pas confondre avec leurs homologues
+# daily_weekly (utilisés par collect_weekly_multiseed ci-dessus).
+MONTHLY_MULTISEED_JSON = {m: str(REPO_ROOT / "experiments" / f"{m.lower()}_monthly_multiseed.json")
+                          for m in MONTHLY_KPI_MODELS}
+
+
+def collect_monthly_multiseed(assets: list) -> dict:
+    """Généralisation de collect_weekly_multiseed() aux artefacts multiseed
+    MENSUELS (BRIEF_dashboard_mensuel_et_maj_bdd.md §3.3) -- dégradation
+    gracieuse à l'identique (badge/bandeau vides, jamais d'exception) si
+    multiseed_badge_common est indisponible OU si les artefacts mensuels
+    n'existent pas encore pour un modèle donné (load_multiseed_artifacts gère
+    déjà ce cas, cf. sa docstring). Réutilise mbc.load_multiseed_artifacts /
+    mbc.build_data_config TELS QUELS (le second est déjà générique -- aucun
+    texte "weekly" en dur dans son rendu). Seule différence avec le weekly :
+    mbc.cell_robustness_badge() lit en dur la clé `cv_winkler_weekly` du
+    cv_table (absente des artefacts mensuels, qui stockent `cv_winkler_monthly`
+    à la place) -- plutôt que dupliquer sa logique (Counter des verdicts par
+    graine, etc.) pour ce seul changement de nom de clé, on réutilise la
+    fonction telle quelle puis on complète localement le badge avec la vraie
+    valeur mensuelle (mbc.cell_robustness_badge reste intouchée, toujours
+    utilisée telle quelle par le weekly)."""
+    try:
+        import multiseed_badge_common as mbc
+    except Exception as exc:
+        print(f"[generate_dashboard] badge robustesse multiseed mensuel indisponible ({exc})")
+        return {"data_config": None, "robustness": {}}
+
+    artifacts = mbc.load_multiseed_artifacts(overrides=MONTHLY_MULTISEED_JSON)
+    data_config = mbc.build_data_config(artifacts, MODEL_ORDER)
+    robustness = {}
+    for asset in assets:
+        for model in MONTHLY_KPI_MODELS:
+            badge = mbc.cell_robustness_badge(artifacts, model, asset)
+            if not badge:
+                continue
+            cv = artifacts.get(model, {}).get("data", {}).get("cv_table", {}).get(asset, {})
+            badge = {**badge, "cv_winkler_monthly": cv.get("cv_winkler_monthly")}
+            del badge["cv_winkler_weekly"]   # nom de clé weekly, absent/faux en mensuel
+            robustness.setdefault(asset, {})[model] = badge
     return {"data_config": data_config, "robustness": robustness}
 
 
@@ -480,6 +615,74 @@ def collect_rolling_coverage(db_path: str = SIM_TRADES_DB_PATH,
     return out
 
 
+# Pistes lues en base pour le stamp de provenance B1 (BRIEF_dashboard_mensuel_et_maj_bdd.md
+# §4) : mêmes filtres (frequence, horizon_type) que collect_weekly_kpis/
+# collect_monthly_kpis, mais SANS restriction de modèle -- la fraîcheur d'une piste
+# se lit sur toutes ses lignes, pas seulement les 2 modèles échantillonnés pour les KPI.
+DATA_FRESHNESS_TRACKS = {"weekly": ("weekly", "weekly"), "monthly": ("monthly", "monthly")}
+
+
+def collect_data_freshness(db_path: str = SIM_TRADES_DB_PATH) -> dict:
+    """B1 -- stamp de provenance factuel par piste (weekly, monthly) : dernière
+    origine (MAX(cutoff_date)), nombre d'origines distinctes (COUNT DISTINCT
+    cutoff_date) et le run qui a produit cette dernière origine (run_id + son
+    created_at si connu). « Le plus récent » est déterminé par ORDER BY
+    cutoff_date DESC -- PAS par un tri lexicographique sur run_id : contrairement
+    à l'idiome de flag_daily_duplicates (validation/tracking_db.py), où tous les
+    run_id comparés partagent la même convention YYYYMMDD-préfixée, les run_id
+    réellement présents en base mélangent plusieurs conventions historiques
+    (ex. "weekly-nsdiff-2026-08-02" vs "20260805-tsdiff-monthly-oos") -- un tri
+    sur la chaîne aurait pu classer un run de juillet après un run d'août
+    (vérifié sur tracking.db, cf. revue). cutoff_date, lui, est une vraie date
+    ISO, donc toujours triable correctement quelle que soit la convention de
+    nommage du run. created_at départage seulement les ex-aequo sur la même
+    cutoff_date (souvent NULL sur les lignes source='oos', cf.
+    insert_oos_predictions qui ne renseigne pas cette colonne -- dégradation
+    gracieuse : `created_at_latest` vaut alors None, jamais une fausse date).
+    Dans l'esprit du bandeau honnête multiseed_badge_common.build_data_config :
+    un libellé factuel de ce qui est EN BASE, jamais une affirmation figée.
+    Silencieux ({}) si tracking.db est absent/vide, même logique défensive que
+    collect_weekly_kpis."""
+    import sqlite3
+
+    out = {}
+    try:
+        con = sqlite3.connect(db_path)
+        try:
+            for label, (frequence, horizon_type) in DATA_FRESHNESS_TRACKS.items():
+                cur = con.execute(
+                    """
+                    SELECT MAX(cutoff_date), COUNT(DISTINCT cutoff_date)
+                    FROM predictions
+                    WHERE frequence = ? AND horizon_type = ? AND source IN ('oos', 'live')
+                    """,
+                    (frequence, horizon_type),
+                )
+                max_cutoff, n_origins = cur.fetchone()
+                if max_cutoff is None:
+                    out[label] = None
+                    continue
+                cur = con.execute(
+                    """
+                    SELECT run_id, created_at FROM predictions
+                    WHERE frequence = ? AND horizon_type = ? AND source IN ('oos', 'live')
+                    ORDER BY cutoff_date DESC, created_at DESC, id DESC LIMIT 1
+                    """,
+                    (frequence, horizon_type),
+                )
+                run_id_latest, created_at_latest = cur.fetchone()
+                out[label] = {
+                    "max_cutoff_date": max_cutoff, "n_origins": int(n_origins),
+                    "run_id_latest": run_id_latest, "created_at_latest": created_at_latest,
+                }
+        finally:
+            con.close()
+    except Exception as exc:
+        print(f"[generate_dashboard] fraîcheur base indisponible ({exc})")
+        return {}
+    return out
+
+
 def render_html(run_data: dict, run_root_label: str, external_series: bool = False) -> str:
     """external_series=False (mode --inline) : predictions/prices embarquées dans le
     payload comme avant, page autonome ouvrable en file://. external_series=True (mode
@@ -505,8 +708,12 @@ def render_html(run_data: dict, run_root_label: str, external_series: bool = Fal
         "weekly_kpis": collect_weekly_kpis(),
         "weekly_kpi_models": WEEKLY_KPI_MODELS,
         "weekly_multiseed": collect_weekly_multiseed([a["ticker"] for a in asset_catalog]),
+        "monthly_kpis": collect_monthly_kpis(),
+        "monthly_kpi_models": MONTHLY_KPI_MODELS,
+        "monthly_multiseed": collect_monthly_multiseed([a["ticker"] for a in asset_catalog]),
         "rolling_coverage": collect_rolling_coverage(),
         "rolling_coverage_window": ROLLING_COVERAGE_WINDOW,
+        "data_freshness": collect_data_freshness(),
         "external_series": external_series,
     }
     if not external_series:
@@ -733,6 +940,7 @@ td.gated-out-cell { color: var(--text-muted); font-style: italic; }
 <h1>Dashboard KPI — Modèles de prévision</h1>
 <p class="subtitle" id="subtitle"></p>
 <div id="weekly-multiseed-banner"></div>
+<div id="freshness-banner"></div>
 
 <div class="tabbar" id="asset-tabbar"></div>
 <div id="asset-panels"></div>
@@ -839,16 +1047,44 @@ function renderWeeklyMultiseedBanner() {
     </div>`;
 }
 
-// pill "5/5 stable"/"3/5 instable" · CV(Winkler) daily/weekly, "—" si pas
-// d'artefact multiseed pour ce modèle/actif (dégradation gracieuse)
-function robustnessPillHTML(ticker, model) {
-  const r = ((DATA.weekly_multiseed || {}).robustness || {})[ticker] && DATA.weekly_multiseed.robustness[ticker][model];
+// pill "5/5 stable"/"3/5 instable" · CV(Winkler) daily/weekly(ou monthly), "—" si pas
+// d'artefact multiseed pour ce modèle/actif (dégradation gracieuse). freq='monthly'
+// lit DATA.monthly_multiseed / la clé cv_winkler_monthly (BRIEF_dashboard_mensuel_
+// et_maj_bdd.md §3.3) -- même fonction, miroir du weekly par paramètre plutôt que
+// par duplication.
+function robustnessPillHTML(ticker, model, freq = 'weekly') {
+  const store = freq === 'monthly' ? DATA.monthly_multiseed : DATA.weekly_multiseed;
+  const r = ((store || {}).robustness || {})[ticker] && store.robustness[ticker][model];
   if (!r) return '';
   const cls = r.verdict_stable ? 'stable' : 'unstable';
   const label = r.verdict_stable ? `${r.n_seeds}/${r.n_seeds} stable` : `${r.majority_count}/${r.n_seeds} instable`;
-  const cvd = fmt(r.cv_winkler_daily * 100, 1), cvw = fmt(r.cv_winkler_weekly * 100, 1);
-  const title = `Verdict RMSE identique sur ${r.majority_count}/${r.n_seeds} graines · CV(Winkler) daily=${cvd}% weekly=${cvw}% · artefact à n_samples=${r.n_samples}`;
-  return `<span class="robustness-pill ${cls}" title="${title}">${label} · CV(W) ${cvd}%/${cvw}%</span>`;
+  const otherKey = freq === 'monthly' ? 'cv_winkler_monthly' : 'cv_winkler_weekly';
+  const cvd = fmt(r.cv_winkler_daily * 100, 1), cvo = fmt(r[otherKey] * 100, 1);
+  const title = `Verdict RMSE identique sur ${r.majority_count}/${r.n_seeds} graines · CV(Winkler) daily=${cvd}% ${freq}=${cvo}% · artefact à n_samples=${r.n_samples}`;
+  return `<span class="robustness-pill ${cls}" title="${title}">${label} · CV(W) ${cvd}%/${cvo}%</span>`;
+}
+
+// ---- B1 : stamp de provenance factuel par piste (weekly, monthly) ----------
+// (BRIEF_dashboard_mensuel_et_maj_bdd.md §4) -- lit DATA.data_freshness (une entrée
+// par piste, cf. collect_data_freshness côté Python), même esprit "libellé factuel,
+// jamais figé" que renderWeeklyMultiseedBanner ci-dessus. Global, pas par actif.
+function renderFreshnessBanner() {
+  const el = document.getElementById('freshness-banner');
+  const freshness = DATA.data_freshness || {};
+  const trackLabel = { weekly: 'Weekly', monthly: 'Monthly' };
+  const lines = Object.keys(trackLabel).map(track => {
+    const t = freshness[track];
+    if (!t) return `<li><b>${trackLabel[track]}</b> : aucune donnée en base.</li>`;
+    const runPart = t.run_id_latest
+      ? `run le plus récent <code>${t.run_id_latest}</code>${t.created_at_latest ? ` (${t.created_at_latest})` : ''}`
+      : 'run le plus récent inconnu (created_at absent)';
+    return `<li><b>${trackLabel[track]}</b> : dernière origine ${t.max_cutoff_date} · ${t.n_origins} origine(s) · ${runPart}</li>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="config-banner">
+      <p class="cb-headline">Fraîcheur de la base (tracking.db, lecture seule)</p>
+      <ul>${lines}</ul>
+    </div>`;
 }
 
 // ---- Tooltip helper (onglet Comparaison) -----------------------------------
@@ -885,6 +1121,10 @@ const KPI_DEFINITIONS = {
   weeklycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. Résultat solide pour TSDiff (0,55 en daily -> 0,78 en weekly, p<0,001 Holm) et pour NsDiff (couverture poolée ≈ 92-95% en weekly natif, cf. NOTE_backtest_rolling_nsdiffw.md §3 / NOTE_nsdiff_dashboard_daily_oos.md §7).",
   weeklycov5080: "Couverture 50%/80% (paramétrique) — recalculée en tirant un nuage paramétrique depuis (prédit, IC95) puis en lisant les quantiles 50%/80%. Reconstruction two-piece qui respecte l'asymétrie des bornes stockées (log-espace pour ARIMA-GARCH/Prophet) — exacte pour des bornes symétriques, cf. prob_kpi_common.sample_parametric. APPROXIMATION pour les modèles de diffusion (TSDiff, NsDiff — nuage réel non persisté à cette granularité pour aucun des deux) — indicatif, pas un résultat testé statistiquement comme la couverture à 95%.",
   weeklycrps: "CRPS (paramétrique) — score de la distribution complète (précision + incertitude), calculé sur un nuage paramétrique recalculé depuis (prédit, IC95) en respectant l'asymétrie des bornes stockées (two-piece, log-espace pour ARIMA-GARCH/Prophet — plus d'hypothèse de symétrie gaussienne forcée depuis l'adoption skew-t/log). APPROXIMATION pour les modèles de diffusion (TSDiff, NsDiff) — ne PAS lire comme 'plus précis en weekly' (non significatif pour les deux), cf. couverture pour le résultat solide.",
+  monthlyintro: "Régime mensuel natif (C), modèles de diffusion uniquement (TSDiff, NsDiff — mêmes 2 modèles que le weekly, seuls présents en mensuel) — miroir exact du weekly (BRIEF_dashboard_mensuel_et_maj_bdd.md). FAIBLE PUISSANCE STATISTIQUE : ~130-140 clôtures mensuelles depuis 2015, cibles M+1/M+2/M+3 recouvrantes (corrélées) → effective_n ≈ 10. La plupart des cellules ressortent 'indistinguishable' : c'est l'effet ATTENDU d'un petit échantillon, jamais une équivalence démontrée — comme le weekly refuse de dire 'plus précis'.",
+  monthlycov95: "Couverture 95% (exacte) — % des cibles réalisées tombant dans l'intervalle à 95% stocké, calculé directement sur les bornes (aucune hypothèse de forme). Cible ≈ 95%. Même lecture que weeklycov95 ; à faible n (effective_n ≈ 10), un écart à 95% peut être du bruit d'échantillonnage, pas un signal de miscalibration.",
+  monthlycov5080: "Couverture 50%/80% (paramétrique) — même reconstruction two-piece que weeklycov5080. APPROXIMATION pour les 2 modèles de diffusion — indicatif, à faible puissance mensuelle (effective_n ≈ 10).",
+  monthlycrps: "CRPS (paramétrique) — même calcul que weeklycrps, sur les tirages gaussiens du régime mensuel natif. APPROXIMATION pour les 2 modèles — ne PAS lire comme 'plus précis en mensuel', puissance statistique trop faible pour trancher.",
   rollcov: "Monitoring de la calibration déployée (adoption σ dynamique du 30-31/07/2026) : pour chaque modèle × horizon, part des prédictions RÉSOLUES dont le vrai prix est tombé dans la bande 95 % stockée — recalculée depuis les bornes, sans hypothèse de forme. Fenêtre = dernières prédictions résolues (défaut 30) ; « live » = sous-ensemble réellement produit en production (source='live'), c'est lui qui confirme (ou non) en conditions réelles ce qui a été validé en backtest. Rouge = sous-couverture au-delà de 2 écarts-types binomiaux sous 95 % (bandes trop étroites — le sens risqué) ; ambre = 100 % sur fenêtre pleine (bandes probablement trop larges). Les premiers jours après déploiement, n_live est faible : les cellules se fiabilisent au fil des résolutions quotidiennes (evaluate_daily).",
   rmse: "RMSE — racine de l'erreur quadratique moyenne entre prix réel et prédit sur la validation. Unité du prix ; plus bas = meilleur.",
   crps: "CRPS — score probabiliste empirique (Gneiting & Raftery) sur un nuage de tirages : bootstrap des résidus pour ARIMA-GARCH/SARIMA/Prophet, bande gaussienne (même hypothèse que son IC95) pour Naive, Monte Carlo Dropout pour LSTM, échantillons natifs pour TSDiff. Généralise le MAE à une prévision probabiliste ; plus bas = meilleur. '—' : horizon D+7 (non supporté pour l'instant). À ne pas confondre avec le CRPS (gaussien) ci-dessus (weeklycrps) : celui-ci recalcule un nuage gaussien depuis l'IC95 déjà stocké (experiments/kpi_probabilistes.json, même logique) ; cette ligne-ci, en revanche, tire son nuage directement des résidus empiriques du modèle (ou du dropout pour LSTM) — aucune hypothèse de forme gaussienne pour ARIMA-GARCH/SARIMA/Prophet/LSTM, calculée à chaque run pour D1 seulement (pas encore D7 ni le grid hebdomadaire).",
@@ -969,6 +1209,9 @@ DATA.assets.forEach(a => {
     // réellement présents pour CET actif (cf. wireAssetPanel) -- ex: NsDiff absent
     // pour TLT (données non résolues), cf. NOTE_nsdiff_dashboard_daily_oos.md §3.
     weeklyModels: new Set(),
+    // Miroir exact de weeklyModels pour le panneau Monthly (régime C mensuel natif,
+    // BRIEF_dashboard_mensuel_et_maj_bdd.md §3).
+    monthlyModels: new Set(),
   };
 });
 
@@ -1000,18 +1243,23 @@ function switchAssetTab(ticker) {
 function assetPanelSkeleton(a) {
   const s = a.short;
   const hasWeekly = !!(DATA.weekly_kpis && DATA.weekly_kpis[a.ticker]);
+  // Bouton "Monthly" (BRIEF_dashboard_mensuel_et_maj_bdd.md §3.3) : même condition
+  // d'activation que Weekly (données pour CET actif), plus grisé/absent sinon.
+  const hasMonthly = !!(DATA.monthly_kpis && DATA.monthly_kpis[a.ticker]);
   return `
     <div class="card controls-row">
       <div class="subtabbar" id="subtab-${s}">
         <button class="active" data-sub="kpis">KPIs</button>
         <button data-sub="chart">Graphique</button>
       </div>
-      ${hasWeekly ? `
+      ${(hasWeekly || hasMonthly) ? `
       <div class="toggle-group" id="freq-${s}">
         <button class="active" data-freq="daily">Daily</button>
-        <button data-freq="weekly">Weekly ${infoDot('weeklyintro')}</button>
+        ${hasWeekly ? `<button data-freq="weekly">Weekly ${infoDot('weeklyintro')}</button>` : ''}
+        ${hasMonthly ? `<button data-freq="monthly">Monthly ${infoDot('monthlyintro')}</button>` : ''}
       </div>
-      <div class="model-checks" id="weeklymodel-${s}" style="display:none;"></div>` : ''}
+      <div class="model-checks" id="weeklymodel-${s}" style="display:none;"></div>
+      <div class="model-checks" id="monthlymodel-${s}" style="display:none;"></div>` : ''}
       <label class="field-label" id="daterow-${s}">Date de run
         <select class="select-box" id="date-${s}"></select>
       </label>
@@ -1142,15 +1390,16 @@ function buildAssetPanels() {
 }
 
 // Reconstruit le toggle d'horizon selon la fréquence courante (daily: D1/D7 depuis
-// DATA.records ; weekly: W+1/2/3 fixes, TSDiff uniquement) -- appelé au chargement et
-// à chaque bascule du toggle Daily/Weekly (cf. wireAssetPanel).
+// DATA.records ; weekly: W+1/2/3 fixes ; monthly: M+1/2/3 fixes, miroir du weekly) --
+// appelé au chargement et à chaque bascule du toggle Daily/Weekly/Monthly (cf.
+// wireAssetPanel).
 function buildHorizonToggle(ticker) {
   const s = DATA.assets.find(x => x.ticker === ticker).short;
   const st = assetState[ticker];
   const hEl = document.getElementById(`horizon-${s}`);
   hEl.innerHTML = '';
-  const horizons = st.freq === 'weekly'
-    ? ['W+1', 'W+2', 'W+3']
+  const horizons = st.freq === 'weekly' ? ['W+1', 'W+2', 'W+3']
+    : st.freq === 'monthly' ? ['M+1', 'M+2', 'M+3']
     : [...new Set(DATA.records.filter(r => r.asset === ticker).map(r => r.horizon))].sort();
   if (!horizons.includes(st.horizon)) st.horizon = horizons[0];
   horizons.forEach(h => {
@@ -1163,6 +1412,28 @@ function buildHorizonToggle(ticker) {
       refreshAssetTab(ticker);
     });
     hEl.appendChild(btn);
+  });
+}
+
+// Cases à cocher + carré de couleur par modèle, composant partagé par le sélecteur
+// Daily (models-${s}), Weekly (weeklymodel-${s}) et Monthly (monthlymodel-${s}) --
+// factorisé pour ne pas retaper 3 fois la même boucle (pas un onglet exclusif :
+// plusieurs modèles cochables ensemble, cf. commentaires historiques weekly ci-dessous).
+function buildModelCheckGroup(container, models, selectedSet, ticker) {
+  models.forEach(m => {
+    const label = document.createElement('label');
+    label.className = 'model-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = selectedSet.has(m);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedSet.add(m); else selectedSet.delete(m);
+      refreshAssetTab(ticker);
+    });
+    const sw = document.createElement('span');
+    sw.className = 'swatch'; sw.style.background = MODEL_COLORS[m];
+    const txt = document.createElement('span'); txt.textContent = m;
+    label.appendChild(cb); label.appendChild(sw); label.appendChild(txt);
+    container.appendChild(label);
   });
 }
 
@@ -1180,43 +1451,39 @@ function wireAssetPanel(a) {
 
   buildHorizonToggle(ticker);
 
-  if (DATA.weekly_kpis && DATA.weekly_kpis[ticker]) {
-    // Modèles weekly réellement présents pour CET actif (ex: NsDiff absent pour
-    // TLT, cf. NOTE_nsdiff_dashboard_daily_oos.md §3), dans l'ordre déclaré
-    // DATA.weekly_kpi_models -- jamais l'ordre d'itération d'un objet JS. Cases à
-    // cocher + carrés de couleur, MÊME composant que le sélecteur de modèles Daily
-    // (models-${s} ci-dessous) -- pas un onglet exclusif : tous cochés par défaut.
-    const weeklyModelsHere = DATA.weekly_kpi_models.filter(m => DATA.weekly_kpis[ticker][m]);
-    st.weeklyModels = new Set(weeklyModelsHere);
+  // Modèles weekly/monthly réellement présents pour CET actif (ex: NsDiff absent pour
+  // TLT, cf. NOTE_nsdiff_dashboard_daily_oos.md §3), dans l'ordre déclaré
+  // DATA.weekly_kpi_models/monthly_kpi_models -- jamais l'ordre d'itération d'un objet
+  // JS. Monthly (BRIEF_dashboard_mensuel_et_maj_bdd.md §3.3) est le MIROIR exact du
+  // weekly : même composant de cases à cocher, même bascule de fréquence.
+  const hasWeeklyHere = !!(DATA.weekly_kpis && DATA.weekly_kpis[ticker]);
+  const hasMonthlyHere = !!(DATA.monthly_kpis && DATA.monthly_kpis[ticker]);
+  const weeklyModelsHere = hasWeeklyHere ? DATA.weekly_kpi_models.filter(m => DATA.weekly_kpis[ticker][m]) : [];
+  const monthlyModelsHere = hasMonthlyHere ? DATA.monthly_kpi_models.filter(m => DATA.monthly_kpis[ticker][m]) : [];
+  st.weeklyModels = new Set(weeklyModelsHere);
+  st.monthlyModels = new Set(monthlyModelsHere);
 
-    const wmEl = document.getElementById(`weeklymodel-${s}`);
-    weeklyModelsHere.forEach(m => {
-      const label = document.createElement('label');
-      label.className = 'model-check';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = st.weeklyModels.has(m);
-      cb.addEventListener('change', () => {
-        if (cb.checked) st.weeklyModels.add(m); else st.weeklyModels.delete(m);
-        refreshAssetTab(ticker);
-      });
-      const sw = document.createElement('span');
-      sw.className = 'swatch'; sw.style.background = MODEL_COLORS[m];
-      const txt = document.createElement('span'); txt.textContent = m;
-      label.appendChild(cb); label.appendChild(sw); label.appendChild(txt);
-      wmEl.appendChild(label);
-    });
+  const wmEl = document.getElementById(`weeklymodel-${s}`);
+  const mmEl = document.getElementById(`monthlymodel-${s}`);
+  if (hasWeeklyHere) buildModelCheckGroup(wmEl, weeklyModelsHere, st.weeklyModels, ticker);
+  if (hasMonthlyHere) buildModelCheckGroup(mmEl, monthlyModelsHere, st.monthlyModels, ticker);
 
+  if (hasWeeklyHere || hasMonthlyHere) {
     const freqEl = document.getElementById(`freq-${s}`);
     freqEl.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
         st.freq = btn.dataset.freq;
         freqEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
-        const isWeekly = st.freq === 'weekly';
-        document.getElementById(`daterow-${s}`).style.display = isWeekly ? 'none' : '';
-        document.getElementById(`models-${s}`).style.display = isWeekly ? 'none' : '';
-        wmEl.style.display = isWeekly && weeklyModelsHere.length > 0 ? '' : 'none';
-        document.getElementById(`showtrain-label-${s}`).style.display = isWeekly ? 'none' : '';
-        document.getElementById(`showval-label-${s}`).style.display = isWeekly ? 'none' : '';
+        // "Aggrégé" = weekly OU monthly (par opposition à daily) : mêmes contrôles
+        // masqués dans les deux cas (date de run/modèles daily/checks train-val, tous
+        // sans objet hors daily -- cf. buildHorizonToggle pour l'horizon).
+        const isAggregated = st.freq !== 'daily';
+        document.getElementById(`daterow-${s}`).style.display = isAggregated ? 'none' : '';
+        document.getElementById(`models-${s}`).style.display = isAggregated ? 'none' : '';
+        wmEl.style.display = st.freq === 'weekly' && weeklyModelsHere.length > 0 ? '' : 'none';
+        mmEl.style.display = st.freq === 'monthly' && monthlyModelsHere.length > 0 ? '' : 'none';
+        document.getElementById(`showtrain-label-${s}`).style.display = isAggregated ? 'none' : '';
+        document.getElementById(`showval-label-${s}`).style.display = isAggregated ? 'none' : '';
         buildHorizonToggle(ticker);
         refreshAssetTab(ticker);
       });
@@ -1224,21 +1491,7 @@ function wireAssetPanel(a) {
   }
 
   const mEl = document.getElementById(`models-${s}`);
-  MODELS.forEach(m => {
-    const label = document.createElement('label');
-    label.className = 'model-check';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = st.models.has(m);
-    cb.addEventListener('change', () => {
-      if (cb.checked) st.models.add(m); else st.models.delete(m);
-      refreshAssetTab(ticker);
-    });
-    const sw = document.createElement('span');
-    sw.className = 'swatch'; sw.style.background = MODEL_COLORS[m];
-    const txt = document.createElement('span'); txt.textContent = m;
-    label.appendChild(cb); label.appendChild(sw); label.appendChild(txt);
-    mEl.appendChild(label);
-  });
+  buildModelCheckGroup(mEl, MODELS, st.models, ticker);
 
   document.getElementById(`subtab-${s}`).querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1350,28 +1603,51 @@ function renderRollingCoverage(ticker) {
 // =============================================================================
 
 // Réutilise EXACTEMENT le schéma daily (cartes KPI + breakdown dans l'onglet KPIs,
-// graphique prix + prévision dans l'onglet Graphique) -- toggle Daily/Weekly bascule
-// le contenu de ces DEUX onglets existants, pas un 3e onglet à part (cf. revue).
-function weeklyRows(ticker, model) {
-  const weekly = (DATA.weekly_kpis[ticker] || {})[model] || {};
+// graphique prix + prévision dans l'onglet Graphique) -- toggle Daily/Weekly/Monthly
+// bascule le contenu de ces DEUX onglets existants, pas un 3e onglet à part (cf. revue).
+// Monthly (BRIEF_dashboard_mensuel_et_maj_bdd.md) est un MIROIR exact du weekly : les
+// fonctions ci-dessous sont génériques par fréquence (FREQ_CONFIG) plutôt que dupliquées
+// -- même principe que _weekly_row_samples réutilisé tel quel côté Python.
+const FREQ_CONFIG = {
+  weekly: { kpisKey: 'weekly_kpis', modelsKey: 'weekly_kpi_models', stateKey: 'weeklyModels',
+           cov95Def: 'weeklycov95', cov5080Def: 'weeklycov5080', crpsDef: 'weeklycrps',
+           priceLabel: 'Historique hebdomadaire' },
+  monthly: { kpisKey: 'monthly_kpis', modelsKey: 'monthly_kpi_models', stateKey: 'monthlyModels',
+            cov95Def: 'monthlycov95', cov5080Def: 'monthlycov5080', crpsDef: 'monthlycrps',
+            priceLabel: 'Historique mensuel' },
+};
+
+function freqRows(ticker, model, freq) {
+  const cfg = FREQ_CONFIG[freq];
+  const bucket = (DATA[cfg.kpisKey][ticker] || {})[model] || {};
   const rows = [];
-  Object.entries(weekly).forEach(([horizonUnit, kpi]) => rows.push({ horizonUnit, ...kpi }));
+  Object.entries(bucket).forEach(([horizonUnit, kpi]) => rows.push({ horizonUnit, ...kpi }));
   rows.sort((a, b) => a.horizonUnit.localeCompare(b.horizonUnit));
   return rows;
 }
+function weeklyRows(ticker, model) { return freqRows(ticker, model, 'weekly'); }
+function monthlyRows(ticker, model) { return freqRows(ticker, model, 'monthly'); }
 
-function renderWeeklyKpisInline(ticker) {
+function checkedFreqModels(ticker, freq) {
+  const cfg = FREQ_CONFIG[freq];
+  const st = assetState[ticker];
+  return DATA[cfg.modelsKey].filter(m => st[cfg.stateKey].has(m) && DATA[cfg.kpisKey][ticker][m]);
+}
+
+function renderFreqKpisInline(ticker, freq) {
+  const cfg = FREQ_CONFIG[freq];
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
-  const checked = DATA.weekly_kpi_models.filter(m => st.weeklyModels.has(m) && DATA.weekly_kpis[ticker][m]);
+  const checked = checkedFreqModels(ticker, freq);
 
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
-  cardsEl.innerHTML = '';
+  cardsEl.innerHTML = freq === 'monthly'
+    ? `<div class="no-data" style="width:100%;">${KPI_DEFINITIONS.monthlyintro}</div>` : '';
   if (!checked.length) {
-    cardsEl.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
+    cardsEl.innerHTML += '<div class="no-data">Sélectionnez au moins un modèle.</div>';
   }
   checked.forEach(m => {
-    const rows = weeklyRows(ticker, m);
+    const rows = freqRows(ticker, m, freq);
     const rec = rows.find(r => r.horizonUnit === st.horizon);
     const card = document.createElement('div');
     card.className = 'kpi-card';
@@ -1382,24 +1658,24 @@ function renderWeeklyKpisInline(ticker) {
       const crpsLabel = rec.crps_gaussian == null ? '—' :
         fmt(rec.crps_gaussian, 3) + (rec.crps_is_approx ? ' (approx.)' : '');
       rowsHtml = [
-        [`Couverture 95% ${infoDot('weeklycov95')}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
-        [`Couverture 50% / 80% ${infoDot('weeklycov5080')}`,
+        [`Couverture 95% ${infoDot(cfg.cov95Def)}`, rec.cov95_exact == null ? '—' : fmt(rec.cov95_exact * 100, 1) + ' %'],
+        [`Couverture 50% / 80% ${infoDot(cfg.cov5080Def)}`,
          (rec.cov50_gaussian == null ? '—' : fmt(rec.cov50_gaussian * 100, 1) + ' %') + ' / ' +
          (rec.cov80_gaussian == null ? '—' : fmt(rec.cov80_gaussian * 100, 1) + ' %')],
-        [`CRPS ${infoDot('weeklycrps')}`, crpsLabel],
+        [`CRPS ${infoDot(cfg.crpsDef)}`, crpsLabel],
         ['n (réalisé/total)', `${rec.n_realized}/${rec.n_total}`],
       ].map(([k, v]) => `<div class="kpi-row"><span>${k}</span><b>${v}</b></div>`).join('');
     }
     card.innerHTML = `<div class="kpi-card-title">`
       + `<span class="swatch" style="background:${MODEL_COLORS[m]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>${m}`
-      + robustnessPillHTML(ticker, m) + `</div>`
+      + robustnessPillHTML(ticker, m, freq) + `</div>`
       + rowsHtml;
     cardsEl.appendChild(card);
   });
 
   const wrap = document.getElementById(`breakdown-wrap-${s}`);
   wrap.innerHTML = '';
-  const allRows = checked.flatMap(m => weeklyRows(ticker, m).map(r => ({ model: m, ...r })));
+  const allRows = checked.flatMap(m => freqRows(ticker, m, freq).map(r => ({ model: m, ...r })));
   if (!allRows.length) {
     wrap.innerHTML = '<div class="no-data">Aucune donnée pour cette sélection.</div>';
     return;
@@ -1408,9 +1684,9 @@ function renderWeeklyKpisInline(ticker) {
   table.innerHTML = `
     <thead><tr>
       <th>Modèle</th><th>Horizon</th><th>n (réalisé/total)</th>
-      <th>Couverture 95% ${infoDot('weeklycov95')}</th>
-      <th>Couverture 50% / 80% ${infoDot('weeklycov5080')}</th>
-      <th>CRPS ${infoDot('weeklycrps')}</th>
+      <th>Couverture 95% ${infoDot(cfg.cov95Def)}</th>
+      <th>Couverture 50% / 80% ${infoDot(cfg.cov5080Def)}</th>
+      <th>CRPS ${infoDot(cfg.crpsDef)}</th>
     </tr></thead>`;
   const tbody = document.createElement('tbody');
   allRows.forEach(r => {
@@ -1418,7 +1694,7 @@ function renderWeeklyKpisInline(ticker) {
     const crpsLabel = r.crps_gaussian == null ? '—' :
       fmt(r.crps_gaussian, 3) + (r.crps_is_approx ? ' (approx.)' : '');
     tr.innerHTML = `
-      <td><span class="swatch" style="background:${MODEL_COLORS[r.model]};width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;"></span>${r.model}${robustnessPillHTML(ticker, r.model)}</td>
+      <td><span class="swatch" style="background:${MODEL_COLORS[r.model]};width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;"></span>${r.model}${robustnessPillHTML(ticker, r.model, freq)}</td>
       <td>${r.horizonUnit}</td>
       <td>${r.n_realized}/${r.n_total}</td>
       <td>${r.cov95_exact == null ? '—' : fmt(r.cov95_exact * 100, 1) + '%'}</td>
@@ -1428,18 +1704,30 @@ function renderWeeklyKpisInline(ticker) {
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
+  if (freq === 'monthly') {
+    const note = document.createElement('p');
+    note.className = 'no-data';
+    note.style.marginTop = '10px';
+    note.textContent = "Faible puissance mensuelle (effective_n ≈ 10, cibles M+1/2/3 recouvrantes) : "
+      + "la plupart des cellules ci-dessus ressortent «indistinguishable» -- effet ATTENDU d'un "
+      + "petit échantillon, jamais une équivalence démontrée.";
+    wrap.appendChild(note);
+  }
 }
+function renderWeeklyKpisInline(ticker) { renderFreqKpisInline(ticker, 'weekly'); }
+function renderMonthlyKpisInline(ticker) { renderFreqKpisInline(ticker, 'monthly'); }
 
-// ---- Graphique weekly : prix hebdo réel + prévision de chaque modèle weekly coché --
+// ---- Graphique weekly/monthly : prix réel + prévision de chaque modèle coché -------
 // Même schéma visuel que le Graphique daily (Plotly zoomable, bande IC95 par modèle,
-// une trace par modèle coché), sourcé directement depuis DATA.weekly_kpis (déjà tout
-// en mémoire, pas de fetch réseau contrairement au daily en mode externe).
-function renderWeeklyChart(ticker) {
+// une trace par modèle coché), sourcé directement depuis DATA.weekly_kpis/monthly_kpis
+// (déjà tout en mémoire, pas de fetch réseau contrairement au daily en mode externe).
+function renderFreqChart(ticker, freq) {
+  const cfg = FREQ_CONFIG[freq];
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
-  const checked = DATA.weekly_kpi_models.filter(m => st.weeklyModels.has(m) && DATA.weekly_kpis[ticker][m]);
+  const checked = checkedFreqModels(ticker, freq);
 
   if (!checked.length) {
     container.innerHTML = '<div class="no-data">Sélectionnez au moins un modèle.</div>';
@@ -1447,18 +1735,18 @@ function renderWeeklyChart(ticker) {
     return;
   }
 
-  // Prix réel hebdo : un point par origine (cutoff_date, last_close), dédupliqué sur
-  // TOUS les modèles cochés -- last_close est identique pour un même cutoff_date quel
-  // que soit le modèle ou l'horizon (même grille d'origines, cf. NOTE_nsdiff_dashboard_daily_oos.md).
+  // Prix réel : un point par origine (cutoff_date, last_close), dédupliqué sur TOUS
+  // les modèles cochés -- last_close est identique pour un même cutoff_date quel que
+  // soit le modèle ou l'horizon (même grille d'origines).
   const priceByDate = new Map();
   let anyRows = false;
-  checked.forEach(m => weeklyRows(ticker, m).forEach(r => {
+  checked.forEach(m => freqRows(ticker, m, freq).forEach(r => {
     anyRows = true;
     r.rows.forEach(row => priceByDate.set(row.cutoff_date, row.last_close));
   }));
   const priceDates = [...priceByDate.keys()].sort();
   dateRangeEl.textContent = priceDates.length
-    ? `Historique hebdomadaire : ${priceDates[0]} → ${priceDates[priceDates.length - 1]}`
+    ? `${cfg.priceLabel} : ${priceDates[0]} → ${priceDates[priceDates.length - 1]}`
     : '';
   if (!anyRows) {
     container.innerHTML = '<div class="no-data">Aucune donnée pour cette sélection.</div>';
@@ -1467,13 +1755,13 @@ function renderWeeklyChart(ticker) {
 
   const traces = [{
     x: priceDates, y: priceDates.map(d => priceByDate.get(d)),
-    mode: 'lines+markers', name: 'Réel (clôture hebdo)',
+    mode: 'lines+markers', name: 'Réel (clôture)',
     line: { color: ACTUAL_COLOR, width: 1.6 }, marker: { size: 4 },
     hovertemplate: '%{x}<br>%{y:.2f}<extra>Réel</extra>',
   }];
 
   checked.forEach(m => {
-    const rows = weeklyRows(ticker, m);
+    const rows = freqRows(ticker, m, freq);
     const sel = (rows.find(r => r.horizonUnit === st.horizon) || {}).rows || [];
     const sorted = sel.slice().sort((x, y) => x.target_date.localeCompare(y.target_date));
     if (!sorted.length) return;
@@ -1510,6 +1798,8 @@ function renderWeeklyChart(ticker) {
   };
   Plotly.newPlot(`chart-${s}`, traces, layout, { responsive: true, displaylogo: false });
 }
+function renderWeeklyChart(ticker) { renderFreqChart(ticker, 'weekly'); }
+function renderMonthlyChart(ticker) { renderFreqChart(ticker, 'monthly'); }
 
 // Changement de date de run pour un actif : si les séries de cette date ne sont pas
 // encore en cache, les récupère (fetch, mode externe) avant de rafraîchir l'onglet --
@@ -1902,6 +2192,7 @@ function renderAssetKpis(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
   if (st.freq === 'weekly') { renderWeeklyKpisInline(ticker); return; }
+  if (st.freq === 'monthly') { renderMonthlyKpisInline(ticker); return; }
   const checked = MODELS.filter(m => st.models.has(m));
 
   const cardsEl = document.getElementById(`kpi-cards-${s}`);
@@ -2027,6 +2318,7 @@ function renderAssetChart(ticker) {
   const a = DATA.assets.find(x => x.ticker === ticker);
   const s = a.short, st = assetState[ticker];
   if (st.freq === 'weekly') { renderWeeklyChart(ticker); return; }
+  if (st.freq === 'monthly') { renderMonthlyChart(ticker); return; }
   const container = document.getElementById(`chart-${s}`);
   const dateRangeEl = document.getElementById(`chart-daterange-${s}`);
 
@@ -2511,6 +2803,7 @@ async function boot() {
   seedDataCacheFromInline();
   renderSubtitle();
   renderWeeklyMultiseedBanner();
+  renderFreshnessBanner();
   buildTabBar();
   // Toutes les fiches actif démarrent sur la même date (la plus récente, cf. assetState
   // ci-dessus) -- un seul fetch couvre le rendu KPI initial de tous les actifs.
