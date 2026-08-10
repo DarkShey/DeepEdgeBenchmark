@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T12:41:33.347025+00:00",
+  "generated_at": "2026-08-10T14:29:16.456579+00:00",
   "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
   "horizon_unit": "W+1",
   "seed_pooled": 42,
@@ -1609,10 +1609,10 @@
         "model": "NsDiff",
         "verdict_stable": false,
         "n_seeds": 5,
-        "majority_count": 4,
-        "cv_winkler_daily": 0.1175949131825386,
-        "cv_winkler_weekly": 0.029128361511031844,
-        "n_samples": 50,
+        "majority_count": 3,
+        "cv_winkler_daily": 0.11149890850260236,
+        "cv_winkler_weekly": 0.03768988382280826,
+        "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
@@ -1717,9 +1717,9 @@
         "verdict_stable": true,
         "n_seeds": 5,
         "majority_count": 5,
-        "cv_winkler_daily": 0.11638954427194328,
-        "cv_winkler_weekly": 0.051408257332961886,
-        "n_samples": 50,
+        "cv_winkler_daily": 0.0856937871862915,
+        "cv_winkler_weekly": 0.02223064167470471,
+        "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
@@ -1821,12 +1821,12 @@
       },
       "robustness": {
         "model": "NsDiff",
-        "verdict_stable": false,
+        "verdict_stable": true,
         "n_seeds": 5,
-        "majority_count": 4,
-        "cv_winkler_daily": 0.11275186374934852,
-        "cv_winkler_weekly": 0.04202808034573693,
-        "n_samples": 50,
+        "majority_count": 5,
+        "cv_winkler_daily": 0.08664772418158478,
+        "cv_winkler_weekly": 0.02628544895985471,
+        "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
@@ -1931,9 +1931,9 @@
         "verdict_stable": true,
         "n_seeds": 5,
         "majority_count": 5,
-        "cv_winkler_daily": 0.05830452735540789,
-        "cv_winkler_weekly": 0.014328083369469101,
-        "n_samples": 50,
+        "cv_winkler_daily": 0.03826461671550907,
+        "cv_winkler_weekly": 0.030128156394299138,
+        "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
@@ -2035,12 +2035,12 @@
       },
       "robustness": {
         "model": "NsDiff",
-        "verdict_stable": false,
+        "verdict_stable": true,
         "n_seeds": 5,
-        "majority_count": 4,
-        "cv_winkler_daily": 0.04016033290539645,
-        "cv_winkler_weekly": 0.058716453340692955,
-        "n_samples": 50,
+        "majority_count": 5,
+        "cv_winkler_daily": 0.059027464600621186,
+        "cv_winkler_weekly": 0.05477025382938365,
+        "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
       }
     },
@@ -19309,7 +19309,7 @@
         "effective_n": 31,
         "mean_diff": -0.7426310993685364,
         "ci95_lo": -1.0124973490520317,
-        "ci95_hi": -0.5099072340761707,
+        "ci95_hi": -0.5099072340761708,
         "p_value": 0.0,
         "significant_at_05": true,
         "verdict": "weekly_native_significantly_better"
@@ -19328,7 +19328,7 @@
           "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 95 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 31 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=95). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.7426, IC95% bootstrap = [-1.0125, -0.5099] : cet intervalle exclut 0 (p=0.0000) -> r\u00e9sultat significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.0,
           "ci95_lo": -1.0124973490520317,
-          "ci95_hi": -0.5099072340761707,
+          "ci95_hi": -0.5099072340761708,
           "n": 95,
           "effective_n": 31,
           "block_length": 3
@@ -19481,9 +19481,9 @@
         "n": 91,
         "block_length": 3,
         "effective_n": 30,
-        "mean_diff": -0.037027777168250994,
-        "ci95_lo": -0.11242904175193003,
-        "ci95_hi": 0.05648170751252053,
+        "mean_diff": -0.03702777716825109,
+        "ci95_lo": -0.1124290417519302,
+        "ci95_hi": 0.05648170751252041,
         "p_value": 0.4276,
         "significant_at_05": false,
         "verdict": "indistinguishable"
@@ -19501,8 +19501,8 @@
         "skill_winkler": {
           "text": "Test bootstrap par blocs sur skill Winkler (fiabilit\u00e9 de l'incertitude, sans \u00e9chelle vs RW) : 91 origines appari\u00e9es (blocs de 3 origines cons\u00e9cutives -> 30 blocs quasi ind\u00e9pendants, c'est la puissance statistique r\u00e9elle, pas n=91). Diff\u00e9rence moyenne (daily \u2212 weekly) = -0.0370, IC95% bootstrap = [-0.1124, +0.0565] : cet intervalle inclut 0 (p=0.4276) -> r\u00e9sultat non significatif. \u00ab Significatif \u00bb signifie ici que l'intervalle de confiance \u00e0 95% (obtenu par r\u00e9\u00e9chantillonnage par blocs de 3 origines, pour respecter l'autocorr\u00e9lation entre origines hebdomadaires qui se chevauchent) de la diff\u00e9rence d'erreur appari\u00e9e exclut z\u00e9ro.",
           "p_value": 0.4276,
-          "ci95_lo": -0.11242904175193003,
-          "ci95_hi": 0.05648170751252053,
+          "ci95_lo": -0.1124290417519302,
+          "ci95_hi": 0.05648170751252041,
           "n": 91,
           "effective_n": 30,
           "block_length": 3
@@ -19529,8 +19529,7 @@
   "data_config": {
     "target": "ensemble 5 graines (42-46) x 200 tirages",
     "sampled_models": [
-      "NsDiff",
-      "TSDiff"
+      "NsDiff"
     ],
     "analytic_models": [
       "ARIMA-GARCH",
@@ -19543,23 +19542,15 @@
     "multiseed_artifacts": {
       "NsDiff": {
         "artifact_found": true,
-        "n_samples": 50,
+        "n_samples": 200,
         "n_seeds": 5,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json",
-        "is_target_config": false,
-        "status_label": "pas encore la config cible"
-      },
-      "TSDiff": {
-        "artifact_found": false,
-        "n_samples": null,
-        "n_seeds": null,
-        "source_path": null,
-        "is_target_config": false,
-        "status_label": "artefact multiseed absent -- badge indisponible pour ce mod\u00e8le"
+        "is_target_config": true,
+        "status_label": "config cible atteinte"
       }
     },
-    "all_target_config": false,
-    "headline": "Donn\u00e9es actuelles (NsDiff : 5 graine(s) x 50 tirages; TSDiff : artefact absent) -- cible : ensemble 5 graines (42-46) x 200 tirages, r\u00e9g\u00e9n\u00e9ration en attente c\u00f4t\u00e9 tuteur (voir RUNBOOK_regeneration_multiseed_200.md).",
+    "all_target_config": true,
+    "headline": "Donn\u00e9es (mod\u00e8les \u00e9chantillonn\u00e9s NsDiff) : ensemble 5 graines (42-46) x 200 tirages -- config de production (t\u00e2che 6).",
     "oos_rows_note": "Le badge (artefact JSON multiseed) et les lignes `oos` affich\u00e9es dans le tableau sont DEUX \u00e9critures ind\u00e9pendantes (jamais la m\u00eame) -- l'artefact peut \u00eatre \u00e0 200 tirages sans garantir que les lignes `oos` aient d\u00e9j\u00e0 \u00e9t\u00e9 r\u00e9\u00e9crites en ensemble, et inversement. Se fier au run_id/n_samples affich\u00e9s ici pour la vraie provenance, jamais \u00e0 une supposition."
   },
   "plain": {

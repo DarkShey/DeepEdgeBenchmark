@@ -1,9 +1,30 @@
 # RUNBOOK — régénération ensemble 5 graines × 200 tirages (NsDiff + TSDiff)
 
 *Pour le tuteur. Compute lourd (entraînements diffusion), volontairement PAS lancé
-sur la machine de l'étudiante — cf. `BRIEF_dashboard_multiseed_200.md`. Les scripts
-sont prêts et smoke-testés (imports vérifiés), mais **aucun n'a été exécuté** : ni
-checkpoints, ni JSON multiseed à 200, ni lignes `oos` réécrites.*
+sur la machine de l'étudiante — cf. `BRIEF_dashboard_multiseed_200.md`.*
+
+> **État au 2026-08-10 — étapes 2, 3 et 5 FAITES pour NsDiff, rien à relancer.**
+>
+> - Étape 2 : `nsdiff_daily_weekly_multiseed.py` exécuté (8,4 min, 25 checkpoints
+>   sous `checkpoints_nsdiff_multiseed_200/`). `nsdiff_daily_weekly_multiseed.json`
+>   est désormais à `n_samples: 200`, 5 graines. Le bandeau du dashboard affiche
+>   « config de production (tâche 6) », `all_target_config: true`.
+> - Étape 3 : les 2 700 lignes `oos` NsDiff/weekly avaient déjà été réécrites en
+>   ensemble 5×200 par `repoint_oos_to_ensemble.py` (`run_id`
+>   `20260808-oos-repoint-ensemble`) — voie équivalente à
+>   `oos_ensemble_nsdiff_daily_weekly.py`, même agrégation par concaténation des
+>   nuages. Ne pas rejouer l'étape 3 : elle réécrirait les mêmes lignes.
+> - **TSDiff : sans objet.** Le modèle a été RETIRÉ du benchmark (chantier A3, cf.
+>   `benchmark_registry.RETIRED`). `MULTISEED_MODELS` est dérivé de
+>   `reg.sampled_models()`, donc TSDiff ne conditionne plus le bandeau et son
+>   artefact n'a pas à être régénéré — les ~1h30-2h annoncées plus bas sont
+>   économisées. Les commandes TSDiff sont conservées ci-dessous au cas où le
+>   modèle serait réactivé.
+> - **Hors périmètre, assumé :** les 1 200 lignes `oos` NsDiff à l'horizon MENSUEL
+>   (`run_id 20260805-nsdiff-monthly-oos`) restent en mono-graine 42 / n=50. Elles
+>   n'apparaissent pas dans le dashboard, borné à `horizon_unit = W+1`. Les aligner
+>   demanderait un re-run de `nsdiff_monthly_multiseed.py` à n=200 ET un script de
+>   repointage mensuel qui n'existe pas encore.
 
 ## Portée
 

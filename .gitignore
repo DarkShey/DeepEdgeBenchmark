@@ -57,6 +57,10 @@ experiments/checkpoints_nsdiff_swept/
 # Idem pour le multi-graines daily-vs-weekly (BRIEF_nsdiff_ameliorer_limites.md Fix 2) --
 # déjà agrégé dans experiments/nsdiff_daily_weekly_multiseed.json.
 experiments/checkpoints_nsdiff_multiseed/
+# Idem pour la version 5 graines x 200 tirages (RUNBOOK_regeneration_multiseed_200.md
+# étape 2, exécutée le 2026-08-10) -- 52 Mo de nuages bruts régénérables en 8,4 min,
+# déjà agrégés dans le même nsdiff_daily_weekly_multiseed.json.
+experiments/checkpoints_nsdiff_multiseed_200/
 
 # Rapport HTML régénérable (experiments/generate_dist_options_report.py) -- embarque
 # Cambria/Consolas (polices sous licence Microsoft) en base64 pour un rendu autonome ;

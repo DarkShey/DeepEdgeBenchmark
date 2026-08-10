@@ -15,6 +15,8 @@ generate_dashboard.collect_weekly_multiseed() -> badge/bandeau vides en
 production alors que tout fonctionnait en local (venv complet). Ce module n'a
 besoin que de la stdlib (json, pathlib, collections) : aucune dépendance
 supplémentaire à installer, aucun risque de ce genre de panne silencieuse.
+(`benchmark_registry`, importé plus bas, n'a lui non plus aucune dépendance --
+il ne contient que des dictionnaires : la garantie reste vraie.)
 
 Réutilisé par :
   - experiments/dashboard_d7_w1.py (réexporte ces noms pour compatibilité --
@@ -28,6 +30,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import benchmark_registry as reg
+
 EXPERIMENTS_DIR = Path(__file__).resolve().parent
 
 # Audit §3 de BRIEF_dashboard_multiseed_200.md (grep + lecture de benchmarks/
@@ -39,7 +43,14 @@ EXPERIMENTS_DIR = Path(__file__).resolve().parent
 # un nuage relu en quantiles -- pas concerné. Prophet échantillonne en interne
 # (Facebook Prophet, MC non graine) mais ce dépôt n'expose ni seed ni n_samples
 # pour lui -- dette déclarée, non régénéré (cf. NOTE_dashboard_multiseed_200.md).
-MULTISEED_MODELS = ["NsDiff", "TSDiff"]
+# Derive du registre plutot que fige ici : un modele RETIRE du benchmark
+# (TSDiff, chantier A3) n'est plus une reference, donc ni badge, ni ligne dans
+# le bandeau, ni artefact a regenerer -- sinon son JSON manquant maintenait
+# `all_target_config=False` et le bandeau affichait "regeneration en attente"
+# alors que le seul modele echantillonne encore actif, NsDiff, est a la config
+# cible. `benchmark_registry` n'importe rien (stdlib pure) : la contrainte
+# d'environnement minimal rappelee dans le docstring tient toujours.
+MULTISEED_MODELS = reg.sampled_models()
 TARGET_ENSEMBLE_LABEL = "ensemble 5 graines (42-46) x 200 tirages"
 DEFAULT_MULTISEED_JSON = {m: EXPERIMENTS_DIR / f"{m.lower()}_daily_weekly_multiseed.json"
                           for m in MULTISEED_MODELS}
