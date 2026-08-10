@@ -1,0 +1,35 @@
+{
+  "scope": "chantier R2 phase W -- modeles de reference classiques sur la grille regeneree",
+  "origin_start": "2020-01-01",
+  "assets": [
+    "SPY",
+    "ZN=F",
+    "TLT",
+    "BTC-USD",
+    "ETH-USD",
+    "GLD",
+    "USO"
+  ],
+  "models": [
+    "SARIMA",
+    "Prophet",
+    "Naive",
+    "LSTM"
+  ],
+  "regime": "weekly",
+  "regime_code_weekly_multimodel": "C",
+  "protocol": "refit a CHAQUE origine (protocole naturel de ces modeles), variantes hebdo-natives pour SARIMA/Prophet, calibration sigma EWMA causale pour SARIMA/Prophet/Naive/LSTM (ARIMA-GARCH en est exclu partout, son sigma GARCH est deja dynamique)",
+  "lstm_seq_len": {
+    "SPY": 26,
+    "ZN=F": 8,
+    "TLT": 8,
+    "BTC-USD": 8,
+    "ETH-USD": 26,
+    "GLD": 8,
+    "USO": 8
+  },
+  "lstm_seq_len_selection": "1-SE sur CRPS de validation, bloc de 12 origines strictement anterieur a 2020-01-01 -- le SEQ_LEN* publie avait ete choisi sur un bloc qui tombe dans cette grille de test, il n'est pas reutilise",
+  "prices": "prices_v3/ -- series gelees, aucun appel reseau",
+  "cells": {},
+  "elapsed_min": 0.0
+}

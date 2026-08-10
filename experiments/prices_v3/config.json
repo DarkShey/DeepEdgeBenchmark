@@ -1,0 +1,257 @@
+{
+  "scope": "chantier A -- panel \u00e9tendu, prix gel\u00e9s, panel d\u00e9s\u00e9quilibr\u00e9 assum\u00e9",
+  "config": {
+    "common_start": "2011-05-01",
+    "fetch_end": "2026-07-24",
+    "origin_start_for_counts": "2020-01-01",
+    "seq_len": 30,
+    "horizon_daily": 15,
+    "daily_train_window_target": 2000,
+    "overlap_checks": {
+      "on": "LOG-RENDEMENTS (ce que les modeles voient) et STABILITE du ratio de prix (ce qui distingue un changement de base d'ajustement d'une revision) -- jamais le niveau des prix, qui depend d'une convention de dividendes",
+      "logret_tolerance": 1e-05,
+      "price_ratio_dispersion_tolerance": 0.0001
+    },
+    "unbalanced_panel": "assum\u00e9 (d\u00e9cision act\u00e9e) : chaque actif \u00e0 son historique maximal propre, aucune troncature au plus court",
+    "new_assets": [
+      "GLD",
+      "USO"
+    ],
+    "excluded_candidates": {
+      "QQQ": "corr\u00e9l\u00e9 ~0,9 \u00e0 SPY",
+      "EFA": "corr\u00e9l\u00e9 ~0,8 \u00e0 SPY",
+      "IEF": "corr\u00e9l\u00e9 ~0,9 \u00e0 TLT/ZN=F"
+    },
+    "previous_series_untouched": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/diffusion_multiseed_v2/prices"
+  },
+  "regimes_traversed": {
+    "2011-2015": "QE, taux zero, volatilite basse",
+    "2015-2020": "normalisation des taux, deux corrections (2015, 2018)",
+    "2020": "choc COVID -- la plus forte dislocation de l'echantillon",
+    "2022": "marche baissier de taux, inflation, correlation actions/obligations positive",
+    "2024-2026": "la fenetre du benchmark actuel"
+  },
+  "per_asset": {
+    "SPY": {
+      "start": null,
+      "classe": "index",
+      "note": "exposition actions US",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2905,
+        "span_common": "2015-01-02 -> 2026-07-23",
+        "logret_max_abs_diff": 1.1245621500677316e-06,
+        "logret_median_abs_diff": 1.1962863766257215e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 1.3838946334443492e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 924,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ZN=F": {
+      "start": null,
+      "classe": "bond",
+      "note": "future 10-Year T-Note",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3828,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2133,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2905,
+        "span_common": "2015-01-02 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 923,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "TLT": {
+      "start": null,
+      "classe": "bond",
+      "note": "ETF obligations longues",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 2121,
+        "span_common": "2018-02-13 -> 2026-07-23",
+        "logret_max_abs_diff": 1.8964537931154268e-06,
+        "logret_median_abs_diff": 3.857565786802297e-07,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 0.9959878214766184,
+        "price_ratio_dispersion": 2.5016711329151065e-06,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 1708,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true,
+        "price_level_shift": "ratio constant 0.99598782 -- base d'ajustement de dividendes differente (ancienne serie : source offline `fetch_tlt_patched` ; nouvelle : yfinance). Sans effet sur les log-rendements, donc sans effet sur les modeles ; mais les NIVEAUX de prix ne sont pas comparables d'un jeu a l'autre."
+      }
+    },
+    "BTC-USD": {
+      "start": "2014-09-01",
+      "classe": "crypto",
+      "note": "debut de la source yfinance",
+      "requested_start": "2014-09-01",
+      "counts": {
+        "n_daily": 4328,
+        "n_weekly": 619,
+        "n_monthly": 143,
+        "span": "2014-09-17 -> 2026-07-23",
+        "n_train_weeks_before_origin": 276,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 1887,
+        "n_train_windows_weekly": 243,
+        "meets_daily_target": false
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 4222,
+        "span_common": "2015-01-01 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 106,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "ETH-USD": {
+      "start": "2017-11-01",
+      "classe": "crypto",
+      "note": "debut de la source yfinance",
+      "requested_start": "2017-11-01",
+      "counts": {
+        "n_daily": 3179,
+        "n_weekly": 455,
+        "n_monthly": 105,
+        "span": "2017-11-09 -> 2026-07-23",
+        "n_train_weeks_before_origin": 112,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 738,
+        "n_train_windows_weekly": 79,
+        "meets_daily_target": false
+      },
+      "overlap_vs_v2": {
+        "status": "checked",
+        "n_common": 3179,
+        "span_common": "2017-11-09 -> 2026-07-23",
+        "logret_max_abs_diff": 0.0,
+        "logret_median_abs_diff": 0.0,
+        "logret_tolerance": 1e-05,
+        "price_ratio_median": 1.0,
+        "price_ratio_dispersion": 0.0,
+        "price_ratio_dispersion_tolerance": 0.0001,
+        "n_dates_only_in_old": 0,
+        "n_dates_only_in_new": 0,
+        "logret_ok": true,
+        "ratio_stable": true,
+        "passes": true
+      }
+    },
+    "GLD": {
+      "start": null,
+      "classe": "commodity",
+      "note": "NOUVEAU -- or ; exposition non correlee au panier existant",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "no_previous_series",
+        "asset": "GLD"
+      }
+    },
+    "USO": {
+      "start": null,
+      "classe": "commodity",
+      "note": "NOUVEAU -- petrole ; exposition non correlee au panier existant",
+      "requested_start": "2011-05-01",
+      "counts": {
+        "n_daily": 3829,
+        "n_weekly": 795,
+        "n_monthly": 183,
+        "span": "2011-05-02 -> 2026-07-23",
+        "n_train_weeks_before_origin": 452,
+        "n_test_origins_from_2020": 340,
+        "effective_n_from_2020": 113,
+        "n_train_windows_daily": 2137,
+        "n_train_windows_weekly": 419,
+        "meets_daily_target": true
+      },
+      "overlap_vs_v2": {
+        "status": "no_previous_series",
+        "asset": "USO"
+      }
+    }
+  },
+  "weak_cells": [
+    "BTC-USD",
+    "ETH-USD"
+  ],
+  "failures": [],
+  "elapsed_s": 0.3
+}

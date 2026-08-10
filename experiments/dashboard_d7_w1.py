@@ -54,6 +54,7 @@ for _p in (EXPERIMENTS_DIR, MODELS_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import benchmark_registry as reg            # noqa: E402
 import matrice_paired_tests as mpt          # noqa: E402  (path patched above)
 from paired_test import paired_block_bootstrap_test  # noqa: E402
 from arima_model import fetch_data          # noqa: E402
@@ -179,10 +180,15 @@ def load_price_history_cache(assets, end_date: str, refresh: bool = False) -> di
 
 
 # ── Assemblage des lignes appariées (une ligne = un (model, asset, origine W+1)) ──
-def build_enriched_pairs(df: pd.DataFrame, price_cache: dict) -> pd.DataFrame:
-    pairs = mpt.build_daily_weekly_pairs(df, horizon_units=[HORIZON_UNIT])
+def build_enriched_pairs(df: pd.DataFrame, price_cache: dict,
+                          horizon_unit: str = HORIZON_UNIT) -> pd.DataFrame:
+    """`horizon_unit` par défaut = W+1, le scope de ce dashboard (comportement
+    inchangé). Paramétrable pour les consommateurs qui rejouent le MEME calcul
+    de skill (RW recalculée à la vraie distance en jours de l'horizon visé) à
+    W+2/W+3 -- rien d'autre dans la fonction n'est spécifique à W+1."""
+    pairs = mpt.build_daily_weekly_pairs(df, horizon_units=[horizon_unit])
     if pairs.empty:
-        raise SystemExit(f"Aucune paire daily/weekly trouvée à l'horizon {HORIZON_UNIT} -- "
+        raise SystemExit(f"Aucune paire daily/weekly trouvée à l'horizon {horizon_unit} -- "
                           "la DB a-t-elle des lignes OOS ?")
 
     # côté daily et côté weekly partagent le même target_date (clé de jointure) ET
@@ -763,6 +769,10 @@ def main() -> None:
     p.add_argument("--refresh-prices", action="store_true",
                    help="force le retéléchargement de l'historique de prix (yfinance) au lieu du cache local "
                         f"({PRICE_CACHE_DIR}) -- par défaut le cache est réutilisé s'il couvre la fenêtre requise.")
+    p.add_argument("--exclude-models", nargs="*", default=None,
+                   help="modèles à ne pas afficher. Par défaut : les modèles RETIRÉS du benchmark "
+                        f"({', '.join(reg.retired_models()) or 'aucun'}, cf. benchmark_registry.py). "
+                        "Passer une liste vide (--exclude-models) pour tout afficher, y compris les retirés.")
     args = p.parse_args()
 
     _selftest_winkler()
@@ -770,6 +780,14 @@ def main() -> None:
     print(f"Chargement des prédictions OOS depuis {args.db_path} ...")
     df = mpt.load_predictions(args.db_path)
     print(f"  {len(df)} lignes OOS chargées.")
+
+    # Modèles retirés : leurs lignes restent en base (historique vérifiable) mais ne
+    # sont plus affichées -- un modèle retiré n'est plus une référence du benchmark.
+    excluded = reg.retired_models() if args.exclude_models is None else list(args.exclude_models)
+    if excluded:
+        n_before = len(df)
+        df = df[~df["model"].isin(excluded)].reset_index(drop=True)
+        print(f"  Modèles exclus (retirés du benchmark) : {excluded} -- {n_before - len(df)} lignes retirées de l'affichage.")
 
     assets = sorted(df["asset"].unique())
     max_target = df["target_date"].max()
@@ -799,6 +817,25 @@ def main() -> None:
         "alpha": ALPHA,
         "min_rw_quantile_samples": MIN_RW_QUANTILE_SAMPLES,
         "price_history_start": PRICE_HISTORY_START,
+        # Provenance de la référence d'échantillonnage : sans elle, un lecteur ne peut
+        # pas savoir si les chiffres de cette page sont comparables à ceux des notes.
+        "sampling_reference": {
+            "n_samples": 1000,
+            "acted_on": "2026-08-08 (chantier C — bascule sur la configuration production)",
+            "per_model": {m: reg.ACTIVE[m]["sampling_reference"] for m in sorted(df["model"].unique())
+                          if m in reg.ACTIVE},
+            "nsdiff_configuration": reg.ACTIVE["NsDiff"].get("configuration"),
+            "nsdiff_seeds": reg.ACTIVE["NsDiff"].get("seeds"),
+            "excluded_models": excluded,
+            "note": "Les modèles à bornes analytiques (ARIMA-GARCH, SARIMA, Naive, LSTM) ne tirent "
+                    "aucun échantillon et sont insensibles à ce paramètre ; Prophet lit ses bornes "
+                    "sur 1000 tirages internes. NsDiff porte désormais la CONFIGURATION DE "
+                    "PRODUCTION — l'ensemble des 5 graines (42-46), soit 1000 tirages concaténés — "
+                    "et non plus un run à graine unique : à 200 tirages par graine, le régime "
+                    "weekly n'était pas convergé (il en exige 800), alors que l'ensemble l'est sur "
+                    "6 cellules sur 6. La ligne NsDiff répond donc à « qu'obtient-on en déployant "
+                    "les cinq graines ? » et non à « qu'obtient-on en en tirant une au hasard ? ».",
+        },
         "asset_class_label": ASSET_CLASS_LABEL,
         "cells": cells,
         "trajectories": trajectories,

@@ -1,0 +1,1003 @@
+{
+  "scope": "chantier R3 -- tableau ancienne grille vs nouvelle grille",
+  "grids": {
+    "ancienne": {
+      "n_origins": 95,
+      "effective_n": 31,
+      "assets": [
+        "BTC-USD",
+        "ETH-USD",
+        "SPY",
+        "TLT",
+        "ZN=F"
+      ],
+      "prices": "diffusion_multiseed_v2/prices",
+      "source": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/diffusion_multiseed_v2/NsDiff"
+    },
+    "nouvelle": {
+      "n_origins": 354,
+      "effective_n": 118,
+      "assets": [
+        "BTC-USD",
+        "ETH-USD",
+        "GLD",
+        "SPY",
+        "TLT",
+        "USO",
+        "ZN=F"
+      ],
+      "prices": "prices_v3",
+      "source": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/grid2020"
+    }
+  },
+  "not_comparable_row_by_row": "origines, prix et perimetre different ; seuls les VERDICTS et les grandeurs agregees par cellule se comparent",
+  "strategy_for_pnl": "var_limit",
+  "tost_margin_rel": 0.05,
+  "per_cell": {
+    "BTC-USD|weekly|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9666666666666667,
+        "cov95_garch": 0.9777777777777777,
+        "winkler_nsdiff": 30363.689747178814,
+        "winkler_garch": 30661.06116844757,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.42724601156961917,
+        "pnl_net_nsdiff_bps": -5.141685105499429
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9705882352941176,
+        "cov95_garch": 0.9558823529411765,
+        "winkler_nsdiff": 22589.536680908204,
+        "winkler_garch": 20667.287751492506,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.5573444224287976,
+        "pnl_net_nsdiff_bps": 10.813580184854455
+      }
+    },
+    "BTC-USD|weekly|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9444444444444444,
+        "cov95_garch": 0.9555555555555556,
+        "winkler_nsdiff": 43944.933133680555,
+        "winkler_garch": 43825.148672715164,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 1.011401123935063,
+        "pnl_net_nsdiff_bps": -0.7689471472709265
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9705882352941176,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 32023.66041611615,
+        "winkler_garch": 28864.464252393554,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -1.8534943640464097,
+        "pnl_net_nsdiff_bps": 20.817313640472737
+      }
+    },
+    "BTC-USD|weekly|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 57838.37186631943,
+        "winkler_garch": 58835.03736035835,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 1.7177839150830798,
+        "pnl_net_nsdiff_bps": 1.764083784670421
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9676470588235294,
+        "cov95_garch": 0.9382352941176471,
+        "winkler_nsdiff": 39850.806044742356,
+        "winkler_garch": 35972.56607940028,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -2.081870732609682,
+        "pnl_net_nsdiff_bps": 28.83070371340214
+      }
+    },
+    "BTC-USD|daily|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 28753.37884874132,
+        "winkler_garch": 31160.30173729402,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -4.651758021785545,
+        "pnl_net_nsdiff_bps": -11.250213307048721
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9205882352941176,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 21385.135685747933,
+        "winkler_garch": 20818.46480941784,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 4.682344976884019,
+        "pnl_net_nsdiff_bps": 16.640830349675927
+      }
+    },
+    "BTC-USD|daily|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9222222222222223,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 43444.7437641059,
+        "winkler_garch": 45673.50921757597,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -3.010503528053276,
+        "pnl_net_nsdiff_bps": -6.072660202990482
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9117647058823529,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 29785.51851573271,
+        "winkler_garch": 30000.960423208024,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 7.913024225274735,
+        "pnl_net_nsdiff_bps": 29.27464357195867
+      }
+    },
+    "BTC-USD|daily|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 64217.64332573787,
+        "winkler_garch": 60864.98581979257,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -4.048819466440152,
+        "pnl_net_nsdiff_bps": -4.496313183485509
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.8705882352941177,
+        "cov95_garch": 0.9441176470588235,
+        "winkler_nsdiff": 39944.67596659941,
+        "winkler_garch": 36732.089706241786,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 15.800837934754743,
+        "pnl_net_nsdiff_bps": 44.26412971542003
+      }
+    },
+    "ETH-USD|weekly|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9,
+        "winkler_nsdiff": 1356.5835912068685,
+        "winkler_garch": 1344.6974950924825,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 1.2519784752523324,
+        "pnl_net_nsdiff_bps": -5.99275115829365
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 1.0,
+        "cov95_garch": 0.95,
+        "winkler_nsdiff": 3708.539021140266,
+        "winkler_garch": 1223.251715326218,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -9.652204980269332,
+        "pnl_net_nsdiff_bps": 5.9644646530138905
+      }
+    },
+    "ETH-USD|weekly|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9666666666666667,
+        "cov95_garch": 0.8888888888888888,
+        "winkler_nsdiff": 1912.3708355034719,
+        "winkler_garch": 1961.7644699960035,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.025577230649710854,
+        "pnl_net_nsdiff_bps": -1.4001227959342148
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 1.0,
+        "cov95_garch": 0.9352941176470588,
+        "winkler_nsdiff": 5853.109516485718,
+        "winkler_garch": 1680.9064772465917,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -16.043368716515566,
+        "pnl_net_nsdiff_bps": 11.500989804564824
+      }
+    },
+    "ETH-USD|weekly|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9333333333333333,
+        "cov95_garch": 0.8333333333333334,
+        "winkler_nsdiff": 2455.8232553100584,
+        "winkler_garch": 2823.89581874289,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -1.2650296235185778,
+        "pnl_net_nsdiff_bps": 2.007350956561983
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 1.0,
+        "cov95_garch": 0.9117647058823529,
+        "winkler_nsdiff": 7913.710776116143,
+        "winkler_garch": 2123.7656890927856,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -20.301955367237355,
+        "pnl_net_nsdiff_bps": 16.32487609009701
+      }
+    },
+    "ETH-USD|daily|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9111111111111111,
+        "cov95_garch": 0.9555555555555556,
+        "winkler_nsdiff": 1432.1674140421549,
+        "winkler_garch": 1421.0569884029183,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.7090491587547878,
+        "pnl_net_nsdiff_bps": -6.898594097043567
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.95,
+        "cov95_garch": 0.9529411764705882,
+        "winkler_nsdiff": 1210.0118026037776,
+        "winkler_garch": 1233.6101725800972,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.883248022867591,
+        "pnl_net_nsdiff_bps": 16.10137157164217
+      }
+    },
+    "ETH-USD|daily|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9333333333333333,
+        "cov95_garch": 0.9555555555555556,
+        "winkler_nsdiff": 2000.459419996473,
+        "winkler_garch": 1964.87759512443,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.6866039648421305,
+        "pnl_net_nsdiff_bps": -2.8535881449239313
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9470588235294117,
+        "cov95_garch": 0.95,
+        "winkler_nsdiff": 1594.038436291078,
+        "winkler_garch": 1659.7267393812322,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.058544616623445046,
+        "pnl_net_nsdiff_bps": 25.836702983005168
+      }
+    },
+    "ETH-USD|daily|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.8444444444444444,
+        "cov95_garch": 0.9333333333333333,
+        "winkler_nsdiff": 3109.052974565295,
+        "winkler_garch": 2510.225559223722,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.6491560832717433,
+        "pnl_net_nsdiff_bps": -0.9446331663867659
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.8941176470588236,
+        "cov95_garch": 0.9441176470588235,
+        "winkler_nsdiff": 2043.473627727172,
+        "winkler_garch": 2016.2490927374279,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 4.992001620702874,
+        "pnl_net_nsdiff_bps": 39.11280568042401
+      }
+    },
+    "SPY|weekly|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9777777777777777,
+        "winkler_nsdiff": 68.16278889126245,
+        "winkler_garch": 67.74811787035874,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 6.025877137616382,
+        "pnl_net_nsdiff_bps": 17.68335980327776
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.8705882352941177,
+        "cov95_garch": 0.9588235294117647,
+        "winkler_nsdiff": 64.30145166284899,
+        "winkler_garch": 51.599176476455675,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 4.397365447051,
+        "pnl_net_nsdiff_bps": 20.68182440710232
+      }
+    },
+    "SPY|weekly|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 101.3847576565213,
+        "winkler_garch": 91.53630899463339,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 11.522364767073126,
+        "pnl_net_nsdiff_bps": 30.477070399781624
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.888235294117647,
+        "cov95_garch": 0.9558823529411765,
+        "winkler_nsdiff": 88.31873548395492,
+        "winkler_garch": 75.07313425578478,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 8.247157513769086,
+        "pnl_net_nsdiff_bps": 35.246859268988324
+      }
+    },
+    "SPY|weekly|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9222222222222223,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 120.58152853224009,
+        "winkler_garch": 109.35437024556167,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 16.480600199440385,
+        "pnl_net_nsdiff_bps": 42.89870560013238
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.8970588235294118,
+        "cov95_garch": 0.95,
+        "winkler_nsdiff": 108.89232170217181,
+        "winkler_garch": 90.65091752419764,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 11.946291301608323,
+        "pnl_net_nsdiff_bps": 46.2179329550103
+      }
+    },
+    "SPY|daily|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 72.81953293694396,
+        "winkler_garch": 64.719566811128,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.2046110800946868,
+        "pnl_net_nsdiff_bps": 20.13357455964717
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9294117647058824,
+        "cov95_garch": 0.95,
+        "winkler_nsdiff": 53.89966289969052,
+        "winkler_garch": 50.74823677101618,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.002821965477606433,
+        "pnl_net_nsdiff_bps": 19.16087374876241
+      }
+    },
+    "SPY|daily|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9444444444444444,
+        "cov95_garch": 0.9888888888888889,
+        "winkler_nsdiff": 85.00409866333005,
+        "winkler_garch": 87.6051608763797,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 9.02080543677825,
+        "pnl_net_nsdiff_bps": 34.26140605949662
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9441176470588235,
+        "cov95_garch": 0.9588235294117647,
+        "winkler_nsdiff": 73.16328211616066,
+        "winkler_garch": 73.97730143312546,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 3.069857954516752,
+        "pnl_net_nsdiff_bps": 30.49613736367196
+      }
+    },
+    "SPY|daily|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9444444444444444,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 101.69135628594293,
+        "winkler_garch": 104.3327780906208,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 11.257801036900283,
+        "pnl_net_nsdiff_bps": 45.05930570627393
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9411764705882353,
+        "cov95_garch": 0.9558823529411765,
+        "winkler_nsdiff": 92.12010158426621,
+        "winkler_garch": 90.88929239159278,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.2195174268866587,
+        "pnl_net_nsdiff_bps": 36.95701614195113
+      }
+    },
+    "TLT|weekly|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9666666666666667,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 8.044089777204732,
+        "winkler_garch": 6.997625596403228,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -1.134064112260776,
+        "pnl_net_nsdiff_bps": -3.179429542019373
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9088235294117647,
+        "cov95_garch": 0.9294117647058824,
+        "winkler_nsdiff": 11.139275742138137,
+        "winkler_garch": 10.405371804478108,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.9373291804414898,
+        "pnl_net_nsdiff_bps": -10.366946388936016
+      }
+    },
+    "TLT|weekly|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9777777777777777,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 9.937557273440893,
+        "winkler_garch": 8.765417868182455,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -2.424135473498203,
+        "pnl_net_nsdiff_bps": -2.968114398835448
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9323529411764706,
+        "cov95_garch": 0.9529411764705882,
+        "winkler_nsdiff": 14.220790344126085,
+        "winkler_garch": 13.852980491714996,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.9766552085643956,
+        "pnl_net_nsdiff_bps": -13.25907512170554
+      }
+    },
+    "TLT|weekly|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9888888888888889,
+        "cov95_garch": 0.9888888888888889,
+        "winkler_nsdiff": 11.978766629960802,
+        "winkler_garch": 10.493351004401474,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -1.311250799804959,
+        "pnl_net_nsdiff_bps": -3.119665500555931
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9411764705882353,
+        "cov95_garch": 0.9529411764705882,
+        "winkler_nsdiff": 16.908256900450766,
+        "winkler_garch": 16.984358016389145,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.022769744656766802,
+        "pnl_net_nsdiff_bps": -14.937895994117294
+      }
+    },
+    "TLT|daily|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9444444444444444,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 7.470548956129293,
+        "winkler_garch": 7.169151254699444,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.830533538436737,
+        "pnl_net_nsdiff_bps": -4.0883052908819755
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9147058823529411,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 11.977281740413,
+        "winkler_garch": 10.848317422470146,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.16944895787895553,
+        "pnl_net_nsdiff_bps": -7.994567046083624
+      }
+    },
+    "TLT|daily|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9555555555555556,
+        "cov95_garch": 0.9555555555555556,
+        "winkler_nsdiff": 8.997218350304495,
+        "winkler_garch": 8.801687724193757,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -1.8439548668921895,
+        "pnl_net_nsdiff_bps": -4.469472341403001
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9352941176470588,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 15.382183473250445,
+        "winkler_garch": 14.28900508138673,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.7504218139336725,
+        "pnl_net_nsdiff_bps": -11.690572956164257
+      }
+    },
+    "TLT|daily|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9777777777777777,
+        "cov95_garch": 0.9777777777777777,
+        "winkler_nsdiff": 10.491993719736731,
+        "winkler_garch": 10.352347810579014,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.9405256995166398,
+        "pnl_net_nsdiff_bps": -3.9454548201685973
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.95,
+        "cov95_garch": 0.9705882352941176,
+        "winkler_nsdiff": 17.66497726552627,
+        "winkler_garch": 16.843597132212913,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.22841890379073962,
+        "pnl_net_nsdiff_bps": -12.842299712803364
+      }
+    },
+    "ZN=F|weekly|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9333333333333333,
+        "cov95_garch": 0.9555555555555556,
+        "winkler_nsdiff": 4.210200708177355,
+        "winkler_garch": 4.112794403271706,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.0,
+        "pnl_net_nsdiff_bps": -4.463804027682286
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9117647058823529,
+        "cov95_garch": 0.9352941176470588,
+        "winkler_nsdiff": 5.098684398426728,
+        "winkler_garch": 4.981682254271433,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.0,
+        "pnl_net_nsdiff_bps": -6.207817278543373
+      }
+    },
+    "ZN=F|weekly|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9777777777777777,
+        "cov95_garch": 0.9888888888888889,
+        "winkler_nsdiff": 4.456084904140899,
+        "winkler_garch": 4.645899132140651,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.13965059690853138,
+        "pnl_net_nsdiff_bps": -6.033387961681849
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9294117647058824,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 6.908075283274926,
+        "winkler_garch": 6.7833826107472115,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.0020720173025258297,
+        "pnl_net_nsdiff_bps": -10.817874756075016
+      }
+    },
+    "ZN=F|weekly|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9666666666666667,
+        "cov95_garch": 0.9666666666666667,
+        "winkler_nsdiff": 5.643265469868979,
+        "winkler_garch": 5.833893652094936,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.1179790142013899,
+        "pnl_net_nsdiff_bps": -7.609739576723165
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9235294117647059,
+        "cov95_garch": 0.9323529411764706,
+        "winkler_nsdiff": 8.382232451158414,
+        "winkler_garch": 8.55462155855416,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.20977385011515326,
+        "pnl_net_nsdiff_bps": -15.534592493298128
+      }
+    },
+    "ZN=F|daily|W+1": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9333333333333333,
+        "cov95_garch": 0.9444444444444444,
+        "winkler_nsdiff": 3.981311711205376,
+        "winkler_garch": 3.791602379647769,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.0,
+        "pnl_net_nsdiff_bps": -4.463804027682286
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9205882352941176,
+        "cov95_garch": 0.9382352941176471,
+        "winkler_nsdiff": 5.473808171328375,
+        "winkler_garch": 4.773535135105075,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.10433859263559517,
+        "pnl_net_nsdiff_bps": -6.2926775490488325
+      }
+    },
+    "ZN=F|daily|W+2": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9444444444444444,
+        "cov95_garch": 0.9777777777777777,
+        "winkler_nsdiff": 4.804860021803119,
+        "winkler_garch": 4.487368511925448,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.19229835990751137,
+        "pnl_net_nsdiff_bps": -6.326677805498861
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9352941176470588,
+        "cov95_garch": 0.9588235294117647,
+        "winkler_nsdiff": 7.034354091532089,
+        "winkler_garch": 6.556686282384011,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.4373798606856492,
+        "pnl_net_nsdiff_bps": -11.244016459929272
+      }
+    },
+    "ZN=F|daily|W+3": {
+      "ancienne": {
+        "n": 90,
+        "cov95_nsdiff": 0.9777777777777777,
+        "cov95_garch": 0.9777777777777777,
+        "winkler_nsdiff": 5.9980154652065725,
+        "winkler_garch": 5.645613144614611,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.42302434463354394,
+        "pnl_net_nsdiff_bps": -8.306736907813715
+      },
+      "nouvelle": {
+        "n": 340,
+        "cov95_nsdiff": 0.9264705882352942,
+        "cov95_garch": 0.9470588235294117,
+        "winkler_nsdiff": 8.790734105390662,
+        "winkler_garch": 8.227094824567283,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": -0.7336035747482232,
+        "pnl_net_nsdiff_bps": -16.28987732547622
+      }
+    }
+  },
+  "pooled": {
+    "ancienne": {
+      "cov95_nsdiff": 0.945185185185185,
+      "cov95_garch": 0.9540740740740739,
+      "edge_net_bps": 1.3291425077026635,
+      "n_cells_winkler_nsdiff": 0,
+      "n_cells_winkler_garch": 3,
+      "n_cells_tost_equivalent": 0,
+      "n_cells": 30
+    },
+    "nouvelle": {
+      "cov95_nsdiff": 0.9334313725490194,
+      "cov95_garch": 0.9470588235294115,
+      "edge_net_bps": 0.3316814158833656,
+      "n_cells_winkler_nsdiff": 0,
+      "n_cells_winkler_garch": 16,
+      "n_cells_tost_equivalent": 0,
+      "n_cells": 30
+    }
+  },
+  "reversals": {
+    "BTC-USD|weekly|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +0.43 -> -0.56 bps"
+    ],
+    "BTC-USD|weekly|W+2": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +1.01 -> -1.85 bps"
+    ],
+    "BTC-USD|weekly|W+3": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +1.72 -> -2.08 bps"
+    ],
+    "BTC-USD|daily|W+1": [
+      "signe de l'edge net : -4.65 -> +4.68 bps"
+    ],
+    "BTC-USD|daily|W+2": [
+      "signe de l'edge net : -3.01 -> +7.91 bps"
+    ],
+    "BTC-USD|daily|W+3": [
+      "signe de l'edge net : -4.05 -> +15.80 bps"
+    ],
+    "ETH-USD|weekly|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +1.25 -> -9.65 bps"
+    ],
+    "ETH-USD|weekly|W+2": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +0.03 -> -16.04 bps"
+    ],
+    "ETH-USD|weekly|W+3": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "ETH-USD|daily|W+3": [
+      "signe de l'edge net : -0.65 -> +4.99 bps"
+    ],
+    "SPY|weekly|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "SPY|weekly|W+2": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "SPY|weekly|W+3": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "SPY|daily|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "TLT|weekly|W+1": [
+      "verdict Winkler : garch_significantly_better -> indistinguishable"
+    ],
+    "TLT|weekly|W+2": [
+      "verdict Winkler : garch_significantly_better -> indistinguishable"
+    ],
+    "TLT|weekly|W+3": [
+      "verdict Winkler : garch_significantly_better -> indistinguishable"
+    ],
+    "TLT|daily|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : -0.83 -> +0.17 bps"
+    ],
+    "TLT|daily|W+2": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "TLT|daily|W+3": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : -0.94 -> +0.23 bps"
+    ],
+    "ZN=F|weekly|W+3": [
+      "signe de l'edge net : +0.12 -> -0.21 bps"
+    ],
+    "ZN=F|daily|W+1": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better",
+      "signe de l'edge net : +0.00 -> -0.10 bps"
+    ],
+    "ZN=F|daily|W+2": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ],
+    "ZN=F|daily|W+3": [
+      "verdict Winkler : indistinguishable -> garch_significantly_better"
+    ]
+  },
+  "n_reversals": 24,
+  "newcomers": {
+    "assets": [
+      "GLD",
+      "USO"
+    ],
+    "per_cell": {
+      "GLD|weekly|W+1": {
+        "n": 340,
+        "cov95_nsdiff": 0.9147058823529411,
+        "cov95_garch": 0.9264705882352942,
+        "winkler_nsdiff": 31.402295360565184,
+        "winkler_garch": 30.689571652198964,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 1.4369612164400114,
+        "pnl_net_nsdiff_bps": 21.51895214608742
+      },
+      "GLD|weekly|W+2": {
+        "n": 340,
+        "cov95_nsdiff": 0.9029411764705882,
+        "cov95_garch": 0.9294117647058824,
+        "winkler_nsdiff": 42.97290308335249,
+        "winkler_garch": 41.55628015038566,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.4935837827212364,
+        "pnl_net_nsdiff_bps": 32.52301913391621
+      },
+      "GLD|weekly|W+3": {
+        "n": 340,
+        "cov95_nsdiff": 0.8911764705882353,
+        "cov95_garch": 0.9176470588235294,
+        "winkler_nsdiff": 53.79856761651881,
+        "winkler_garch": 50.79007433698861,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.919698558579048,
+        "pnl_net_nsdiff_bps": 41.56213623849043
+      },
+      "GLD|daily|W+1": {
+        "n": 340,
+        "cov95_nsdiff": 0.9029411764705882,
+        "cov95_garch": 0.9147058823529411,
+        "winkler_nsdiff": 34.61873177135693,
+        "winkler_garch": 31.424258516345287,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.1031978747816025,
+        "pnl_net_nsdiff_bps": 23.09272560872944
+      },
+      "GLD|daily|W+2": {
+        "n": 340,
+        "cov95_nsdiff": 0.9147058823529411,
+        "cov95_garch": 0.9264705882352942,
+        "winkler_nsdiff": 45.19077404190513,
+        "winkler_garch": 40.92207532946699,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 3.5974721509393524,
+        "pnl_net_nsdiff_bps": 35.46541727440796
+      },
+      "GLD|daily|W+3": {
+        "n": 340,
+        "cov95_nsdiff": 0.9,
+        "cov95_garch": 0.9264705882352942,
+        "winkler_nsdiff": 56.85666097248303,
+        "winkler_garch": 49.960595605140654,
+        "winkler_verdict": "garch_significantly_better",
+        "tost_equivalent": false,
+        "edge_net_bps": 3.103511717265062,
+        "pnl_net_nsdiff_bps": 43.29813640968074
+      },
+      "USO|weekly|W+1": {
+        "n": 340,
+        "cov95_nsdiff": 0.888235294117647,
+        "cov95_garch": 0.9088235294117647,
+        "winkler_nsdiff": 23.30618030660293,
+        "winkler_garch": 22.104615484984112,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.9429307772811215,
+        "pnl_net_nsdiff_bps": 7.784311863167582
+      },
+      "USO|weekly|W+2": {
+        "n": 340,
+        "cov95_nsdiff": 0.9,
+        "cov95_garch": 0.9294117647058824,
+        "winkler_nsdiff": 35.96079839257633,
+        "winkler_garch": 34.22210794583496,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 4.76159065363657,
+        "pnl_net_nsdiff_bps": 16.03978320586667
+      },
+      "USO|weekly|W+3": {
+        "n": 340,
+        "cov95_nsdiff": 0.9029411764705882,
+        "cov95_garch": 0.9323529411764706,
+        "winkler_nsdiff": 47.51976280822473,
+        "winkler_garch": 46.36331382943498,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 5.896923424038553,
+        "pnl_net_nsdiff_bps": 21.856120588024655
+      },
+      "USO|daily|W+1": {
+        "n": 340,
+        "cov95_nsdiff": 0.9205882352941176,
+        "cov95_garch": 0.9323529411764706,
+        "winkler_nsdiff": 21.867398605907667,
+        "winkler_garch": 20.905704686004707,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 0.04922785103182751,
+        "pnl_net_nsdiff_bps": 9.012569861937454
+      },
+      "USO|daily|W+2": {
+        "n": 340,
+        "cov95_nsdiff": 0.9147058823529411,
+        "cov95_garch": 0.9264705882352942,
+        "winkler_nsdiff": 33.6250070488453,
+        "winkler_garch": 34.35784128086742,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 2.1041402157678957,
+        "pnl_net_nsdiff_bps": 16.422113845735808
+      },
+      "USO|daily|W+3": {
+        "n": 340,
+        "cov95_nsdiff": 0.9176470588235294,
+        "cov95_garch": 0.9176470588235294,
+        "winkler_nsdiff": 46.34543617486953,
+        "winkler_garch": 46.44429144887619,
+        "winkler_verdict": "indistinguishable",
+        "tost_equivalent": false,
+        "edge_net_bps": 1.847123472523827,
+        "pnl_net_nsdiff_bps": 20.050378682378295
+      }
+    },
+    "status": "premiers entrants -- rapportes a part, jamais melanges au tableau de comparaison"
+  },
+  "elapsed_s": 108.3
+}

@@ -1,0 +1,832 @@
+{
+  "question": "la diffusion se differencie-t-elle sur un usage qui consomme la TRAJECTOIRE entiere, que les quantiles marginaux de GARCH ne donnent pas ?",
+  "config": {
+    "n_paths_each_side": 1000,
+    "nsdiff_paths": "5 graines x 200 tirages concatenees (spec production) ; les 3 horizons d'une (graine, origine) partagent l'index de tirage -- un seul appel a sample_paths, correlation ~0.76 entre W+1 et W+2",
+    "garch_paths": "marche aleatoire gaussienne a increments independants calee sur (mu_h, sigma_h) recuperes EXACTEMENT de ses trois intervalles publies (log-symetrie verifiee a la precision machine sur 100 % des lignes, sigma strictement croissant sur 100 %)",
+    "garch_concession": "ses increments sont gaussiens et independants par construction : l'ecart mesure porte sur ce que le FORMAT DE SORTIE de GARCH permet, pas sur ce que le modele GARCH sait. C'est la comparaison pertinente pour une decision de production.",
+    "functionals": {
+      "path_min": "min_h (P_h/P_0 - 1) sur 3 semaines -- drawdown intra-fenetre, evalue par CRPS empirique + couverture du quantile a 0.05",
+      "put_atm_3w": "E[max(K - S_3, 0)]/K, K = P_t, taux nul declare -- evalue par le PnL du vendeur systematique (prix encaisse - payoff realise)",
+      "barrier_digital": "P(le parcours touche 0.95 x P_0 en 3 semaines) -- purement dependant du chemin, evalue par score de Brier"
+    },
+    "multiple_testing": "Holm sur la famille des 6 tests pooles (2 regimes x 3 fonctionnelles)",
+    "elapsed_s": 25.2
+  },
+  "per_cell": {
+    "BTC-USD|weekly": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.04367858178719717,
+        "garch": 0.04445899710641394,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0007804153192167618,
+          "ci95_lo": -0.0016225279337168756,
+          "ci95_hi": 8.619225754299265e-05,
+          "p_value": 0.0784,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.06666666666666667,
+        "garch": 0.06666666666666667,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": -0.13711314356807708,
+        "garch_total": 0.03613808066688189,
+        "nsdiff_price_mean": 0.0356106202660161,
+        "garch_price_mean": 0.03753563386862675,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.001925013602610657,
+          "ci95_lo": -0.003288736519998528,
+          "ci95_hi": -0.0006198521154218881,
+          "p_value": 0.0034,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.23021055555555558,
+        "garch": 0.23587462222222222,
+        "nsdiff_prob_mean": 0.39100000000000007,
+        "garch_prob_mean": 0.4047777777777778,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.005664066666666672,
+          "ci95_lo": -0.01312531750000001,
+          "ci95_hi": 0.003405384166666652,
+          "p_value": 0.1966,
+          "significant_at_05": false
+        }
+      }
+    },
+    "ETH-USD|weekly": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.06913602633741409,
+        "garch": 0.06890071732060367,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0002353090168103978,
+          "ci95_lo": -0.0039729174248425685,
+          "ci95_hi": 0.0039558518221511655,
+          "p_value": 0.9088,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.05555555555555555,
+        "garch": 0.13333333333333333,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": -0.2752381399402266,
+        "garch_total": -1.6131155610131538,
+        "nsdiff_price_mean": 0.06285319269094056,
+        "garch_price_mean": 0.04798788801235247,
+        "test": {
+          "status": "tested",
+          "verdict": "nsdiff_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.014865304678588077,
+          "ci95_lo": 0.011672045560103922,
+          "ci95_hi": 0.018042374628155337,
+          "p_value": 0.0,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.25485241111111107,
+        "garch": 0.2505818444444444,
+        "nsdiff_prob_mean": 0.522988888888889,
+        "garch_prob_mean": 0.4691333333333334,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.004270566666666657,
+          "ci95_lo": -0.014512462222222232,
+          "ci95_hi": 0.025763977499999986,
+          "p_value": 0.639,
+          "significant_at_05": false
+        }
+      }
+    },
+    "SPY|weekly": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.015494096945978907,
+        "garch": 0.016240931228395712,
+        "test": {
+          "status": "tested",
+          "verdict": "nsdiff_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0007468342824168041,
+          "ci95_lo": -0.0015079355140518722,
+          "ci95_hi": -8.467505303552709e-05,
+          "p_value": 0.0276,
+          "significant_at_05": true
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.08888888888888889,
+        "garch": 0.1,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.1878522310821789,
+        "garch_total": 0.33544459823758277,
+        "nsdiff_price_mean": 0.01070163979127899,
+        "garch_price_mean": 0.01234156067249476,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0016399151906155986,
+          "ci95_lo": -0.0033496790941006296,
+          "ci95_hi": -0.00031161718510096546,
+          "p_value": 0.0132,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.08603083333333332,
+        "garch": 0.09330052222222222,
+        "nsdiff_prob_mean": 0.06554444444444445,
+        "garch_prob_mean": 0.08414444444444445,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.007269688888888894,
+          "ci95_lo": -0.016197421111111113,
+          "ci95_hi": 0.0005842944444444372,
+          "p_value": 0.0682,
+          "significant_at_05": false
+        }
+      }
+    },
+    "TLT|weekly": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.010926256025626713,
+        "garch": 0.010481061941062289,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0004451940845644249,
+          "ci95_lo": 7.499545432536591e-05,
+          "ci95_hi": 0.0008088496020397063,
+          "p_value": 0.0212,
+          "significant_at_05": true
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.03333333333333333,
+        "garch": 0.03333333333333333,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.3446267960645786,
+        "garch_total": 0.2770951516711155,
+        "nsdiff_price_mean": 0.013225132222224668,
+        "garch_price_mean": 0.012474791613576302,
+        "test": {
+          "status": "tested",
+          "verdict": "nsdiff_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0007503516043718124,
+          "ci95_lo": 0.00013328673235157184,
+          "ci95_hi": 0.0013491246419335711,
+          "p_value": 0.0192,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.04592132222222221,
+        "garch": 0.04225518888888889,
+        "nsdiff_prob_mean": 0.0822111111111111,
+        "garch_prob_mean": 0.06047777777777778,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0036661333333333373,
+          "ci95_lo": 0.0010614375000000055,
+          "ci95_hi": 0.00652830055555556,
+          "p_value": 0.006,
+          "significant_at_05": true
+        }
+      }
+    },
+    "ZN=F|weekly": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.004676053792793108,
+        "garch": 0.0046795031119143205,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -3.4493191212125248e-06,
+          "ci95_lo": -0.0001608283189311684,
+          "ci95_hi": 0.00012566169281444598,
+          "p_value": 0.8346,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.044444444444444446,
+        "garch": 0.044444444444444446,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.05629638804392567,
+        "garch_total": 0.08627293539305783,
+        "nsdiff_price_mean": 0.005050363408843957,
+        "garch_price_mean": 0.005383436157167647,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0003330727483236905,
+          "ci95_lo": -0.0005799064718524606,
+          "ci95_hi": -7.774345320397811e-05,
+          "p_value": 0.0104,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 1.5333333333333332e-06,
+        "garch": 1.0222222222222221e-06,
+        "nsdiff_prob_mean": 0.0003111111111111111,
+        "garch_prob_mean": 0.0003111111111111111,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 5.111111111111111e-07,
+          "ci95_lo": -1.4888888888888888e-06,
+          "ci95_hi": 3.0111111111111113e-06,
+          "p_value": 0.6842,
+          "significant_at_05": false
+        }
+      }
+    },
+    "BTC-USD|daily": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.04499488005400863,
+        "garch": 0.045213809479723706,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.00021892942571507772,
+          "ci95_lo": -0.0028807223439097254,
+          "ci95_hi": 0.0030762130995557586,
+          "p_value": 0.926,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.13333333333333333,
+        "garch": 0.05555555555555555,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": -0.6508999151086873,
+        "garch_total": 0.40338254922928685,
+        "nsdiff_price_mean": 0.029901878360009317,
+        "garch_price_mean": 0.041616127963764585,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.011714249603755267,
+          "ci95_lo": -0.012809941516634518,
+          "ci95_hi": -0.010617709800687047,
+          "p_value": 0.0,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.24148074444444445,
+        "garch": 0.24094346666666663,
+        "nsdiff_prob_mean": 0.3233888888888889,
+        "garch_prob_mean": 0.42451111111111106,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0005372777777777859,
+          "ci95_lo": -0.024941338888888883,
+          "ci95_hi": 0.02976571611111111,
+          "p_value": 0.8794,
+          "significant_at_05": false
+        }
+      }
+    },
+    "ETH-USD|daily": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.07098838387497047,
+        "garch": 0.07003087503618682,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0009575088387836491,
+          "ci95_lo": -0.0029107511978128365,
+          "ci95_hi": 0.005294804382360846,
+          "p_value": 0.6114,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.13333333333333333,
+        "garch": 0.07777777777777778,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": -1.3749507284389968,
+        "garch_total": -0.050247404195786945,
+        "nsdiff_price_mean": 0.050634163929843094,
+        "garch_price_mean": 0.06535308975476765,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.014718925824924551,
+          "ci95_lo": -0.017106167687780754,
+          "ci95_hi": -0.012629331812795703,
+          "p_value": 0.0,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.2567196333333333,
+        "garch": 0.2519502,
+        "nsdiff_prob_mean": 0.4535222222222222,
+        "garch_prob_mean": 0.5291777777777779,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.004769433333333336,
+          "ci95_lo": -0.016361730833333338,
+          "ci95_hi": 0.026978876944444435,
+          "p_value": 0.6038,
+          "significant_at_05": false
+        }
+      }
+    },
+    "SPY|daily": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.015394909184743658,
+        "garch": 0.015443758484787407,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -4.8849300043746135e-05,
+          "ci95_lo": -0.0010259230358475018,
+          "ci95_hi": 0.0008061021296671032,
+          "p_value": 0.9812,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.07777777777777778,
+        "garch": 0.06666666666666667,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.184870142427007,
+        "garch_total": 0.29997453094133486,
+        "nsdiff_price_mean": 0.010668505472888192,
+        "garch_price_mean": 0.011947448813647558,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0012789376501591977,
+          "ci95_lo": -0.002737779485444512,
+          "ci95_hi": -0.00019767786661876308,
+          "p_value": 0.0144,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.08586607777777779,
+        "garch": 0.08525952222222223,
+        "nsdiff_prob_mean": 0.06110000000000001,
+        "garch_prob_mean": 0.07990000000000001,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0006065555555555527,
+          "ci95_lo": -0.006687566111111112,
+          "ci95_hi": 0.007909630833333323,
+          "p_value": 0.8606,
+          "significant_at_05": false
+        }
+      }
+    },
+    "TLT|daily": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.010572796790245738,
+        "garch": 0.010524885565319405,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 4.791122492633049e-05,
+          "ci95_lo": -0.000143716964167358,
+          "ci95_hi": 0.00023878856097818643,
+          "p_value": 0.6612,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.03333333333333333,
+        "garch": 0.03333333333333333,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.17967821220418498,
+        "garch_total": 0.2387987892365167,
+        "nsdiff_price_mean": 0.011392370179331405,
+        "garch_price_mean": 0.012049276475414095,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0006568953003592416,
+          "ci95_lo": -0.0009363826613835903,
+          "ci95_hi": -0.0003824340643665725,
+          "p_value": 0.0002,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 0.04317393333333333,
+        "garch": 0.04278813333333334,
+        "nsdiff_prob_mean": 0.048844444444444454,
+        "garch_prob_mean": 0.054488888888888885,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.00038579999999999897,
+          "ci95_lo": -0.000693971111111111,
+          "ci95_hi": 0.0017594966666666643,
+          "p_value": 0.5344,
+          "significant_at_05": false
+        }
+      }
+    },
+    "ZN=F|daily": {
+      "n": 90,
+      "path_min_crps": {
+        "nsdiff": 0.0047028083016664255,
+        "garch": 0.0046122197667339,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 9.058853493252583e-05,
+          "ci95_lo": -2.8658410200370943e-05,
+          "ci95_hi": 0.00022828368358265283,
+          "p_value": 0.1364,
+          "significant_at_05": false
+        }
+      },
+      "stress_q05_breach_rate": {
+        "nsdiff": 0.044444444444444446,
+        "garch": 0.044444444444444446,
+        "target": 0.05
+      },
+      "put_seller_pnl": {
+        "nsdiff_total": 0.04566947427173217,
+        "garch_total": 0.06228664792109258,
+        "nsdiff_price_mean": 0.004932286589152919,
+        "garch_price_mean": 0.00511692185192359,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.00018463526277067135,
+          "ci95_lo": -0.00040217644286677057,
+          "ci95_hi": 1.5042416652315974e-05,
+          "p_value": 0.0672,
+          "significant_at_05": false
+        }
+      },
+      "barrier_brier": {
+        "nsdiff": 7.777777777777779e-07,
+        "garch": 5.888888888888889e-07,
+        "nsdiff_prob_mean": 0.00022222222222222223,
+        "garch_prob_mean": 0.00016666666666666666,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 1.8888888888888882e-07,
+          "ci95_lo": -7.666666666666666e-07,
+          "ci95_hi": 1.0888888888888889e-06,
+          "p_value": 0.6344,
+          "significant_at_05": false
+        }
+      }
+    }
+  },
+  "pooled": {
+    "weekly": {
+      "path_min_crps": {
+        "nsdiff_mean": 0.03402746499495002,
+        "garch_mean": 0.0342952320454754,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0002677670505253907,
+          "ci95_lo": -0.0013417192073047173,
+          "ci95_hi": 0.0006811760459210275,
+          "p_value": 0.5862,
+          "significant_at_05": false
+        }
+      },
+      "put_seller_pnl": {
+        "nsdiff_mean": -6.677072325520139e-05,
+        "garch_mean": -0.0029440245516016736,
+        "test": {
+          "status": "tested",
+          "verdict": "nsdiff_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.002877253828346471,
+          "ci95_lo": 0.0016731420901698875,
+          "ci95_hi": 0.003937083273341916,
+          "p_value": 0.0,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff_mean": 0.14851380694444444,
+        "garch_mean": 0.15022127361111112,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0017074666666666719,
+          "ci95_lo": -0.006907731354166676,
+          "ci95_hi": 0.003766512708333329,
+          "p_value": 0.5688,
+          "significant_at_05": false
+        }
+      }
+    },
+    "daily": {
+      "path_min_crps": {
+        "nsdiff_mean": 0.034753993914919706,
+        "garch_mean": 0.034564248916681146,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.00018974499823856263,
+          "ci95_lo": -0.001347369929940137,
+          "ci95_hi": 0.002007318709936418,
+          "p_value": 0.7686,
+          "significant_at_05": false
+        }
+      },
+      "put_seller_pnl": {
+        "nsdiff_mean": -0.004800851827451994,
+        "garch_mean": 0.002232367762648998,
+        "test": {
+          "status": "tested",
+          "verdict": "garch_significantly_better",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": -0.0070332195901009935,
+          "ci95_lo": -0.008030535948820597,
+          "ci95_hi": -0.006166239260932206,
+          "p_value": 0.0,
+          "significant_at_05": true
+        }
+      },
+      "barrier_brier": {
+        "nsdiff_mean": 0.15141345277777776,
+        "garch_mean": 0.1498868875,
+        "test": {
+          "status": "tested",
+          "verdict": "indistinguishable",
+          "n": 90,
+          "block_length": 3,
+          "effective_n": 30,
+          "mean_diff": 0.0015265652777777783,
+          "ci95_lo": -0.009811705104166664,
+          "ci95_hi": 0.013782281006944452,
+          "p_value": 0.7128,
+          "significant_at_05": false
+        }
+      }
+    }
+  },
+  "holm": {
+    "family": {
+      "weekly|path_min_crps": {
+        "status": "tested",
+        "verdict": "indistinguishable",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.0002677670505253907,
+        "ci95_lo": -0.0013417192073047173,
+        "ci95_hi": 0.0006811760459210275,
+        "p_value": 0.5862,
+        "significant_at_05": false,
+        "holm_reject": false,
+        "holm_p_adjusted": 1.0,
+        "holm_threshold": 0.016666666666666666,
+        "holm_verdict": "indistinguishable"
+      },
+      "weekly|put_seller_pnl": {
+        "status": "tested",
+        "verdict": "nsdiff_significantly_better",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": 0.002877253828346471,
+        "ci95_lo": 0.0016731420901698875,
+        "ci95_hi": 0.003937083273341916,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "holm_reject": true,
+        "holm_p_adjusted": 0.0,
+        "holm_threshold": 0.008333333333333333,
+        "holm_verdict": "nsdiff_significantly_better"
+      },
+      "weekly|barrier_brier": {
+        "status": "tested",
+        "verdict": "indistinguishable",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.0017074666666666719,
+        "ci95_lo": -0.006907731354166676,
+        "ci95_hi": 0.003766512708333329,
+        "p_value": 0.5688,
+        "significant_at_05": false,
+        "holm_reject": false,
+        "holm_p_adjusted": 1.0,
+        "holm_threshold": 0.0125,
+        "holm_verdict": "indistinguishable"
+      },
+      "daily|path_min_crps": {
+        "status": "tested",
+        "verdict": "indistinguishable",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": 0.00018974499823856263,
+        "ci95_lo": -0.001347369929940137,
+        "ci95_hi": 0.002007318709936418,
+        "p_value": 0.7686,
+        "significant_at_05": false,
+        "holm_reject": false,
+        "holm_p_adjusted": 1.0,
+        "holm_threshold": 0.05,
+        "holm_verdict": "indistinguishable"
+      },
+      "daily|put_seller_pnl": {
+        "status": "tested",
+        "verdict": "garch_significantly_better",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": -0.0070332195901009935,
+        "ci95_lo": -0.008030535948820597,
+        "ci95_hi": -0.006166239260932206,
+        "p_value": 0.0,
+        "significant_at_05": true,
+        "holm_reject": true,
+        "holm_p_adjusted": 0.0,
+        "holm_threshold": 0.01,
+        "holm_verdict": "garch_significantly_better"
+      },
+      "daily|barrier_brier": {
+        "status": "tested",
+        "verdict": "indistinguishable",
+        "n": 90,
+        "block_length": 3,
+        "effective_n": 30,
+        "mean_diff": 0.0015265652777777783,
+        "ci95_lo": -0.009811705104166664,
+        "ci95_hi": 0.013782281006944452,
+        "p_value": 0.7128,
+        "significant_at_05": false,
+        "holm_reject": false,
+        "holm_p_adjusted": 1.0,
+        "holm_threshold": 0.025,
+        "holm_verdict": "indistinguishable"
+      }
+    },
+    "summary": {
+      "m": 6,
+      "alpha": 0.05,
+      "smallest_threshold": 0.008333333333333333,
+      "n_significant_raw": 2,
+      "n_significant_holm": 2,
+      "lost_to_correction": [],
+      "survivors": [
+        "daily|put_seller_pnl",
+        "weekly|put_seller_pnl"
+      ]
+    }
+  }
+}

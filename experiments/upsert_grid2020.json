@@ -1,0 +1,108 @@
+{
+  "scope": "chantier R2 -- upsert de la grille regeneree, phase W",
+  "run_id": "20260808-grid2020-phaseW",
+  "applied": true,
+  "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
+  "source_written": "oos2020",
+  "source_protected": "oos",
+  "why_new_track": "la nouvelle grille n'est pas un repointage (340 origines et 7 actifs contre 90 et 5, prix regeles) ; ecraser la piste oos rendrait les anciens verdicts inverifiables et produirait le melange que R3 interdit",
+  "garch_arm": "ARIMA-GARCH",
+  "regime": "weekly",
+  "nsdiff_config": {
+    "name": "NsDiff-ensemble-5x200",
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "n_samples_per_seed": 200,
+    "n_samples_total": 1000,
+    "epochs": 40,
+    "seq_len": 30,
+    "k_denoise": 20,
+    "aggregation": "concatenation des nuages (melange des lois predictives), PAS moyenne des bornes",
+    "point": "moyenne du nuage concatene",
+    "interval": "quantiles empiriques 0.025 / 0.975 du nuage concatene",
+    "refit": "aucun -- train-once-forward, les 5 nuages viennent du meme passage forward",
+    "residual_quantile_bias": "couverture bilaterale reelle ~94.81 % pour une etiquette 95 % (1000 tirages) -- 0.19 point, meme regime que Prophet"
+  },
+  "grid_checks": {
+    "n_rows": 42840,
+    "n_models": 6,
+    "models": [
+      "ARIMA-GARCH",
+      "LSTM",
+      "Naive",
+      "NsDiff",
+      "Prophet",
+      "SARIMA"
+    ],
+    "n_assets": 7,
+    "assets": [
+      "BTC-USD",
+      "ETH-USD",
+      "GLD",
+      "SPY",
+      "TLT",
+      "USO",
+      "ZN=F"
+    ],
+    "n_horizons": 3,
+    "horizon_units": [
+      "W+1",
+      "W+2",
+      "W+3"
+    ],
+    "horizon_units_expected": [
+      "W+1",
+      "W+2",
+      "W+3"
+    ],
+    "horizon_units_ok": true,
+    "horizon_column_ok": true,
+    "n_cutoffs": 354,
+    "n_duplicated_keys": 0,
+    "rows_per_model": {
+      "ARIMA-GARCH": 7140,
+      "LSTM": 7140,
+      "Naive": 7140,
+      "NsDiff": 7140,
+      "Prophet": 7140,
+      "SARIMA": 7140
+    },
+    "rows_per_model_identical": true,
+    "no_null": true,
+    "bands_ordered": true
+  },
+  "protected_before": {
+    "source": "oos",
+    "n_rows": 25124,
+    "checksum": 1420571385.888128
+  },
+  "before": {
+    "n_rows": 0
+  },
+  "backup": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db.bak_grid2020_weekly_2026-08-08T140155",
+  "n_upserted": 42840,
+  "after": {
+    "n_rows": 42840,
+    "cov95_recomputed": 0.9350606909430439,
+    "cov95_stored_column": 0.9350606909430439,
+    "per_model_cov95": {
+      "ARIMA-GARCH": 0.9379551820728291,
+      "LSTM": 0.9341736694677871,
+      "Naive": 0.9310924369747899,
+      "NsDiff": 0.9291316526610645,
+      "Prophet": 0.9470588235294117,
+      "SARIMA": 0.930952380952381
+    }
+  },
+  "protected_after": {
+    "source": "oos",
+    "n_rows": 25124,
+    "checksum": 1420571385.888128
+  },
+  "elapsed_s": 4.9
+}

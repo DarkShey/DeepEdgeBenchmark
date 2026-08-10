@@ -1,0 +1,210 @@
+{
+  "selected_seq_len": {
+    "SPY": 26,
+    "ZN=F": 8,
+    "TLT": 8,
+    "BTC-USD": 8,
+    "ETH-USD": 26,
+    "GLD": 8,
+    "USO": 8
+  },
+  "sweep": {
+    "SPY": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 5.23704110385426,
+          "se_crps_val": 0.32231734139709456
+        },
+        "16": {
+          "mean_crps_val": 3.5344805831957626,
+          "se_crps_val": 0.2395732071886915
+        },
+        "26": {
+          "mean_crps_val": 3.253442974380598,
+          "se_crps_val": 0.2543945948900436
+        }
+      },
+      "selected": {
+        "seq_len": 26,
+        "mean_crps_val": 3.253442974380598,
+        "se_crps_val": 0.2543945948900436,
+        "argmin_seq_len": 26,
+        "argmin_mean_crps_val": 3.253442974380598,
+        "threshold_1se": 3.5078375692706416
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 121.0
+    },
+    "ZN=F": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 0.6235562010452436,
+          "se_crps_val": 0.03458530133734855
+        },
+        "16": {
+          "mean_crps_val": 1.046504187752837,
+          "se_crps_val": 0.08341003983870142
+        },
+        "26": {
+          "mean_crps_val": 1.1886924845167082,
+          "se_crps_val": 0.07354416687335712
+        }
+      },
+      "selected": {
+        "seq_len": 8,
+        "mean_crps_val": 0.6235562010452436,
+        "se_crps_val": 0.03458530133734855,
+        "argmin_seq_len": 8,
+        "argmin_mean_crps_val": 0.6235562010452436,
+        "threshold_1se": 0.6581415023825921
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 95.1
+    },
+    "TLT": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 1.4616798396140585,
+          "se_crps_val": 0.08315952017409334
+        },
+        "16": {
+          "mean_crps_val": 2.627040173896416,
+          "se_crps_val": 0.21335389475266683
+        },
+        "26": {
+          "mean_crps_val": 2.9099328680104377,
+          "se_crps_val": 0.19098520255010312
+        }
+      },
+      "selected": {
+        "seq_len": 8,
+        "mean_crps_val": 1.4616798396140585,
+        "se_crps_val": 0.08315952017409334,
+        "argmin_seq_len": 8,
+        "argmin_mean_crps_val": 1.4616798396140585,
+        "threshold_1se": 1.5448393597881518
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 90.4
+    },
+    "BTC-USD": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 688.7908379222223,
+          "se_crps_val": 44.6062338498456
+        },
+        "16": {
+          "mean_crps_val": 1104.8857769924984,
+          "se_crps_val": 74.83868579875121
+        },
+        "26": {
+          "mean_crps_val": 928.2021074243033,
+          "se_crps_val": 98.81508820256393
+        }
+      },
+      "selected": {
+        "seq_len": 8,
+        "mean_crps_val": 688.7908379222223,
+        "se_crps_val": 44.6062338498456,
+        "argmin_seq_len": 8,
+        "argmin_mean_crps_val": 688.7908379222223,
+        "threshold_1se": 733.3970717720679
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 113.6
+    },
+    "ETH-USD": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 72.02595528653552,
+          "se_crps_val": 2.6317011942946955
+        },
+        "16": {
+          "mean_crps_val": 42.46756166712069,
+          "se_crps_val": 1.5438142698840178
+        },
+        "26": {
+          "mean_crps_val": 33.912588202420274,
+          "se_crps_val": 1.2378017859277874
+        }
+      },
+      "selected": {
+        "seq_len": 26,
+        "mean_crps_val": 33.912588202420274,
+        "se_crps_val": 1.2378017859277874,
+        "argmin_seq_len": 26,
+        "argmin_mean_crps_val": 33.912588202420274,
+        "threshold_1se": 35.15038998834806
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 81.3
+    },
+    "GLD": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 2.0168744351857693,
+          "se_crps_val": 0.07206900029434295
+        },
+        "16": {
+          "mean_crps_val": 2.0297833890292964,
+          "se_crps_val": 0.06963128186666974
+        },
+        "26": {
+          "mean_crps_val": 2.8324417108467714,
+          "se_crps_val": 0.22050441766505482
+        }
+      },
+      "selected": {
+        "seq_len": 8,
+        "mean_crps_val": 2.0168744351857693,
+        "se_crps_val": 0.07206900029434295,
+        "argmin_seq_len": 8,
+        "argmin_mean_crps_val": 2.0168744351857693,
+        "threshold_1se": 2.0889434354801124
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 98.8
+    },
+    "USO": {
+      "T0": "2019-09-13",
+      "n_val": 12,
+      "regime_c": {
+        "8": {
+          "mean_crps_val": 4.3694058984678925,
+          "se_crps_val": 0.15554349958003819
+        },
+        "16": {
+          "mean_crps_val": 4.569412962310709,
+          "se_crps_val": 0.18231981788532237
+        },
+        "26": {
+          "mean_crps_val": 5.0499789956224035,
+          "se_crps_val": 0.21597401228817514
+        }
+      },
+      "selected": {
+        "seq_len": 8,
+        "mean_crps_val": 4.3694058984678925,
+        "se_crps_val": 0.15554349958003819,
+        "argmin_seq_len": 8,
+        "argmin_mean_crps_val": 4.3694058984678925,
+        "threshold_1se": 4.524949398047931
+      },
+      "regime_b_default_crps_val": null,
+      "elapsed_s": 148.5
+    }
+  },
+  "protocol": "SEQ_LEN* regime hebdo natif, regle 1-SE sur CRPS de validation, bloc de 12 origines STRICTEMENT anterieur a 2020-01-01 (cible W+3 comprise) -- la grille de test n'est jamais touchee"
+}

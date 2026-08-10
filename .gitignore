@@ -74,3 +74,42 @@ experiments/lstm_sigma_ckpt*/
 experiments/d7_sigma_state.json
 experiments/d7_sigma_ckpt/
 validation/tracking.db.bak_recalib_*
+
+# Artefact multi-graines v2 (n_samples=200, BRIEF "consolider le verdict daily vs weekly"
+# tâche 4) -- 20 Mo de nuages prédictifs bruts + checkpoints par (graine, actif),
+# régénérables en 8 min via experiments/nsdiff_multiseed_v2.py ; seuls les résumés
+# agrégés (nsdiff_{consolidation_tests,conformal_daily,seed_ensemble,vs_garch_w23}.json)
+# sont versionnés.
+experiments/nsdiff_multiseed_v2/
+experiments/nsdiff_multiseed_v2.log
+experiments/nsdiff_multiseed_v2_smoke/
+
+# Idem pour l'artefact du duel diffusion-vs-diffusion à budget égal
+# (NsDiff + TSDiff à n_samples=200, prix gelés partagés) -- régénérable via
+# experiments/diffusion_multiseed_v2.py ; seul nsdiff_vs_tsdiff_v2.json est versionné.
+experiments/diffusion_multiseed_v2/
+experiments/diffusion_multiseed_v2_smoke/
+# journaux de run (le contenu utile est dans les *.json agrégés)
+experiments/diffusion_multiseed_v2.log
+experiments/diffusion_tsdiff_regen.log
+experiments/garch_refactor_check.log
+experiments/nsdiff_vs_tsdiff_v2.log
+experiments/tsdiff_daily_epoch_sweep.log
+experiments/garch_skewt.log
+experiments/grid2020_refs_weekly.log
+experiments/grid2020_refs_daily.log
+
+# Nuages prédictifs bruts de la grille 2020 et du duel n=800 -- 54 Mo et 41 Mo de
+# samples.npy à eux seuls, régénérables via experiments/{grid2020,diffusion_multiseed_v2}.py ;
+# seuls les résumés agrégés (grid2020_tests.json, nsdiff_vs_tsdiff_v2.json...) sont versionnés.
+experiments/grid2020/
+experiments/diffusion_multiseed_n800/
+# journaux de run
+experiments/grid2020.log
+experiments/diffusion_multiseed_n800.log
+experiments/garch_pi80.log
+experiments/monthly_d2.log
+experiments/monthly_d3.log
+experiments/monthly_feasibility.log
+experiments/nsdiff_refit_cadence.log
+experiments/nsdiff_vs_garch_econ.log

@@ -141,12 +141,28 @@ def select_seq_len(candidate_stats: dict) -> dict:
 
 
 def sweep_asset(asset: str, ticker: str, n_val: int, n_test: int, start: str, end: str,
-                candidates=SEQ_LEN_CANDIDATES) -> dict:
-    print(f"[{asset}] downloading {ticker} ({start} -> {end}) ...")
-    import tsdiff_model as td   # fetch_data reused, TF already imported above (safe order)
-    daily = td.fetch_data(ticker, start, end)
+                candidates=SEQ_LEN_CANDIDATES, daily=None, val_pos: list = None,
+                with_regime_b: bool = True) -> dict:
+    """Trois paramètres opt-in, `None`/`True` par défaut -- chemin historique
+    inchangé quand ils ne sont pas passés (chantier R2 du
+    BRIEF_nsdiff_regeneration_oos_et_famille3.md) :
+      `daily`          : série déjà gelée, aucun appel réseau ;
+      `val_pos`        : bloc de validation imposé, à la place de
+                         `three_way_split` -- la régénération le veut STRICTEMENT
+                         antérieur à sa grille de test, ce que le découpage par
+                         défaut ne garantit pas quand la grille change ;
+      `with_regime_b`  : contrôle de parité régime B, sans objet quand seul le
+                         régime C est régénéré."""
+    if daily is None:
+        print(f"[{asset}] downloading {ticker} ({start} -> {end}) ...")
+        import tsdiff_model as td   # fetch_data reused, TF already imported above (safe order)
+        daily = td.fetch_data(ticker, start, end)
     weekly, weekly_dates = build_weekly(daily)
-    train_end_pos, val_pos, test_pos = three_way_split(weekly, n_val, n_test)
+    if val_pos is None:
+        train_end_pos, _val_pos, _ = three_way_split(weekly, n_val, n_test)
+        val_pos = _val_pos
+    else:
+        train_end_pos = val_pos[0] - 1
     T0_date = weekly_dates.iloc[train_end_pos]
     print(f"[{asset}] train <= {T0_date.date()} | validation "
           f"{weekly_dates.iloc[val_pos[0]].date()} -> {weekly_dates.iloc[val_pos[-1]].date()} "
@@ -157,16 +173,20 @@ def sweep_asset(asset: str, ticker: str, n_val: int, n_test: int, start: str, en
     regime_c_stats = {sl: _mean_se(vals) for sl, vals in regime_c_raw.items()}
     selection = select_seq_len(regime_c_stats)
 
-    regime_b_raw = sweep_regime_b_default(weekly, weekly_dates, daily, val_pos)
-    regime_b_mean, regime_b_se = _mean_se(regime_b_raw)
+    regime_b = None
+    if with_regime_b:
+        regime_b_mean, regime_b_se = _mean_se(sweep_regime_b_default(weekly, weekly_dates,
+                                                                     daily, val_pos))
+        regime_b = {"seq_len": 30, "mean_crps_val": regime_b_mean, "se_crps_val": regime_b_se}
     elapsed = time.time() - t0
 
     print(f"[{asset}] done in {elapsed:.0f}s")
     for sl, (mean, se) in sorted(regime_c_stats.items()):
         mark = " *" if sl == selection["seq_len"] else ""
         print(f"    regime C  seq_len={sl:<4} CRPS_val={mean:8.4f} +/- {se:.4f}{mark}")
-    print(f"    regime B  seq_len=30(default) CRPS_val={regime_b_mean:8.4f} +/- {regime_b_se:.4f}"
-          f"  [unchanged, parity check only]")
+    if regime_b is not None:
+        print(f"    regime B  seq_len=30(default) CRPS_val={regime_b['mean_crps_val']:8.4f} "
+              f"+/- {regime_b['se_crps_val']:.4f}  [unchanged, parity check only]")
 
     return {
         "T0": str(T0_date.date()),
@@ -174,8 +194,7 @@ def sweep_asset(asset: str, ticker: str, n_val: int, n_test: int, start: str, en
         "regime_c": {str(sl): {"mean_crps_val": m, "se_crps_val": s}
                     for sl, (m, s) in regime_c_stats.items()},
         "selected": selection,
-        "regime_b_default_crps_val": {"seq_len": 30, "mean_crps_val": regime_b_mean,
-                                      "se_crps_val": regime_b_se},
+        "regime_b_default_crps_val": regime_b,
         "elapsed_s": round(elapsed, 1),
     }
 

@@ -1,0 +1,1123 @@
+{
+  "scope": "chantier 0-bis-B -- la porte, signal corrige, instrument corrige, univers elargi",
+  "declared_criterion": {
+    "branch_1": "au moins un actif a PnL net positif ET p < 0,05 brut vs B&H",
+    "branch_2": "Sharpe poole de l'EXCES (PnL signal - PnL B&H, par origine) > 0 ET >= 3 classes sur 4 a exces positif",
+    "classes": [
+      "actions",
+      "taux",
+      "matieres",
+      "crypto"
+    ],
+    "hors_classes": [
+      "VXX"
+    ],
+    "on_failure": "cloture definitive du dossier trading, toute la ligne -- il n'y aura pas de porte 0-ter"
+  },
+  "setup": {
+    "prices": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v4",
+    "signal": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/deita_cta_signal_v4",
+    "n_origins": 354,
+    "assets": [
+      "SPY",
+      "QQQ",
+      "IWM",
+      "EFA",
+      "EEM",
+      "ZN=F",
+      "TLT",
+      "GLD",
+      "SI=F",
+      "HG=F",
+      "USO",
+      "ZC=F",
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "BNB-USD",
+      "LINK-USD",
+      "VXX"
+    ],
+    "regime": "weekly",
+    "horizon": "W+1",
+    "fees_level": "central",
+    "roll_included": true,
+    "window": "2020-01-01 -> 2026-07 (inchangee depuis la porte 0)"
+  },
+  "per_cell": {
+    "SPY-ETF|W+1": {
+      "p_value_vs_zero": 1.0,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 3.5,
+      "pnl_net_cta_bps": -0.6981282171071252,
+      "pnl_net_bh_bps": 27.82923163102901,
+      "edge_vs_bh_bps": -28.52735984813614,
+      "share_long": 0.5823529411764706,
+      "share_short": 0.4176470588235294,
+      "hit_rate": 0.49117647058823527,
+      "sharpe_annualised": -0.018838594696468564,
+      "sharpe_bh_annualised": 0.7561438359611293,
+      "max_drawdown": -0.504912508917356,
+      "p_value_vs_bh": 0.201,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "SPY-ETF",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 75.10828350864676,
+          "sharpe": 1.2565273372767494
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -28.17499051435884,
+          "sharpe": -1.17832148695817
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 10.13397000997871,
+          "sharpe": 0.2275954435332503
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 6.364852145985654,
+          "sharpe": 0.23902782574000475
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -27.564441718612148,
+          "sharpe": -0.9711406788775984
+        }
+      }
+    },
+    "SPY-ES|W+1": {
+      "p_value_vs_zero": 0.8878,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 1.6153846153846154,
+      "pnl_net_cta_bps": 1.1864871675082498,
+      "pnl_net_bh_bps": 29.71384701564439,
+      "edge_vs_bh_bps": -28.52735984813614,
+      "share_long": 0.5823529411764706,
+      "share_short": 0.4176470588235294,
+      "hit_rate": 0.49117647058823527,
+      "sharpe_annualised": 0.03201668449080769,
+      "sharpe_bh_annualised": 0.8073504350195648,
+      "max_drawdown": -0.44893943199427083,
+      "p_value_vs_bh": 0.201,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "SPY-ES",
+      "asset": "SPY",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 76.99289889326218,
+          "sharpe": 1.2880560933659357
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -26.290375129743474,
+          "sharpe": -1.0995039696563453
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 12.018585394594089,
+          "sharpe": 0.2699213902183862
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 8.249467530601036,
+          "sharpe": 0.3098033139066695
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -25.679826333996754,
+          "sharpe": -0.9047425750189322
+        }
+      }
+    },
+    "TLT-ETF|W+1": {
+      "p_value_vs_zero": 0.8188,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 3.5,
+      "pnl_net_cta_bps": -2.80809431725034,
+      "pnl_net_bh_bps": -10.283883179131,
+      "edge_vs_bh_bps": 7.475788861880652,
+      "share_long": 0.4970588235294118,
+      "share_short": 0.5029411764705882,
+      "hit_rate": 0.5,
+      "sharpe_annualised": -0.09663852317998099,
+      "sharpe_bh_annualised": -0.3540965940195615,
+      "max_drawdown": -0.44206916709318683,
+      "p_value_vs_bh": 0.6722,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "TLT-ETF",
+      "asset": "TLT",
+      "horizon_unit": "W+1",
+      "classe": "taux",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": -39.067332651710956,
+          "sharpe": -1.0915693310537415
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 24.71562175423126,
+          "sharpe": 1.129784271927554
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 46.1857641675531,
+          "sharpe": 1.2582617020720843
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 14.275229278953042,
+          "sharpe": 0.47027895571298206
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -25.29288112796016,
+          "sharpe": -1.0640819692043366
+        }
+      }
+    },
+    "ZN-FUT|W+1": {
+      "p_value_vs_zero": 0.2944,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 1.6153846153846154,
+      "pnl_net_cta_bps": -4.690391492423781,
+      "pnl_net_bh_bps": -6.3232018939279895,
+      "edge_vs_bh_bps": 1.6328104015042098,
+      "share_long": 0.47941176470588237,
+      "share_short": 0.5205882352941177,
+      "hit_rate": 0.5,
+      "sharpe_annualised": -0.41762237788901724,
+      "sharpe_bh_annualised": -0.5635520959011311,
+      "max_drawdown": -0.24227393484788465,
+      "p_value_vs_bh": 0.8348,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "ZN-FUT",
+      "asset": "ZN=F",
+      "horizon_unit": "W+1",
+      "classe": "taux",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": -8.566652942594452,
+          "sharpe": -0.8844315458009483
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 10.90671865464454,
+          "sharpe": 1.474811763357622
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 3.9342432764964674,
+          "sharpe": 0.2628044549762221
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -8.68127922226205,
+          "sharpe": -0.6285740834430882
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -11.152702307849502,
+          "sharpe": -1.0951621916078975
+        }
+      }
+    },
+    "BTC-SPOT|W+1": {
+      "p_value_vs_zero": 0.3442,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 30.0,
+      "pnl_net_cta_bps": -41.83744901840215,
+      "pnl_net_bh_bps": 69.44937440852378,
+      "edge_vs_bh_bps": -111.28682342692593,
+      "share_long": 0.47058823529411764,
+      "share_short": 0.4764705882352941,
+      "hit_rate": 0.4441176470588235,
+      "sharpe_annualised": -0.3770056213553603,
+      "sharpe_bh_annualised": 0.5936624296429731,
+      "max_drawdown": -2.7356712934507343,
+      "p_value_vs_bh": 0.0734,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "BTC-SPOT",
+      "asset": "BTC-USD",
+      "horizon_unit": "W+1",
+      "classe": "crypto",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_mean_bps": -131.31482218680017,
+          "sharpe": -1.3360913133960792
+        },
+        "2021": {
+          "n": 53,
+          "pnl_mean_bps": 257.6670995654603,
+          "sharpe": 1.6217995542800634
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -262.4886243833494,
+          "sharpe": -2.529665076385019
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -121.25150486073578,
+          "sharpe": -1.036214890075981
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -8.383446326870875,
+          "sharpe": -0.09730899228382811
+        }
+      }
+    },
+    "ETH-SPOT|W+1": {
+      "p_value_vs_zero": 0.746,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 30.0,
+      "pnl_net_cta_bps": -16.459662891734844,
+      "pnl_net_bh_bps": 108.3046278259785,
+      "edge_vs_bh_bps": -124.76429071771337,
+      "share_long": 0.5029411764705882,
+      "share_short": 0.4441176470588235,
+      "hit_rate": 0.45,
+      "sharpe_annualised": -0.11270047091531706,
+      "sharpe_bh_annualised": 0.7042666450186787,
+      "max_drawdown": -2.0637003889124412,
+      "p_value_vs_bh": 0.1032,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "ETH-SPOT",
+      "asset": "ETH-USD",
+      "horizon_unit": "W+1",
+      "classe": "crypto",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_mean_bps": -78.65893007108986,
+          "sharpe": -0.7080393555896932
+        },
+        "2021": {
+          "n": 53,
+          "pnl_mean_bps": 210.16863894444455,
+          "sharpe": 0.923209172439916
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -28.149895617933154,
+          "sharpe": -0.17505384555928197
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -86.07300018023466,
+          "sharpe": -0.827086343422012
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -51.186017572855036,
+          "sharpe": -0.41568145314442717
+        }
+      }
+    },
+    "GLD-ETF|W+1": {
+      "p_value_vs_zero": 0.014,
+      "significant_raw_vs_zero": true,
+      "n": 340,
+      "round_trip_bps": 4.0,
+      "pnl_net_cta_bps": -28.71369204354756,
+      "pnl_net_bh_bps": 26.723304384566198,
+      "edge_vs_bh_bps": -55.436996428113765,
+      "share_long": 0.538235294117647,
+      "share_short": 0.46176470588235297,
+      "hit_rate": 0.4294117647058823,
+      "sharpe_annualised": -0.8787438312563766,
+      "sharpe_bh_annualised": 0.8203028096168857,
+      "max_drawdown": -1.1810451563930224,
+      "p_value_vs_bh": 0.0004,
+      "significant_raw": true,
+      "verdict_vs_bh": "bh_better",
+      "instrument": "GLD-ETF",
+      "asset": "GLD",
+      "horizon_unit": "W+1",
+      "classe": "matieres",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": -61.94851151097914,
+          "sharpe": -1.5315286452424821
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -46.476140066602284,
+          "sharpe": -2.008238464610299
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -9.879035895324742,
+          "sharpe": -0.3605974013140101
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -10.924142758430916,
+          "sharpe": -0.40997718451502324
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -22.75465352111194,
+          "sharpe": -0.6239941220348633
+        }
+      }
+    },
+    "USO-ETF|W+1": {
+      "p_value_vs_zero": 0.3026,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 5.0,
+      "pnl_net_cta_bps": -31.781142477750546,
+      "pnl_net_bh_bps": 16.601749284539718,
+      "edge_vs_bh_bps": -48.382891762290264,
+      "share_long": 0.5676470588235294,
+      "share_short": 0.4323529411764706,
+      "hit_rate": 0.49117647058823527,
+      "sharpe_annualised": -0.3617860307854248,
+      "sharpe_bh_annualised": 0.1889296734287716,
+      "max_drawdown": -1.8665313006335136,
+      "p_value_vs_bh": 0.199,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "USO-ETF",
+      "asset": "USO",
+      "horizon_unit": "W+1",
+      "classe": "matieres",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": -11.067882896786921,
+          "sharpe": -0.07336912568253448
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 11.865000879641046,
+          "sharpe": 0.21223990571933268
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -122.06229069445244,
+          "sharpe": -1.5362611818613008
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -56.945705374811745,
+          "sharpe": -0.9440914789265887
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -11.660724420191416,
+          "sharpe": -0.1531524525116855
+        }
+      }
+    },
+    "QQQ-ETF|W+1": {
+      "p_value_vs_zero": 0.4874,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 3.5,
+      "pnl_net_cta_bps": 11.35033772613866,
+      "pnl_net_bh_bps": 38.476716007727454,
+      "edge_vs_bh_bps": -27.126378281588796,
+      "share_long": 0.5705882352941176,
+      "share_short": 0.4294117647058823,
+      "hit_rate": 0.49117647058823527,
+      "sharpe_annualised": 0.2589274206464642,
+      "sharpe_bh_annualised": 0.8846130459830384,
+      "max_drawdown": -0.4817384597899575,
+      "p_value_vs_bh": 0.3002,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "QQQ-ETF",
+      "asset": "QQQ",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 101.92858040125931,
+          "sharpe": 1.7944646164119868
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -19.292244941786812,
+          "sharpe": -0.5804147074790768
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 31.519625545052687,
+          "sharpe": 0.5736240968274656
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 10.567856657262698,
+          "sharpe": 0.2903406439867717
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -20.82787993837469,
+          "sharpe": -0.539947995586744
+        }
+      }
+    },
+    "IWM-ETF|W+1": {
+      "p_value_vs_zero": 0.8238,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 4.0,
+      "pnl_net_cta_bps": -3.40006960432622,
+      "pnl_net_bh_bps": 21.964319041075623,
+      "edge_vs_bh_bps": -25.364388645401835,
+      "share_long": 0.5735294117647058,
+      "share_short": 0.4264705882352941,
+      "hit_rate": 0.49117647058823527,
+      "sharpe_annualised": -0.06832310266936135,
+      "sharpe_bh_annualised": 0.44252724006991073,
+      "max_drawdown": -0.6440856319833819,
+      "p_value_vs_bh": 0.33,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "IWM-ETF",
+      "asset": "IWM",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 45.63284438878724,
+          "sharpe": 0.5488451991197661
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -54.97465886438018,
+          "sharpe": -1.415953741608666
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 9.418863606300604,
+          "sharpe": 0.19302808005079575
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -6.571813907216785,
+          "sharpe": -0.15608609031124146
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -6.594875889169664,
+          "sharpe": -0.17432929784827833
+        }
+      }
+    },
+    "EFA-ETF|W+1": {
+      "p_value_vs_zero": 0.941,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 5.0,
+      "pnl_net_cta_bps": 1.2970029319298484,
+      "pnl_net_bh_bps": 16.371848870806502,
+      "edge_vs_bh_bps": -15.074845938876653,
+      "share_long": 0.5558823529411765,
+      "share_short": 0.4441176470588235,
+      "hit_rate": 0.48823529411764705,
+      "sharpe_annualised": 0.034958445118744436,
+      "sharpe_bh_annualised": 0.44256972538632094,
+      "max_drawdown": -0.45651205107469045,
+      "p_value_vs_bh": 0.494,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "EFA-ETF",
+      "asset": "EFA",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 77.2944637622728,
+          "sharpe": 1.3069951486438387
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -11.4974488935156,
+          "sharpe": -0.48537410620825083
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 2.938894785221388,
+          "sharpe": 0.06888210082224125
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 11.87708687225918,
+          "sharpe": 0.4094658705719883
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -29.222818979164035,
+          "sharpe": -0.996075812538985
+        }
+      }
+    },
+    "EEM-ETF|W+1": {
+      "p_value_vs_zero": 0.552,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 5.5,
+      "pnl_net_cta_bps": 9.905547259789076,
+      "pnl_net_bh_bps": 14.230612348342673,
+      "edge_vs_bh_bps": -4.32506508855359,
+      "share_long": 0.5411764705882353,
+      "share_short": 0.4588235294117647,
+      "hit_rate": 0.5176470588235295,
+      "sharpe_annualised": 0.25442565397742567,
+      "sharpe_bh_annualised": 0.3658695921092218,
+      "max_drawdown": -0.47065359886830427,
+      "p_value_vs_bh": 0.8386,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "EEM-ETF",
+      "asset": "EEM",
+      "horizon_unit": "W+1",
+      "classe": "actions",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 81.21324348297776,
+          "sharpe": 1.5214058130370054
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -26.292960647569483,
+          "sharpe": -0.821839292839589
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -23.06810460367248,
+          "sharpe": -0.55634745681094
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 19.851980328676976,
+          "sharpe": 0.6371133425440142
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": 4.56531740231942,
+          "sharpe": 0.12679619924213598
+        }
+      }
+    },
+    "SI-FUT|W+1": {
+      "p_value_vs_zero": 0.1884,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 2.6923076923076925,
+      "pnl_net_cta_bps": -34.116181704893265,
+      "pnl_net_bh_bps": 45.65277455713983,
+      "edge_vs_bh_bps": -79.76895626203309,
+      "share_long": 0.5705882352941176,
+      "share_short": 0.4294117647058823,
+      "hit_rate": 0.45588235294117646,
+      "sharpe_annualised": -0.4812550362823187,
+      "sharpe_bh_annualised": 0.6456689454375304,
+      "max_drawdown": -1.7985739352174215,
+      "p_value_vs_bh": 0.0094,
+      "significant_raw": true,
+      "verdict_vs_bh": "bh_better",
+      "instrument": "SI-FUT",
+      "asset": "SI=F",
+      "horizon_unit": "W+1",
+      "classe": "matieres",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": -93.30935972653442,
+          "sharpe": -0.9918153226481291
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": -42.97173720471652,
+          "sharpe": -1.0087756478825807
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -14.24397605480574,
+          "sharpe": -0.22944354021648203
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -105.86431880971868,
+          "sharpe": -1.9438660476730178
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": 13.939358423230086,
+          "sharpe": 0.17904176280411574
+        }
+      }
+    },
+    "HG-FUT|W+1": {
+      "p_value_vs_zero": 0.4742,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 3.230769230769231,
+      "pnl_net_cta_bps": 14.993788398574699,
+      "pnl_net_bh_bps": 26.9820208918959,
+      "edge_vs_bh_bps": -11.988232493321203,
+      "share_long": 0.5205882352941177,
+      "share_short": 0.47941176470588237,
+      "hit_rate": 0.5058823529411764,
+      "sharpe_annualised": 0.29977711346782543,
+      "sharpe_bh_annualised": 0.5406745378503179,
+      "max_drawdown": -0.4359155307925644,
+      "p_value_vs_bh": 0.6566,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "HG-FUT",
+      "asset": "HG=F",
+      "horizon_unit": "W+1",
+      "classe": "matieres",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 46.65253495028862,
+          "sharpe": 1.0720086454758744
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 14.34758678263905,
+          "sharpe": 0.3087962954294966
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 5.501419097273713,
+          "sharpe": 0.09654649508030026
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 30.570179267047056,
+          "sharpe": 0.8501132992013792
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": 0.026763935177014753,
+          "sharpe": 0.00047890738577555407
+        }
+      }
+    },
+    "ZC-FUT|W+1": {
+      "p_value_vs_zero": 0.7014,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 4.3076923076923075,
+      "pnl_net_cta_bps": 8.055912949738858,
+      "pnl_net_bh_bps": 6.616209947336111,
+      "edge_vs_bh_bps": 1.4397030024027493,
+      "share_long": 0.5411764705882353,
+      "share_short": 0.4588235294117647,
+      "hit_rate": 0.47941176470588237,
+      "sharpe_annualised": 0.15404120283375994,
+      "sharpe_bh_annualised": 0.12649695713079864,
+      "max_drawdown": -0.6050314287927177,
+      "p_value_vs_bh": 0.91,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "ZC-FUT",
+      "asset": "ZC=F",
+      "horizon_unit": "W+1",
+      "classe": "matieres",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 47.884790059451895,
+          "sharpe": 1.0904610644418593
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 63.53777290308754,
+          "sharpe": 0.9179492649847115
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -19.27235073124217,
+          "sharpe": -0.27971413527890543
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -48.867394926848114,
+          "sharpe": -0.8745232488966559
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": 3.361977961987824,
+          "sharpe": 0.09230516820299424
+        }
+      }
+    },
+    "SOL-SPOT|W+1": {
+      "p_value_vs_zero": 0.4972,
+      "significant_raw_vs_zero": false,
+      "n": 326,
+      "round_trip_bps": 40.0,
+      "pnl_net_cta_bps": 62.764453959434704,
+      "pnl_net_bh_bps": 222.8186601351284,
+      "edge_vs_bh_bps": -160.05420617569374,
+      "share_long": 0.558282208588957,
+      "share_short": 0.4294478527607362,
+      "hit_rate": 0.5,
+      "sharpe_annualised": 0.2696364879426355,
+      "sharpe_bh_annualised": 0.9595862371647285,
+      "max_drawdown": -2.418668613714345,
+      "p_value_vs_bh": 0.1164,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "SOL-SPOT",
+      "asset": "SOL-USD",
+      "horizon_unit": "W+1",
+      "classe": "crypto",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 38,
+          "pnl_mean_bps": -152.75914587153036,
+          "sharpe": -0.5348811029854581
+        },
+        "2021": {
+          "n": 53,
+          "pnl_mean_bps": 682.4088668548939,
+          "sharpe": 1.9357099675433092
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -267.1158327398174,
+          "sharpe": -1.1498836441032176
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -105.63705308351894,
+          "sharpe": -0.4850217387556735
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": 72.37816529311436,
+          "sharpe": 0.5332242431375036
+        }
+      }
+    },
+    "BNB-SPOT|W+1": {
+      "p_value_vs_zero": 0.2826,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 40.0,
+      "pnl_net_cta_bps": 85.1650479386471,
+      "pnl_net_bh_bps": 145.82707417800262,
+      "edge_vs_bh_bps": -60.662026239355505,
+      "share_long": 0.4764705882352941,
+      "share_short": 0.47058823529411764,
+      "hit_rate": 0.45,
+      "sharpe_annualised": 0.46652845005462207,
+      "sharpe_bh_annualised": 0.770998414564994,
+      "max_drawdown": -1.9570185110459817,
+      "p_value_vs_bh": 0.3514,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "BNB-SPOT",
+      "asset": "BNB-USD",
+      "horizon_unit": "W+1",
+      "classe": "crypto",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_mean_bps": 20.70119452954937,
+          "sharpe": 0.23628345058190312
+        },
+        "2021": {
+          "n": 53,
+          "pnl_mean_bps": 812.8783713581413,
+          "sharpe": 2.11339857143632
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -197.03355269769386,
+          "sharpe": -1.5597570704758583
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -41.69225555750291,
+          "sharpe": -0.4824751236036399
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -21.291278390135968,
+          "sharpe": -0.20894548918964878
+        }
+      }
+    },
+    "LINK-SPOT|W+1": {
+      "p_value_vs_zero": 0.875,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 50.0,
+      "pnl_net_cta_bps": -10.700004719965905,
+      "pnl_net_bh_bps": 85.37616991475464,
+      "edge_vs_bh_bps": -96.07617463472054,
+      "share_long": 0.49117647058823527,
+      "share_short": 0.45588235294117646,
+      "hit_rate": 0.45588235294117646,
+      "sharpe_annualised": -0.059588947188838476,
+      "sharpe_bh_annualised": 0.45072187938991304,
+      "max_drawdown": -3.2377234026407633,
+      "p_value_vs_bh": 0.3046,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "LINK-SPOT",
+      "asset": "LINK-USD",
+      "horizon_unit": "W+1",
+      "classe": "crypto",
+      "periods": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_mean_bps": 85.4856195824092,
+          "sharpe": 0.42344042438260726
+        },
+        "2021": {
+          "n": 53,
+          "pnl_mean_bps": 255.5028815311985,
+          "sharpe": 1.0902806185472853
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": -62.08674879746256,
+          "sharpe": -0.3554973743917302
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": 51.21087150738933,
+          "sharpe": 0.31469249588029063
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -160.75848034460606,
+          "sharpe": -1.0680400183582819
+        }
+      }
+    },
+    "VXX-ETN|W+1": {
+      "p_value_vs_zero": 0.357,
+      "significant_raw_vs_zero": false,
+      "n": 340,
+      "round_trip_bps": 10.0,
+      "pnl_net_cta_bps": 37.409597766337555,
+      "pnl_net_bh_bps": -79.65685681087223,
+      "edge_vs_bh_bps": 117.06645457720981,
+      "share_long": 0.42058823529411765,
+      "share_short": 0.5264705882352941,
+      "hit_rate": 0.5029411764705882,
+      "sharpe_annualised": 0.32913546441547004,
+      "sharpe_bh_annualised": -0.5966472950293537,
+      "max_drawdown": -1.6183239448435072,
+      "p_value_vs_bh": 0.102,
+      "significant_raw": false,
+      "verdict_vs_bh": "indistinguishable",
+      "instrument": "VXX-ETN",
+      "asset": "VXX",
+      "horizon_unit": "W+1",
+      "classe": null,
+      "periods": {
+        "2020 (COVID)": {
+          "n": 53,
+          "pnl_mean_bps": 148.14928734108514,
+          "sharpe": 1.3820279162708153
+        },
+        "2021": {
+          "n": 52,
+          "pnl_mean_bps": 102.20570731093805,
+          "sharpe": 0.7846458130794485
+        },
+        "2022 (bear taux)": {
+          "n": 52,
+          "pnl_mean_bps": 48.765789738361605,
+          "sharpe": 0.5642143536462347
+        },
+        "2023": {
+          "n": 52,
+          "pnl_mean_bps": -36.58497259517747,
+          "sharpe": -0.34909836526260074
+        },
+        "2024-2026": {
+          "n": 131,
+          "pnl_mean_bps": -8.249986718603799,
+          "sharpe": -0.06739713861907952
+        }
+      }
+    }
+  },
+  "gate": {
+    "branch_1_hits": [],
+    "branch_1_passes": false,
+    "branch_1_alt_reading_vs_zero": {
+      "hits": [],
+      "passes": false
+    },
+    "branch_2": {
+      "n_origins": 326,
+      "instruments": [
+        "BNB-SPOT",
+        "BTC-SPOT",
+        "EEM-ETF",
+        "EFA-ETF",
+        "ETH-SPOT",
+        "GLD-ETF",
+        "HG-FUT",
+        "IWM-ETF",
+        "LINK-SPOT",
+        "QQQ-ETF",
+        "SI-FUT",
+        "SOL-SPOT",
+        "SPY-ES",
+        "TLT-ETF",
+        "USO-ETF",
+        "ZC-FUT",
+        "ZN-FUT"
+      ],
+      "excess_mean_bps": -51.77378653676415,
+      "sharpe_excess_annualised": -0.9701198608860733,
+      "per_class": {
+        "actions": {
+          "instruments": [
+            "EEM-ETF",
+            "EFA-ETF",
+            "IWM-ETF",
+            "QQQ-ETF",
+            "SPY-ES"
+          ],
+          "excess_mean_bps": -14.936891055146567,
+          "positive": false
+        },
+        "crypto": {
+          "instruments": [
+            "BNB-SPOT",
+            "BTC-SPOT",
+            "ETH-SPOT",
+            "LINK-SPOT",
+            "SOL-SPOT"
+          ],
+          "excess_mean_bps": -114.46834664765152,
+          "positive": false
+        },
+        "matieres": {
+          "instruments": [
+            "GLD-ETF",
+            "HG-FUT",
+            "SI-FUT",
+            "USO-ETF",
+            "ZC-FUT"
+          ],
+          "excess_mean_bps": -48.687024827845086,
+          "positive": false
+        },
+        "taux": {
+          "instruments": [
+            "TLT-ETF",
+            "ZN-FUT"
+          ],
+          "excess_mean_bps": 5.153470764112595,
+          "positive": true
+        }
+      },
+      "n_classes_positive": 1,
+      "min_classes_required": 3,
+      "passes": false,
+      "formulation": "Sharpe poole de l'EXCES (PnL signal - PnL B&H, par origine) > 0 ET >= 3 classes sur 4 a exces positif"
+    },
+    "passes": false
+  },
+  "complementary_reading": {
+    "portefeuille_diversifie": {
+      "n_instruments": 17,
+      "n_origins": 326,
+      "excess_mean_bps": -51.77378653676415,
+      "sharpe_excess": {
+        "point": -0.9701198608860733,
+        "n_boot": 2000,
+        "ci": [
+          -1.7915228041346403,
+          -0.22412302486660535
+        ],
+        "share_positive": 0.0065
+      },
+      "pnl_mean_bps": 0.4180987761439511,
+      "sharpe_pnl": {
+        "point": 0.01292757921291718,
+        "n_boot": 2000,
+        "ci": [
+          -0.7727914290851721,
+          0.7527369745427025
+        ],
+        "share_positive": 0.493
+      },
+      "max_drawdown_excess": -2.0674498409182154
+    },
+    "par_tranche_exces": {
+      "2020 (COVID)": {
+        "n": 52,
+        "pnl_mean_bps": -116.47030689902384,
+        "sharpe": -1.6941569605662188
+      },
+      "2021": {
+        "n": 53,
+        "pnl_mean_bps": -31.276862925794607,
+        "sharpe": -0.5452899107125294
+      },
+      "2022 (bear taux)": {
+        "n": 52,
+        "pnl_mean_bps": 10.614724404085027,
+        "sharpe": 0.17590695186257918
+      },
+      "2023": {
+        "n": 52,
+        "pnl_mean_bps": -77.16755529519142,
+        "sharpe": -1.905234566507623
+      },
+      "2024-2026": {
+        "n": 117,
+        "pnl_mean_bps": -48.746816331890834,
+        "sharpe": -1.0830301861866978
+      }
+    },
+    "hors_classes": {
+      "VXX-ETN": {
+        "instrument": "VXX-ETN",
+        "pnl_net_bps": 37.409597766337555,
+        "edge_vs_bh_bps": 117.06645457720981
+      }
+    },
+    "status": "descriptif -- ne porte aucune decision"
+  },
+  "elapsed_s": 26.3
+}

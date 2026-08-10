@@ -1,0 +1,110 @@
+<svg viewBox="0 0 1000 990" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1000" height="990" fill="#ffffff"/>
+  <text x="60" y="32" font-size="18" font-weight="bold" fill="#1e293b">NsDiff — Timeline des jeux de données (draft)</text>
+  <text x="60" y="52" font-size="11.5" fill="#64748b">Référence : aujourd'hui, 08/08/2026 · Panel déséquilibré déclaré — départ 2011-05 (SPY, ZN=F, TLT), 2014-09 (BTC), 2017-11 (ETH) · Split train/validation : 80/20 par actif</text>
+  <text x="275" y="105" font-size="11" font-weight="bold" fill="#2563eb" text-anchor="middle">ENTRAÎNEMENT (train dataset)</text>
+  <text x="517" y="105" font-size="11" font-weight="bold" fill="#b45309" text-anchor="middle">VALIDATION</text>
+  <text x="749" y="105" font-size="11" font-weight="bold" fill="#7c3aed" text-anchor="middle">OOS — 340 origines hebdo</text>
+  <line x1="566" y1="112" x2="566" y2="426" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="566" y="126" font-size="9.5" fill="#64748b" text-anchor="middle">1ʳᵉ origine oos</text>
+  <text x="566" y="137" font-size="9.5" fill="#64748b" text-anchor="middle">2020-01</text>
+  <line x1="937" y1="60" x2="937" y2="426" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="937" y="75" font-size="10" font-weight="bold" fill="#dc2626" text-anchor="end">aujourd'hui</text>
+  <text x="937" y="87" font-size="9.5" fill="#dc2626" text-anchor="end">08/08/2026</text>
+  <text x="55" y="165" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="end">SPY</text>
+  <rect x="81" y="150" width="388" height="22" fill="#3b82f6" rx="2"/>
+  <rect x="469" y="150" width="97" height="22" fill="#f59e0b"/>
+  <rect x="566" y="150" width="366" height="22" fill="#8b5cf6" rx="2"/>
+  <text x="81" y="184" font-size="9.5" fill="#64748b">2011-05 → 2018-04 : ≈360 sem. train · ≈90 sem. validation · oos : 340 origines (2020-01 → 2026-07)</text>
+  <text x="55" y="209" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="end">ZN=F</text>
+  <rect x="81" y="194" width="388" height="22" fill="#3b82f6" rx="2"/>
+  <rect x="469" y="194" width="97" height="22" fill="#f59e0b"/>
+  <rect x="566" y="194" width="366" height="22" fill="#8b5cf6" rx="2"/>
+  <text x="81" y="228" font-size="9.5" fill="#64748b">idem SPY — ≈360 sem. train · ≈90 sem. validation · 340 origines oos</text>
+  <text x="55" y="253" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="end">TLT</text>
+  <rect x="81" y="238" width="388" height="22" fill="#3b82f6" rx="2"/>
+  <rect x="469" y="238" width="97" height="22" fill="#f59e0b"/>
+  <rect x="566" y="238" width="366" height="22" fill="#8b5cf6" rx="2"/>
+  <text x="81" y="272" font-size="9.5" fill="#64748b">idem SPY (historique dispo depuis 2002, tronqué à 2011-05 pour homogénéité) — ≈360 · ≈90 · 340</text>
+  <text x="55" y="297" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="end">BTC-USD</text>
+  <rect x="268" y="282" width="239" height="22" fill="#3b82f6" rx="2"/>
+  <rect x="507" y="282" width="59" height="22" fill="#f59e0b"/>
+  <rect x="566" y="282" width="366" height="22" fill="#8b5cf6" rx="2"/>
+  <text x="268" y="316" font-size="9.5" fill="#64748b">2014-09 (début source) → ≈222 sem. train · ≈55 sem. validation · 340 origines oos</text>
+  <text x="55" y="341" font-size="11.5" font-weight="bold" fill="#1e293b" text-anchor="end">ETH-USD</text>
+  <rect x="448" y="326" width="95" height="22" fill="#3b82f6" rx="2"/>
+  <rect x="543" y="326" width="23" height="22" fill="#f59e0b"/>
+  <rect x="566" y="326" width="366" height="22" fill="#8b5cf6" rx="2"/>
+  <text x="448" y="360" font-size="9.5" fill="#64748b">2017-11 (existence) → ≈88 sem. train · ≈22 sem. validation · 340 origines oos — cellule faible déclarée</text>
+  <rect x="566" y="376" width="366" height="20" fill="#0d9488" rx="3"/>
+  <text x="749" y="390" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">BACKTEST ÉCONOMIQUE — walk-forward</text>
+  <text x="55" y="390" font-size="10.5" font-weight="bold" fill="#0d9488" text-anchor="end">Backtest</text>
+  <text x="566" y="410" font-size="9.5" fill="#64748b">même fenêtre que l'oos : à chaque origine, les prévisions deviennent des décisions (var_limit, inverse_width) — PnL net de frais réels vs B&amp;H et vs GARCH</text>
+  <line x1="60" y1="424" x2="960" y2="424" stroke="#334155" stroke-width="1.5"/>
+  <g font-size="10" fill="#334155" text-anchor="middle">
+    <line x1="60" y1="424" x2="60" y2="430" stroke="#334155"/><text x="60" y="443">2011</text>
+    <line x1="172.5" y1="424" x2="172.5" y2="430" stroke="#334155"/><text x="172.5" y="443">2013</text>
+    <line x1="285" y1="424" x2="285" y2="430" stroke="#334155"/><text x="285" y="443">2015</text>
+    <line x1="397.5" y1="424" x2="397.5" y2="430" stroke="#334155"/><text x="397.5" y="443">2017</text>
+    <line x1="510" y1="424" x2="510" y2="430" stroke="#334155"/><text x="510" y="443">2019</text>
+    <line x1="622.5" y1="424" x2="622.5" y2="430" stroke="#334155"/><text x="622.5" y="443">2021</text>
+    <line x1="735" y1="424" x2="735" y2="430" stroke="#334155"/><text x="735" y="443">2023</text>
+    <line x1="847.5" y1="424" x2="847.5" y2="430" stroke="#334155"/><text x="847.5" y="443">2025</text>
+    <line x1="960" y1="424" x2="960" y2="430" stroke="#334155"/><text x="960" y="443">2027</text>
+  </g>
+  <rect x="60" y="464" width="14" height="14" fill="#3b82f6" rx="2"/>
+  <text x="80" y="475" font-size="10.5" fill="#1e293b">Train dataset</text>
+  <rect x="180" y="464" width="14" height="14" fill="#f59e0b" rx="2"/>
+  <text x="200" y="475" font-size="10.5" fill="#1e293b">Validation (époques)</text>
+  <rect x="350" y="464" width="14" height="14" fill="#8b5cf6" rx="2"/>
+  <text x="370" y="475" font-size="10.5" fill="#1e293b">OOS (test hors échantillon)</text>
+  <rect x="550" y="464" width="14" height="14" fill="#0d9488" rx="2"/>
+  <text x="570" y="475" font-size="10.5" fill="#1e293b">Backtest économique</text>
+  <line x1="730" y1="471" x2="760" y2="471" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="766" y="475" font-size="10.5" fill="#1e293b">Aujourd'hui (08/08/2026)</text>
+  <g font-size="10.5" fill="#334155">
+    <text x="60" y="506" font-weight="bold" fill="#1e293b">Comment lire :</text>
+    <text x="60" y="526"><tspan font-weight="bold" fill="#2563eb">Train</tspan> — entraînement unique (train-once-forward), 5 graines (42-46), seq_len=30 ; le modèle n'est jamais réentraîné pendant l'oos.</text>
+    <text x="60" y="546"><tspan font-weight="bold" fill="#b45309">Validation</tspan> — les 20 % finaux de la période pré-oos, par actif ; sert uniquement à choisir le budget d'époques (argmin CRPS).</text>
+    <text x="60" y="566">Strictement antérieure à la première origine : aucune donnée de test ne participe au moindre choix (pas de fuite).</text>
+    <text x="60" y="586"><tspan font-weight="bold" fill="#7c3aed">OOS</tspan> — 340 origines hebdomadaires (2020-01 → 2026-07), effective_n ≈ 113. À chaque origine : prévisions W+1 / W+2 / W+3,</text>
+    <text x="60" y="606">200 tirages par graine, ensemble 5×200 = 1000 (config production). Régimes traversés : COVID 2020, bear taux 2022, 2024-2026.</text>
+    <text x="60" y="626"><tspan font-weight="bold" fill="#0d9488">Backtest</tspan> — pas de période dédiée : il rejoue les origines oos en décisions, sans aucun réglage sur cette fenêtre (stratégies, frais,</text>
+    <text x="60" y="646">familles de Holm déclarés avant les runs). Hypothèse primaire pré-déclarée : var_limit / SPY / W+2-W+3 weekly vs GARCH.</text>
+  </g>
+  <rect x="60" y="662" width="880" height="126" fill="#f0fdfa" stroke="#0d9488" stroke-width="1" rx="6"/>
+  <text x="75" y="684" font-size="11" font-weight="bold" fill="#0f766e">Calibration — deux sens, deux règles</text>
+  <text x="75" y="704" font-size="10" font-weight="bold" fill="#7c3aed">MESURÉE — toujours sur l'oos</text>
+  <text x="75" y="720" font-size="9.5" fill="#334155">Couverture 95 %, Winkler, Kupiec/Christoffersen : calculés sur les</text>
+  <text x="75" y="734" font-size="9.5" fill="#334155">origines oos uniquement, jamais sur le train ni la validation.</text>
+  <text x="75" y="748" font-size="9.5" fill="#334155">Sur le train, un modèle sur-appris paraîtrait parfaitement</text>
+  <text x="75" y="762" font-size="9.5" fill="#334155">calibré — la mesure n'y aurait aucune valeur.</text>
+  <text x="520" y="704" font-size="10" font-weight="bold" fill="#2563eb">RÉGLÉE — jamais sur l'oos</text>
+  <text x="520" y="720" font-size="9.5" fill="#334155">Variance du modèle : apprise sur le train (backbone σ dédié).</text>
+  <text x="520" y="734" font-size="9.5" fill="#334155">Budget d'époques : choisi sur la validation (argmin CRPS).</text>
+  <text x="520" y="748" font-size="9.5" fill="#334155">Budget de tirages (200/1000) : fixé par convergence, pas via la couverture oos.</text>
+  <text x="520" y="762" font-size="9.5" fill="#334155">Aucun facteur correctif a posteriori sur les intervalles.</text>
+  <text x="75" y="780" font-size="9.5" font-style="italic" fill="#0f766e">Exception apparente qui confirme la règle : la recalibration conformale (tâche 5) ajustait un facteur k sur la 1ʳᵉ moitié du bloc oos et l'évaluait sur la 2ᵈᵉ, jamais vue (effective_n ≈ 15) — jugée sur-correctrice et rejetée.</text>
+  <rect x="60" y="800" width="880" height="158" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1" rx="6"/>
+  <text x="75" y="822" font-size="11" font-weight="bold" fill="#6d28d9">Prédiction — ce que produit le modèle à chaque origine, et comment on le juge</text>
+  <line x1="200" y1="832" x2="200" y2="944" stroke="#c4b5fd" stroke-width="1" stroke-dasharray="3,2"/>
+  <polyline points="85,908 100,898 115,905 130,893 145,896 160,885 175,889 190,881 200,884" fill="none" stroke="#334155" stroke-width="1.5"/>
+  <polygon points="200,884 330,830 330,936" fill="#8b5cf6" opacity="0.18"/>
+  <line x1="200" y1="884" x2="330" y2="874" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="275" y="856" font-size="8.5" fill="#6d28d9">fourchette 95 %</text>
+  <text x="334" y="877" font-size="8.5" fill="#6d28d9">médiane</text>
+  <text x="140" y="875" font-size="8.5" fill="#64748b">historique</text>
+  <text x="200" y="954" font-size="8.5" fill="#64748b" text-anchor="middle">origine</text>
+  <text x="243" y="954" font-size="8.5" fill="#64748b" text-anchor="middle">W+1</text>
+  <text x="287" y="954" font-size="8.5" fill="#64748b" text-anchor="middle">W+2</text>
+  <text x="330" y="954" font-size="8.5" fill="#64748b" text-anchor="middle">W+3</text>
+  <text x="370" y="836" font-size="9.5" fill="#334155"><tspan font-weight="bold" fill="#6d28d9">Pas un chiffre, un éventail :</tspan> chaque semaine, 1 000 scénarios de prix simulés →</text>
+  <text x="370" y="850" font-size="9.5" fill="#334155">médiane (prévision ponctuelle) + fourchette à 95 %, à 1, 2 et 3 semaines — sans réentraînement.</text>
+  <text x="370" y="870" font-size="9.5" fill="#334155"><tspan font-weight="bold" fill="#6d28d9">Deux axes de jugement :</tspan> précision du point (RMSE) et fiabilité de la fourchette (couverture,</text>
+  <text x="370" y="884" font-size="9.5" fill="#334155">Winkler). La valeur démontrée de NsDiff est sur le second — la fourchette tient sa promesse.</text>
+  <text x="370" y="904" font-size="9.5" fill="#334155"><tspan font-weight="bold" fill="#6d28d9">De la prévision à la décision :</tspan> la fourchette sert à dimensionner le risque (taille de position,</text>
+  <text x="370" y="918" font-size="9.5" fill="#334155">limite VaR) — pas à donner une direction : à ces horizons, elle contient toujours le prix courant.</text>
+  <text x="370" y="938" font-size="9.5" fill="#334155"><tspan font-weight="bold" fill="#6d28d9">Verdict honnête à ce jour :</tspan> parité avec le modèle classique (ARIMA-GARCH) — fiabilité établie,</text>
+  <text x="370" y="952" font-size="9.5" fill="#334155">avantage économique non démontré (test de puissance renforcée en cours : 340 origines).</text>
+  <text x="60" y="980" fill="#94a3b8" font-size="9.5">La dernière origine évaluable s'arrête ≈ 3 semaines avant aujourd'hui (cible W+3 à observer). Comptages hebdo ; mêmes bornes en daily → ≈2 235 fenêtres train (SPY/ZN/TLT), ≈1 930 (BTC), ≈760 (ETH). Draft — bornes à figer au gel des prix (prices_v3/).</text>
+</svg>

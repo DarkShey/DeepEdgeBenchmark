@@ -1,0 +1,455 @@
+{
+  "scope": "chantier R0 -- inventaire et chiffrage de la regeneration complete de la grille oos",
+  "read_only": true,
+  "brief": "BRIEF_nsdiff_regeneration_oos_et_famille3.md",
+  "grid": {
+    "origin_start": "2020-01-01",
+    "n_origins": 340,
+    "assets": [
+      "SPY",
+      "ZN=F",
+      "TLT",
+      "BTC-USD",
+      "ETH-USD",
+      "GLD",
+      "USO"
+    ],
+    "per_asset": {
+      "SPY": {
+        "daily_obs": 3829,
+        "weekly_obs": 795,
+        "n_origins": 340,
+        "history_start": "2011-05-02"
+      },
+      "ZN=F": {
+        "daily_obs": 3828,
+        "weekly_obs": 795,
+        "n_origins": 340,
+        "history_start": "2011-05-02"
+      },
+      "TLT": {
+        "daily_obs": 3829,
+        "weekly_obs": 795,
+        "n_origins": 340,
+        "history_start": "2011-05-02"
+      },
+      "BTC-USD": {
+        "daily_obs": 4328,
+        "weekly_obs": 619,
+        "n_origins": 340,
+        "history_start": "2014-09-17"
+      },
+      "ETH-USD": {
+        "daily_obs": 3179,
+        "weekly_obs": 455,
+        "n_origins": 340,
+        "history_start": "2017-11-09"
+      },
+      "GLD": {
+        "daily_obs": 3829,
+        "weekly_obs": 795,
+        "n_origins": 340,
+        "history_start": "2011-05-02"
+      },
+      "USO": {
+        "daily_obs": 3829,
+        "weekly_obs": 795,
+        "n_origins": 340,
+        "history_start": "2011-05-02"
+      }
+    },
+    "prices": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3",
+    "n_origin_cells_per_model": 4760,
+    "n_rows_per_model": 14280
+  },
+  "model_inventory": {
+    "ARIMA-GARCH": {
+      "kind": "analytic",
+      "evidence": "models/arima_model.py:_std_quantiles / forecast -- last_price*exp(mu + sigma*dist.ppf(alpha/2, 1-alpha/2)), ppf de la loi d'innovation ajustee",
+      "n_samples": null,
+      "regeneration": "a generer"
+    },
+    "SARIMA": {
+      "kind": "analytic",
+      "evidence": "models/sarima_model.py -- get_forecast().conf_int() de statsmodels (bornes fermees), recalibrees par un facteur sigma",
+      "n_samples": null,
+      "regeneration": "a generer"
+    },
+    "Naive": {
+      "kind": "analytic",
+      "evidence": "models/naive_model.py:55 Z_95=1.96 -- prev +/- 1.96*sigma_t, sigma_t = EWMA causale des variations (sigma_mode='ewma')",
+      "n_samples": null,
+      "regeneration": "a generer"
+    },
+    "LSTM": {
+      "kind": "analytic",
+      "evidence": "models/lstm_model.py -- pred +/- 1.96*sigma_t (EWMA causale des residus). Le MC-Dropout (`n_ensemble`) existe mais vaut 0 par defaut et ne sert pas a construire les bornes.",
+      "n_samples": null,
+      "regeneration": "a generer"
+    },
+    "Prophet": {
+      "kind": "sampled_internally",
+      "evidence": "models/prophet_model.py:176 Prophet(interval_width=0.95) -- bornes yhat_lower/upper, tirees par Prophet sur ses `uncertainty_samples` internes (defaut 1000, jamais surcharge ici)",
+      "n_samples": 1000,
+      "regeneration": "a generer"
+    },
+    "NsDiff": {
+      "kind": "sampled",
+      "evidence": "experiments/oos_nsdiff_daily_weekly.py:341 -- np.quantile(s, [0.025, 0.975]) sur le nuage predictif ; DEFAULT_N_SAMPLES=50",
+      "n_samples": 50,
+      "regeneration": "deja genere sur la grille 2020"
+    },
+    "TSDiff": {
+      "kind": "sampled",
+      "evidence": "meme boucle de generation (weekly_headtohead_v2, n_samples=50) -- quantiles empiriques 2.5/97.5 sur le nuage",
+      "n_samples": 50,
+      "regeneration": "retire -- aucune ligne regeneree"
+    }
+  },
+  "already_generated": {
+    "NsDiff": {
+      "artefact": "grid2020/NsDiff/rows.parquet",
+      "n_rows": 71400,
+      "n_origins": 354,
+      "assets": [
+        "BTC-USD",
+        "ETH-USD",
+        "GLD",
+        "SPY",
+        "TLT",
+        "USO",
+        "ZN=F"
+      ],
+      "seeds": [
+        42,
+        43,
+        44,
+        45,
+        46
+      ],
+      "regimes": [
+        "daily",
+        "weekly"
+      ]
+    },
+    "ARIMA-GARCH[normal]": {
+      "artefact": "grid2020/ARIMA-GARCH/bands.parquet",
+      "n_rows": 14280,
+      "n_origins": 354,
+      "assets": [
+        "BTC-USD",
+        "ETH-USD",
+        "GLD",
+        "SPY",
+        "TLT",
+        "USO",
+        "ZN=F"
+      ],
+      "regimes": [
+        "daily",
+        "weekly"
+      ]
+    }
+  },
+  "cost": {
+    "ARIMA-GARCH[skewt]": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.19357895851135254,
+          "n_train_obs": 792,
+          "extrapolated_h": 0.12797720034917195
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 1.075287103652954,
+          "n_train_obs": 3815,
+          "extrapolated_h": 0.710884251859453
+        }
+      },
+      "failures": [],
+      "weekly_h": 0.12797720034917195,
+      "daily_h": 0.710884251859453,
+      "total_h": 0.838861452208625
+    },
+    "SARIMA": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.09503006935119629,
+          "n_train_obs": 792,
+          "extrapolated_h": 0.06282543473773533
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.4889242649078369,
+          "n_train_obs": 3815,
+          "extrapolated_h": 0.32323326402240327
+        }
+      },
+      "failures": [],
+      "weekly_h": 0.06282543473773533,
+      "daily_h": 0.32323326402240327,
+      "total_h": 0.3860586987601386
+    },
+    "Prophet": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.35751819610595703,
+          "n_train_obs": 792,
+          "extrapolated_h": 0.23635925187004936
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 1.21004319190979,
+          "n_train_obs": 3815,
+          "extrapolated_h": 0.7999729990959168
+        }
+      },
+      "failures": [],
+      "weekly_h": 0.23635925187004936,
+      "daily_h": 0.7999729990959168,
+      "total_h": 1.036332250965966
+    },
+    "Naive": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 7.987022399902344e-05,
+          "n_train_obs": 792,
+          "extrapolated_h": 5.280309253268772e-05
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 8.20159912109375e-05,
+          "n_train_obs": 3815,
+          "extrapolated_h": 5.422168307834201e-05
+        }
+      },
+      "failures": [],
+      "weekly_h": 5.280309253268772e-05,
+      "daily_h": 5.422168307834201e-05,
+      "total_h": 0.00010702477561102973
+    },
+    "LSTM": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 6.624930143356323,
+          "n_train_obs": 792,
+          "extrapolated_h": 4.379814928107791
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 10.937060117721558,
+          "n_train_obs": 3815,
+          "extrapolated_h": 7.2306119667159185
+        }
+      },
+      "failures": [],
+      "weekly_h": 4.379814928107791,
+      "daily_h": 7.2306119667159185,
+      "total_h": 11.61042689482371
+    }
+  },
+  "totals": {
+    "phase_W_h": 4.807029618157281,
+    "phase_D_h": 9.06475670337677,
+    "full_regeneration_h": 13.87178632153405,
+    "budget_threshold_h": 48.0,
+    "declared_before_reading": true,
+    "fits_in_budget": true,
+    "already_paid_h": "NsDiff (5 graines x 200) et ARIMA-GARCH gaussien sont deja produits sur cette grille : leur cout n'est pas recompte ici",
+    "decoupage": "phase W d'abord dans tous les cas -- l'hypothese primaire pre-declaree est weekly, et la phase D lui est conditionnee (R2.2). Le decoupage n'est donc pas une consequence du budget mais du protocole."
+  },
+  "db_state": {
+    "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
+    "mode": "read-only (file:...?mode=ro)",
+    "oos_weekly_track": [
+      {
+        "model": "ARIMA-GARCH",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "ARIMA-GARCH",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "LSTM",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "LSTM",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "Naive",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "Naive",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "NsDiff",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "NsDiff",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "Prophet",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "Prophet",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "SARIMA",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "SARIMA",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "TSDiff",
+        "frequence": "daily",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      },
+      {
+        "model": "TSDiff",
+        "frequence": "weekly",
+        "n": 1350,
+        "n_cutoffs": 95,
+        "first_cutoff": "2024-10-18",
+        "last_cutoff": "2026-07-03",
+        "n_assets": 5
+      }
+    ],
+    "n_rows_total": 18900
+  },
+  "write_scope": {
+    "rows_now_oos_weekly_track": 18900,
+    "rows_per_model_per_phase": {
+      "weekly": 7140,
+      "daily": 7140
+    },
+    "rows_after_phase_W": 42840,
+    "rows_after_both_phases": 85680,
+    "expansion_factor": 4.53,
+    "n_models_written": 6,
+    "regle": "un seul script d'upsert par phase, standard repoint_oos_to_m200 : dry-run par defaut, sauvegarde horodatee, --apply explicite, verification 1:1 des cles, backfill des colonnes derivees, bandeau de config. tracking.db en lecture seule partout ailleurs."
+  },
+  "execution_order": [
+    {
+      "step": "R1",
+      "what": "gel des donnees prices_v3 + recouvrement avec diffusion_multiseed_v2/prices",
+      "cost_h": 0.0,
+      "writes": "aucune (verification bloquante)"
+    },
+    {
+      "step": "R2/W",
+      "what": "phase W -- grille weekly 340 origines, 7 actifs, tous modeles (H1 integre : bras GARCH skew-t genere dans la meme passe)",
+      "cost_h": 4.807,
+      "writes": "artefacts disque uniquement"
+    },
+    {
+      "step": "R2/W-upsert",
+      "what": "upsert phase W en base (script dedie, dry-run puis --apply)",
+      "cost_h": 0.0,
+      "writes": "42840 lignes"
+    },
+    {
+      "step": "F3",
+      "what": "famille 3 reposee -- exploratoire sur grille courante, confirmatoire sur la nouvelle grille weekly",
+      "cost_h": 0.0,
+      "writes": "artefacts disque uniquement"
+    },
+    {
+      "step": "R2/D",
+      "what": "phase D -- idem daily, CONDITIONNEE au verdict de la phase W (hypothese primaire survivante OU signal de calibration nouveau)",
+      "cost_h": 9.065,
+      "writes": "artefacts + upsert phase D"
+    },
+    {
+      "step": "H2/H3",
+      "what": "realisme d'execution des futures ; monitoring de couverture en ligne",
+      "cost_h": 0.0,
+      "writes": "aucune"
+    }
+  ],
+  "elapsed_s": 83.1
+}

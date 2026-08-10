@@ -1,0 +1,140 @@
+{
+  "scope": "chantier B, etape prealable : chiffrage AVANT lancement",
+  "grid": {
+    "origin_start": "2020-01-01",
+    "n_origins": 340,
+    "n_assets": 7,
+    "assets": [
+      "SPY",
+      "ZN=F",
+      "TLT",
+      "BTC-USD",
+      "ETH-USD",
+      "GLD",
+      "USO"
+    ],
+    "n_origin_cells_per_model": 4760
+  },
+  "method": "chronometrage sur origines reelles (series gelees prices_v3), extrapolation lineaire pour les modeles refit-par-origine ; NsDiff traite a part (fits fixes + forecast x origines)",
+  "probe_asset": "SPY",
+  "n_probe": 3,
+  "per_model": {
+    "ARIMA-GARCH": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.21431517601013184,
+          "n_train_obs": 792
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 1.103234052658081,
+          "n_train_obs": 3815
+        }
+      },
+      "failures": [],
+      "extrapolated_s": 3135.7671642303467,
+      "extrapolated_h": 0.8710464345084297
+    },
+    "SARIMA": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.10255908966064453,
+          "n_train_obs": 792
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.5080480575561523,
+          "n_train_obs": 3815
+        }
+      },
+      "failures": [],
+      "extrapolated_s": 1453.2450103759766,
+      "extrapolated_h": 0.4036791695488824
+    },
+    "Prophet": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 0.3485870361328125,
+          "n_train_obs": 792
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 1.1751270294189453,
+          "n_train_obs": 3815
+        }
+      },
+      "failures": [],
+      "extrapolated_s": 3626.4394760131836,
+      "extrapolated_h": 1.007344298892551
+    },
+    "Naive": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 3,
+          "median_s_per_origin": 5.0067901611328125e-05,
+          "n_train_obs": 792
+        },
+        "daily": {
+          "n_probe": 3,
+          "median_s_per_origin": 6.508827209472656e-05,
+          "n_train_obs": 3815
+        }
+      },
+      "failures": [],
+      "extrapolated_s": 0.27407169342041016,
+      "extrapolated_h": 7.613102595011393e-05
+    },
+    "NsDiff": {
+      "protocol": "train-once-forward, 5 graines, 200 tirages",
+      "per_regime": {
+        "weekly": {
+          "fit_s": 2.76,
+          "n_train_obs": 452,
+          "median_s_per_origin_forecast": 0.02151799201965332
+        },
+        "daily": {
+          "fit_s": 11.06,
+          "n_train_obs": 2182,
+          "median_s_per_origin_forecast": 0.02964305877685547
+        }
+      },
+      "extrapolated_s": 1092.5165044784546,
+      "extrapolated_h": 0.30347680679957073
+    },
+    "LSTM": {
+      "protocol": "refit par origine",
+      "per_regime": {
+        "weekly": {
+          "n_probe": 2,
+          "median_s_per_origin": 8.740022659301758,
+          "n_train_obs": 792
+        },
+        "daily": {
+          "n_probe": 2,
+          "median_s_per_origin": 12.014704465866089,
+          "n_train_obs": 3815
+        }
+      },
+      "failures": [],
+      "extrapolated_s": 49396.250557899475,
+      "extrapolated_h": 13.721180710527632
+    }
+  },
+  "totals": {
+    "full_regeneration_h": 16.306803551303016,
+    "budget_threshold_h": 2.0,
+    "fits_in_budget": false,
+    "primary_hypothesis_subset_h": 0.0342354850769043,
+    "primary_hypothesis_subset": "{NsDiff, ARIMA-GARCH} x {weekly} x {SPY} -- le minimum qui tranche l'hypothese primaire pre-declaree",
+    "economic_arms_all_assets_h": 1.1745232413080002,
+    "economic_arms_scope": "{NsDiff, ARIMA-GARCH} x {weekly, daily} x tous actifs -- de quoi rejouer TOUT le volet economique et le match de calibration, sans les 4 modeles de reference classiques"
+  },
+  "elapsed_s": 66.4
+}

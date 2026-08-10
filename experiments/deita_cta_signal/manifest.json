@@ -1,0 +1,270 @@
+{
+  "scope": "chantier 0a -- signal directionnel CTA de DEITA, gele point-in-time",
+  "engine": {
+    "source": "/Users/mikamoto/Documents/GitLocal/Projects/LocalProjectTimeSeries1/cta_quant_engine.py",
+    "sha256": "d1dd25fba616b079211a9687ba5de7bf9b9a15859434270cc2f3f5495d625fa6",
+    "retained": "hull_ma(rendements quotidiens, 20 j) -> signe. Coeur trend-following du moteur, ce que DEITA utilise en pure_trend_mode.",
+    "hull_period": 20,
+    "corr_lookback": 63,
+    "calendar": "deita",
+    "calendar_note": "'deita' reproduit le ffill que compute_cta_signal applique sur un panel mixte crypto/actions ; 'own' calcule sur les jours de cotation propres. L'ecart retourne le signe sur 7,3 % des cellules (origine x actif) -- la porte est jugee sous les deux conventions.",
+    "parameters_touched": "aucun -- moteur DEITA tel quel"
+  },
+  "decision_conviction_rejetee": {
+    "mecanisme": "sous-secteur a un membre -> deux niveaux sur trois valent la serie lissee de l'actif -> conv = (2/3) smooth^2 + smooth x mkt/3, dont le terme dominant est un carre : le signe ne change plus",
+    "mesure": {
+      "SPY": {
+        "part_long_conviction": 1.0,
+        "part_long_direction_hull": 0.5809682804674458,
+        "sous_secteur_singleton": true
+      },
+      "ZN=F": {
+        "part_long_conviction": 0.9937395659432388,
+        "part_long_direction_hull": 0.47120200333889817,
+        "sous_secteur_singleton": true
+      },
+      "TLT": {
+        "part_long_conviction": 0.9991652754590985,
+        "part_long_direction_hull": 0.493322203672788,
+        "sous_secteur_singleton": true
+      },
+      "BTC-USD": {
+        "part_long_conviction": 0.9995826377295493,
+        "part_long_direction_hull": 0.5392320534223706,
+        "sous_secteur_singleton": true
+      },
+      "ETH-USD": {
+        "part_long_conviction": 1.0,
+        "part_long_direction_hull": 0.5488313856427379,
+        "sous_secteur_singleton": true
+      },
+      "GLD": {
+        "part_long_conviction": 0.9991652754590985,
+        "part_long_direction_hull": 0.5601001669449082,
+        "sous_secteur_singleton": true
+      },
+      "USO": {
+        "part_long_conviction": 0.9995826377295493,
+        "part_long_direction_hull": 0.5559265442404007,
+        "sous_secteur_singleton": true
+      }
+    },
+    "univers_elargi_ne_sauve_pas": "SPY et BTC-USD sont deja seuls dans leur sous-secteur dans l'univers de 16 actifs de DEITA ; SPY et ZN=F, les deux instruments de l'hypothese primaire, restent degeneres. Et les prix de la base DEITA s'ecartent de prices_v3 jusqu'a 2,6e-03 en log-rendement sur SPY (tolerance de gel du benchmark : 1e-5).",
+    "conservee_en": "conviction.parquet -- descriptif, jamais utilisee pour decider"
+  },
+  "universe": {
+    "assets": [
+      "SPY",
+      "ZN=F",
+      "TLT",
+      "BTC-USD",
+      "ETH-USD",
+      "GLD",
+      "USO"
+    ],
+    "note": "la direction Hull est univariee : elle ne depend d'aucun univers, seulement de la serie de l'actif. Calculee entierement sur prices_v3.",
+    "asset_map_pour_la_conviction_descriptive": {
+      "SPY": {
+        "sector": "Equity",
+        "subsector": "US Large-Cap"
+      },
+      "BTC-USD": {
+        "sector": "Crypto",
+        "subsector": "Large-Cap Crypto"
+      },
+      "ETH-USD": {
+        "sector": "Crypto",
+        "subsector": "L1 Smart Contract"
+      },
+      "GLD": {
+        "sector": "Commodity",
+        "subsector": "Precious Metals"
+      },
+      "USO": {
+        "sector": "Commodity",
+        "subsector": "Energy"
+      },
+      "ZN=F": {
+        "sector": "Bond",
+        "subsector": "US Treasury Future"
+      },
+      "TLT": {
+        "sector": "Bond",
+        "subsector": "US Treasury ETF"
+      }
+    }
+  },
+  "prices": {
+    "dir": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/prices_v3",
+    "sha256": {
+      "SPY": "8c4ec4094fc8e525714919cf242ea65811fbed008f5515560e6b8bd428b237e2",
+      "ZN=F": "e4cd2ac514997810ccc1e985939aef475fc0878052565e06b074237f97f6d4c2",
+      "TLT": "e1133cff9810db3e669b54d59661bc215f4415046299327ee7c6d45210239008",
+      "BTC-USD": "080e8505b106ae67a7e4717a4ebe50b18380facb94632a52ece3606a77444b95",
+      "ETH-USD": "5a28f381d0bdf87f3abba7fa0a78f8a2f842d02981268cd543e0e3f1985f7744",
+      "GLD": "5d4f5f625a1a63a8557c9b58d420d6a5be5a837eef3cc07ea18850790f80687c",
+      "USO": "7d579109528162f1baf7293d1fd9cf142ebebc7b09002913019541ce826ee690"
+    },
+    "span": "2011-05-02 -> 2026-07-23"
+  },
+  "signal_sha256": {
+    "SPY": "a9c2fc1b6dfc188f2401fa9303929a405ffb3e9973742f823c4a3bc02e6c4c07",
+    "ZN=F": "4fe02aaf33f2ff6ea8fbc7a1875cd37a353dfc2a4fc30d9616d90eb2f4d5fb7b",
+    "TLT": "daa0ec96aa1a3b37dd0a480bf58e48a1d69400662d264859f5a23aeb158567c6",
+    "BTC-USD": "d8f117c255de4a081102ac9ab8eba515615bd5aa16bf770773909dcccb20c58f",
+    "ETH-USD": "044ad2635b8e1845e1093a0819524f37b38aa9caa5fd94b1a8542bb0d8e6435c",
+    "GLD": "495fa12284929b6b0d513e1e679b0725a33aaef0e2fba0423e57be9344d8aab3",
+    "USO": "c617b6706b752775d97f98b7a00bb1c1f8fb234d5ca453fc3e949bbb2bd9cd12"
+  },
+  "lookahead_check": {
+    "tolerance": 1e-12,
+    "n_dates": 5,
+    "max_abs_diff_overall": 0.0,
+    "per_date": {
+      "2020-01-03": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 2785
+      },
+      "2021-08-13": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 3373
+      },
+      "2023-03-31": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 3968
+      },
+      "2024-11-15": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 4563
+      },
+      "2026-07-02": {
+        "max_abs_diff": 0.0,
+        "passes": true,
+        "n_obs_truncated": 5157
+      }
+    },
+    "passes": true
+  },
+  "descriptive": {
+    "direction_hull_retenue": {
+      "SPY": {
+        "n": 2396,
+        "share_long": 0.5809682804674458,
+        "share_short": 0.41903171953255425,
+        "share_flat": 0.0,
+        "n_sign_flips": 262,
+        "abs_mean": 0.003112508307489329
+      },
+      "ZN=F": {
+        "n": 2396,
+        "share_long": 0.47120200333889817,
+        "share_short": 0.5287979966611018,
+        "share_flat": 0.0,
+        "n_sign_flips": 271,
+        "abs_mean": 0.0010273842674178488
+      },
+      "TLT": {
+        "n": 2396,
+        "share_long": 0.493322203672788,
+        "share_short": 0.506677796327212,
+        "share_flat": 0.0,
+        "n_sign_flips": 288,
+        "abs_mean": 0.0026728136236023646
+      },
+      "BTC-USD": {
+        "n": 2396,
+        "share_long": 0.5392320534223706,
+        "share_short": 0.4607679465776294,
+        "share_flat": 0.0,
+        "n_sign_flips": 259,
+        "abs_mean": 0.010087653065150793
+      },
+      "ETH-USD": {
+        "n": 2396,
+        "share_long": 0.5488313856427379,
+        "share_short": 0.4511686143572621,
+        "share_flat": 0.0,
+        "n_sign_flips": 256,
+        "abs_mean": 0.013603153632383621
+      },
+      "GLD": {
+        "n": 2396,
+        "share_long": 0.5601001669449082,
+        "share_short": 0.43989983305509184,
+        "share_flat": 0.0,
+        "n_sign_flips": 230,
+        "abs_mean": 0.0031188927332756714
+      },
+      "USO": {
+        "n": 2396,
+        "share_long": 0.5559265442404007,
+        "share_short": 0.44407345575959933,
+        "share_flat": 0.0,
+        "n_sign_flips": 245,
+        "abs_mean": 0.007279211527951152
+      }
+    },
+    "conviction_descriptive": {
+      "SPY": {
+        "n": 2396,
+        "share_long": 1.0,
+        "share_short": 0.0,
+        "share_flat": 0.0,
+        "n_sign_flips": 0,
+        "abs_mean": 0.18038755637654658
+      },
+      "ZN=F": {
+        "n": 2396,
+        "share_long": 0.9937395659432388,
+        "share_short": 0.006260434056761269,
+        "share_flat": 0.0,
+        "n_sign_flips": 30,
+        "abs_mean": 0.01709262871315528
+      },
+      "TLT": {
+        "n": 2396,
+        "share_long": 0.9991652754590985,
+        "share_short": 0.0008347245409015025,
+        "share_flat": 0.0,
+        "n_sign_flips": 4,
+        "abs_mean": 0.10071995080288339
+      },
+      "BTC-USD": {
+        "n": 2396,
+        "share_long": 0.9995826377295493,
+        "share_short": 0.00041736227045075126,
+        "share_flat": 0.0,
+        "n_sign_flips": 2,
+        "abs_mean": 0.43251621223641995
+      },
+      "ETH-USD": {
+        "n": 2396,
+        "share_long": 1.0,
+        "share_short": 0.0,
+        "share_flat": 0.0,
+        "n_sign_flips": 0,
+        "abs_mean": 0.6333612011947138
+      },
+      "GLD": {
+        "n": 2396,
+        "share_long": 0.9991652754590985,
+        "share_short": 0.0008347245409015025,
+        "share_flat": 0.0,
+        "n_sign_flips": 4,
+        "abs_mean": 0.12250204368449003
+      },
+      "USO": {
+        "n": 2396,
+        "share_long": 0.9995826377295493,
+        "share_short": 0.00041736227045075126,
+        "share_flat": 0.0,
+        "n_sign_flips": 2,
+        "abs_mean": 0.3631736347784936
+      }
+    }
+  }
+}

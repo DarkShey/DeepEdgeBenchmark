@@ -1,0 +1,76 @@
+{
+  "scope": "PATCH_gate0_branche2_et_holm_m2.md -- P1 (Holm m=2), P2 (branche 2 reparee)",
+  "applied": false,
+  "edits": [
+    {
+      "file": "BRIEF_couplage_cta_deita_sizing_nsdiff.md",
+      "label": "P1 -- famille de Holm m = 4 -> m = 2",
+      "status": "already",
+      "diff": ""
+    },
+    {
+      "file": "NOTE_couplage_cta_deita_sizing_nsdiff.md",
+      "label": "P1 -- remarque du §3 : l'ecart est tranche",
+      "status": "already",
+      "diff": ""
+    },
+    {
+      "file": "NOTE_couplage_cta_deita_sizing_nsdiff.md",
+      "label": "P2 -- §2.4 : la branche 2 est reparee",
+      "status": "already",
+      "diff": ""
+    },
+    {
+      "file": "NOTE_couplage_cta_deita_sizing_nsdiff.md",
+      "label": "P2 -- §4 : la piste 2 sort des pistes ouvertes",
+      "status": "already",
+      "diff": ""
+    },
+    {
+      "file": "NOTE_couplage_cta_deita_sizing_nsdiff.md",
+      "label": "P2 -- §4 : chapeau, il ne reste que deux pistes",
+      "status": "already",
+      "diff": ""
+    }
+  ],
+  "n_to_apply": 0,
+  "n_already": 5,
+  "blocking": [],
+  "non_regression": {
+    "per_variant": {
+      "cta_gate0.json": {
+        "status": "rejoue",
+        "gate_passes": false,
+        "branch_1_passes": false,
+        "branch_2_repaired_passes": false,
+        "branch_2_repaired_sharpe_excess": -0.5482072509297718,
+        "branch_2_repaired_classes_positive": 1,
+        "branch_2_original_passes": false
+      },
+      "cta_gate0_own_calendar.json": {
+        "status": "rejoue",
+        "gate_passes": false,
+        "branch_1_passes": false,
+        "branch_2_repaired_passes": false,
+        "branch_2_repaired_sharpe_excess": -0.5175554234048789,
+        "branch_2_repaired_classes_positive": 1,
+        "branch_2_original_passes": false
+      },
+      "cta_gate0_conviction.json": {
+        "status": "rejoue",
+        "gate_passes": false,
+        "branch_1_passes": false,
+        "branch_2_repaired_passes": false,
+        "branch_2_repaired_sharpe_excess": 0.5520360224315685,
+        "branch_2_repaired_classes_positive": 1,
+        "branch_2_original_passes": true
+      }
+    },
+    "n_replayed": 3,
+    "all_still_fail": true,
+    "conviction_no_longer_passes_branch2": true
+  },
+  "code_change": "cta_gate0.branch2_verdict -- la branche 2 porte sur l'exces vs B&H ; la formulation d'origine reste rapportee dans le JSON pour tracabilite",
+  "tests": "test_cta_gate0.py -- branche 2 immunisee au signal constant, detection d'un vrai exces, non-regression des trois variantes, verrou de calendrier",
+  "note": "dry-run : aucune ecriture. Relancer avec --apply."
+}

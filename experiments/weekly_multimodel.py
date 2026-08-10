@@ -214,7 +214,9 @@ REGIME_C_FORECAST = {
 def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
                     n_val: int, n_test: int, start: str, end: str,
                     lstm_weekly_seq_len: dict = None,
-                    calibrate_sigma: str = "on") -> dict:
+                    calibrate_sigma: str = "on",
+                    daily: pd.Series = None, test_pos: list = None,
+                    forecast_fn: callable = None) -> dict:
     """regime: 'B' (daily-trained, multi-step) or 'C' (weekly-native).
     `lstm_weekly_seq_len` : {asset_short: SEQ_LEN*}, requis seulement pour
     model_name="LSTM" + regime="C" (cf. BRIEF_lstm_weekly_retune.md) -- construit le
@@ -228,13 +230,29 @@ def run_model_asset(model_name: str, asset_short: str, ticker: str, regime: str,
     toute première origine sort donc toujours la bande brute (état neutre 1.0).
     Chaque record porte le facteur appliqué (champ "sigma_scale", 1.0 = brut).
     "off" : bandes brutes historiques, bit-for-bit.
+
+    Trois paramètres opt-in, tous `None` par défaut -- le chemin historique est
+    inchangé bit-for-bit quand ils ne sont pas passés (chantier R2 du
+    BRIEF_nsdiff_regeneration_oos_et_famille3.md, qui rejoue ce protocole sur une
+    grille d'origines imposée au lieu de celle de `three_way_split`) :
+      `daily`       : série de prix DÉJÀ GELÉE -- aucun appel réseau, `ticker`,
+                      `start` et `end` ne servent alors plus qu'à l'étiquetage ;
+      `test_pos`    : positions d'origines explicites dans la série hebdo, à la
+                      place du découpage train/validation/test ;
+      `forecast_fn` : fonction de prévision imposée (ex. le bras GARCH skew-t de
+                      H1), à la place de celle du registre de régime.
     Returns {"records": [...], "n_failed": int, "T0": str}."""
-    daily = td.fetch_data(ticker, start, end)
+    daily = td.fetch_data(ticker, start, end) if daily is None else daily
     weekly, weekly_dates = build_weekly(daily)
-    train_end_pos, val_pos, test_pos = three_way_split(weekly, n_val, n_test)
+    if test_pos is None:
+        train_end_pos, val_pos, test_pos = three_way_split(weekly, n_val, n_test)
+    else:
+        train_end_pos = test_pos[0] - 1
     T0_date = weekly_dates.iloc[train_end_pos]
 
-    if model_name == "LSTM" and regime == "C":
+    if forecast_fn is not None:
+        pass                                   # bras imposé par l'appelant
+    elif model_name == "LSTM" and regime == "C":
         if lstm_weekly_seq_len is None or asset_short not in lstm_weekly_seq_len:
             raise SystemExit(f"pas de SEQ_LEN* pour {asset_short} -- lance "
                             f"experiments/lstm_weekly_sweep.py --assets {asset_short} d'abord.")

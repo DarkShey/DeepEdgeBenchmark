@@ -1,0 +1,441 @@
+{
+  "scope": "chantier A1 -- la piste oos est-elle encore comparable a la reference n_samples=200",
+  "read_only": true,
+  "reference": {
+    "n_samples": 200,
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "dashboard_track_seed": 42
+  },
+  "quantile_bias": {
+    "formula": "np.quantile(mode 'linear') vise le rang r=(m-1)q+1 ; E[niveau estime] = r/(m+1) ; couverture bilaterale = 2*niveau-1",
+    "mechanical": "independant de la loi echantillonnee et du modele",
+    "table": [
+      {
+        "n_samples": 50,
+        "estimated_level_at_q975": 0.956373,
+        "true_two_sided_coverage": 0.912745,
+        "shortfall_vs_95pct_points": 3.725
+      },
+      {
+        "n_samples": 200,
+        "estimated_level_at_q975": 0.970274,
+        "true_two_sided_coverage": 0.940547,
+        "shortfall_vs_95pct_points": 0.945
+      },
+      {
+        "n_samples": 500,
+        "estimated_level_at_q975": 0.973104,
+        "true_two_sided_coverage": 0.946208,
+        "shortfall_vs_95pct_points": 0.379
+      },
+      {
+        "n_samples": 1000,
+        "estimated_level_at_q975": 0.974051,
+        "true_two_sided_coverage": 0.948102,
+        "shortfall_vs_95pct_points": 0.19
+      }
+    ]
+  },
+  "model_inventory": {
+    "ARIMA-GARCH": {
+      "kind": "analytic",
+      "evidence": "models/arima_model.py:_std_quantiles / forecast -- last_price*exp(mu + sigma*dist.ppf(alpha/2, 1-alpha/2)), ppf de la loi d'innovation ajustee",
+      "n_samples": null
+    },
+    "SARIMA": {
+      "kind": "analytic",
+      "evidence": "models/sarima_model.py -- get_forecast().conf_int() de statsmodels (bornes fermees), recalibrees par un facteur sigma",
+      "n_samples": null
+    },
+    "Naive": {
+      "kind": "analytic",
+      "evidence": "models/naive_model.py:55 Z_95=1.96 -- prev +/- 1.96*sigma_t, sigma_t = EWMA causale des variations (sigma_mode='ewma')",
+      "n_samples": null
+    },
+    "LSTM": {
+      "kind": "analytic",
+      "evidence": "models/lstm_model.py -- pred +/- 1.96*sigma_t (EWMA causale des residus). Le MC-Dropout (`n_ensemble`) existe mais vaut 0 par defaut et ne sert pas a construire les bornes.",
+      "n_samples": null
+    },
+    "Prophet": {
+      "kind": "sampled_internally",
+      "evidence": "models/prophet_model.py:176 Prophet(interval_width=0.95) -- bornes yhat_lower/upper, tirees par Prophet sur ses `uncertainty_samples` internes (defaut 1000, jamais surcharge ici)",
+      "n_samples": 1000
+    },
+    "NsDiff": {
+      "kind": "sampled",
+      "evidence": "experiments/oos_nsdiff_daily_weekly.py:341 -- np.quantile(s, [0.025, 0.975]) sur le nuage predictif ; DEFAULT_N_SAMPLES=50",
+      "n_samples": 50
+    },
+    "TSDiff": {
+      "kind": "sampled",
+      "evidence": "meme boucle de generation (weekly_headtohead_v2, n_samples=50) -- quantiles empiriques 2.5/97.5 sur le nuage",
+      "n_samples": 50
+    }
+  },
+  "sampled_models": [
+    "NsDiff",
+    "TSDiff"
+  ],
+  "comparisons": {
+    "NsDiff": {
+      "status": "compared",
+      "checks": {
+        "n_oos": 2700,
+        "n_v2": 2700,
+        "origins_identical": true,
+        "n_shared_origins": 2700,
+        "y_true_max_abs_rel_diff": 0.0,
+        "last_close_max_abs_rel_diff": 2.1514576717376882e-07,
+        "prices_aligned": true,
+        "targets_aligned": true,
+        "y_pred_rel_shift_median_pct": 0.26546691391456284,
+        "y_pred_rel_shift_p95_pct": 2.5519116386094267,
+        "width_ratio_v2_over_oos_median": 1.0592954939028876
+      },
+      "per_cell": {
+        "daily|W+1": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.8666666666666667,
+            "pi_width_mean": 4457.397718691931,
+            "pi_width_pct_of_price": 14.722167891858673,
+            "winkler_mean": 7858.206878966862,
+            "rmse": 2649.42479314968
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.9088888888888889,
+            "pi_width_mean": 4703.615920758989,
+            "pi_width_pct_of_price": 15.550507207668682,
+            "winkler_mean": 7595.816900797105,
+            "rmse": 2673.2025161260353
+          }
+        },
+        "daily|W+2": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.8911111111111111,
+            "pi_width_mean": 7037.063897119732,
+            "pi_width_pct_of_price": 22.418854133354927,
+            "winkler_mean": 10906.663473417068,
+            "rmse": 3947.839481254296
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.9111111111111111,
+            "pi_width_mean": 7351.537306253223,
+            "pi_width_pct_of_price": 23.408334295231203,
+            "winkler_mean": 11349.131441605467,
+            "rmse": 4010.345707905627
+          }
+        },
+        "daily|W+3": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.8933333333333333,
+            "pi_width_mean": 7406.549517599741,
+            "pi_width_pct_of_price": 24.37569077447525,
+            "winkler_mean": 16092.635599871739,
+            "rmse": 4833.035251364703
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.9066666666666666,
+            "pi_width_mean": 7739.858324600221,
+            "pi_width_pct_of_price": 25.532295868051673,
+            "winkler_mean": 15638.84161941359,
+            "rmse": 4867.447621848881
+          }
+        },
+        "weekly|W+1": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.9311111111111111,
+            "pi_width_mean": 5414.592305249956,
+            "pi_width_pct_of_price": 17.06391507687895,
+            "winkler_mean": 6225.9533616159215,
+            "rmse": 2441.5651289862753
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.9555555555555556,
+            "pi_width_mean": 5707.870253668468,
+            "pi_width_pct_of_price": 17.947203975820376,
+            "winkler_mean": 6387.02789506658,
+            "rmse": 2365.0613253632882
+          }
+        },
+        "weekly|W+2": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.9266666666666666,
+            "pi_width_mean": 7677.239646815407,
+            "pi_width_pct_of_price": 23.992713916969382,
+            "winkler_mean": 9385.464899161867,
+            "rmse": 3594.3356112429296
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.96,
+            "pi_width_mean": 8127.34793906869,
+            "pi_width_pct_of_price": 25.509499182966632,
+            "winkler_mean": 9281.599124540964,
+            "rmse": 3593.609677931236
+          }
+        },
+        "weekly|W+3": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.9444444444444444,
+            "pi_width_mean": 9788.23928725942,
+            "pi_width_pct_of_price": 30.285897363594792,
+            "winkler_mean": 13056.979917464361,
+            "rmse": 4678.976462763705
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.9466666666666667,
+            "pi_width_mean": 10171.84384838062,
+            "pi_width_pct_of_price": 31.61694264908964,
+            "winkler_mean": 11590.879126955246,
+            "rmse": 4680.618272263332
+          }
+        }
+      },
+      "overall": {
+        "m50_db": {
+          "n": 2700,
+          "cov95": 0.9088888888888889,
+          "pi_width_mean": 6963.513728789364,
+          "pi_width_pct_of_price": 22.143206526188663,
+          "winkler_mean": 10587.650688416305,
+          "rmse": 3802.1140511928334
+        },
+        "m200_reference": {
+          "n": 2700,
+          "cov95": 0.9314814814814815,
+          "pi_width_mean": 7300.345598788368,
+          "pi_width_pct_of_price": 23.260797196471376,
+          "winkler_mean": 10307.21601806316,
+          "rmse": 3815.2471248329716
+        },
+        "cov95_gain_points": 2.26
+      }
+    },
+    "TSDiff": {
+      "status": "compared",
+      "checks": {
+        "n_oos": 2700,
+        "n_v2": 2700,
+        "origins_identical": true,
+        "n_shared_origins": 2700,
+        "y_true_max_abs_rel_diff": 2.8608641602572186e-07,
+        "last_close_max_abs_rel_diff": 7.874502825267221e-07,
+        "prices_aligned": true,
+        "targets_aligned": true,
+        "y_pred_rel_shift_median_pct": 0.35796070958668097,
+        "y_pred_rel_shift_p95_pct": 3.4319339091377974,
+        "width_ratio_v2_over_oos_median": 0.9687334163506908
+      },
+      "per_cell": {
+        "daily|W+1": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.6266666666666667,
+            "pi_width_mean": 1649.0132818811203,
+            "pi_width_pct_of_price": 5.578184311364197,
+            "winkler_mean": 13155.578035400817,
+            "rmse": 2345.403904431067
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.5311111111111111,
+            "pi_width_mean": 1646.1596878267924,
+            "pi_width_pct_of_price": 3.869258495986691,
+            "winkler_mean": 13208.511138479873,
+            "rmse": 2303.6462983410556
+          }
+        },
+        "daily|W+2": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.6333333333333333,
+            "pi_width_mean": 2568.5775971844982,
+            "pi_width_pct_of_price": 8.439188353378281,
+            "winkler_mean": 21271.434765797516,
+            "rmse": 3639.0409729551757
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.5488888888888889,
+            "pi_width_mean": 2598.9520648095877,
+            "pi_width_pct_of_price": 5.9552307933226825,
+            "winkler_mean": 20690.79994604196,
+            "rmse": 3517.8338987723478
+          }
+        },
+        "daily|W+3": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.6155555555555555,
+            "pi_width_mean": 2740.541155634986,
+            "pi_width_pct_of_price": 9.401602933021914,
+            "winkler_mean": 29525.98135467742,
+            "rmse": 4545.927250349414
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.5511111111111111,
+            "pi_width_mean": 2712.6458690685695,
+            "pi_width_pct_of_price": 6.66348587602254,
+            "winkler_mean": 28596.985853182465,
+            "rmse": 4409.995706769995
+          }
+        },
+        "weekly|W+1": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.8133333333333334,
+            "pi_width_mean": 7355.540186853195,
+            "pi_width_pct_of_price": 17.70078373226756,
+            "winkler_mean": 7958.835778826395,
+            "rmse": 2444.188552716647
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.8466666666666667,
+            "pi_width_mean": 5797.8164034372985,
+            "pi_width_pct_of_price": 15.701665141077795,
+            "winkler_mean": 6471.98595910136,
+            "rmse": 2344.44745419653
+          }
+        },
+        "weekly|W+2": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.7777777777777778,
+            "pi_width_mean": 8418.224952011107,
+            "pi_width_pct_of_price": 20.548164918599422,
+            "winkler_mean": 10576.964451539781,
+            "rmse": 4089.2856582622994
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.7911111111111111,
+            "pi_width_mean": 7106.1020785814935,
+            "pi_width_pct_of_price": 19.410061680763345,
+            "winkler_mean": 9667.841748483019,
+            "rmse": 3729.8167034102225
+          }
+        },
+        "weekly|W+3": {
+          "m50_db": {
+            "n": 450,
+            "cov95": 0.82,
+            "pi_width_mean": 12484.39326215532,
+            "pi_width_pct_of_price": 29.368615934919667,
+            "winkler_mean": 15566.89630190955,
+            "rmse": 4972.953520442912
+          },
+          "m200_reference": {
+            "n": 450,
+            "cov95": 0.8444444444444444,
+            "pi_width_mean": 9807.831515820399,
+            "pi_width_pct_of_price": 26.40115205366985,
+            "winkler_mean": 12479.704574783747,
+            "rmse": 4540.075485386226
+          }
+        }
+      },
+      "overall": {
+        "m50_db": {
+          "n": 2700,
+          "cov95": 0.7144444444444444,
+          "pi_width_mean": 5869.381739286704,
+          "pi_width_pct_of_price": 15.172756697258508,
+          "winkler_mean": 16342.615114691911,
+          "rmse": 3804.28650419109
+        },
+        "m200_reference": {
+          "n": 2700,
+          "cov95": 0.6855555555555556,
+          "pi_width_mean": 4944.91793659069,
+          "pi_width_pct_of_price": 13.000142340140483,
+          "winkler_mean": 15185.971536678735,
+          "rmse": 3585.8577695458393
+        },
+        "cov95_gain_points": -2.89
+      }
+    }
+  },
+  "repoint_plan": {
+    "repoint": [
+      {
+        "model": "NsDiff",
+        "n_rows": 2700,
+        "reason": "echantillonne a m=50, artefact m=200 aligne",
+        "checks": {
+          "n_oos": 2700,
+          "n_v2": 2700,
+          "origins_identical": true,
+          "n_shared_origins": 2700,
+          "y_true_max_abs_rel_diff": 0.0,
+          "last_close_max_abs_rel_diff": 2.1514576717376882e-07,
+          "prices_aligned": true,
+          "targets_aligned": true,
+          "y_pred_rel_shift_median_pct": 0.26546691391456284,
+          "y_pred_rel_shift_p95_pct": 2.5519116386094267,
+          "width_ratio_v2_over_oos_median": 1.0592954939028876
+        }
+      }
+    ],
+    "leave_as_is": [
+      {
+        "model": "ARIMA-GARCH",
+        "reason": "analytic",
+        "detail": "models/arima_model.py:_std_quantiles / forecast -- last_price*exp(mu + sigma*dist.ppf(alpha/2, 1-alpha/2)), ppf de la loi d'innovation ajustee",
+        "insensitive_to_m": true
+      },
+      {
+        "model": "SARIMA",
+        "reason": "analytic",
+        "detail": "models/sarima_model.py -- get_forecast().conf_int() de statsmodels (bornes fermees), recalibrees par un facteur sigma",
+        "insensitive_to_m": true
+      },
+      {
+        "model": "Naive",
+        "reason": "analytic",
+        "detail": "models/naive_model.py:55 Z_95=1.96 -- prev +/- 1.96*sigma_t, sigma_t = EWMA causale des variations (sigma_mode='ewma')",
+        "insensitive_to_m": true
+      },
+      {
+        "model": "LSTM",
+        "reason": "analytic",
+        "detail": "models/lstm_model.py -- pred +/- 1.96*sigma_t (EWMA causale des residus). Le MC-Dropout (`n_ensemble`) existe mais vaut 0 par defaut et ne sert pas a construire les bornes.",
+        "insensitive_to_m": true
+      },
+      {
+        "model": "Prophet",
+        "reason": "sampled_internally",
+        "detail": "models/prophet_model.py:176 Prophet(interval_width=0.95) -- bornes yhat_lower/upper, tirees par Prophet sur ses `uncertainty_samples` internes (defaut 1000, jamais surcharge ici)",
+        "insensitive_to_m": false
+      }
+    ],
+    "retired": [
+      "TSDiff"
+    ],
+    "retired_detail": [
+      {
+        "model": "TSDiff",
+        "reason": "retire du benchmark (chantier A3) -- non repointe, lignes conservees en base et marquees historiques"
+      }
+    ]
+  }
+}

@@ -1,0 +1,846 @@
+{
+  "config": {
+    "candidates": [
+      10,
+      20,
+      40
+    ],
+    "n_val_origins": 12,
+    "n_samples": 200,
+    "k_denoise": 20,
+    "criterion": "argmin CRPS_val (epoch_sweep.select_epochs, reutilise tel quel)",
+    "validation_anchor": "les n_val origines hebdo STRICTEMENT avant la 1re origine oos -- aucune des 90 origines de test n'entre dans la selection",
+    "why": "le budget hebdomadaire de TSDiff, reutilise cote daily, sur-entraine le modele (~5x plus de fenetres) et effondre la variance de son echantillonneur : largeur du PI 12.4% -> 0.12% du prix entre 10 et 80 epoques sur SPY",
+    "prices": "series gelees de diffusion_multiseed_v2/prices/ (aucun appel reseau)"
+  },
+  "records": [
+    {
+      "asset": "SPY|seed42",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 13.432525419129265,
+      "cov95_val": 0.9166666666666666,
+      "rel_std_pct_val": 4.798364653861971,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed42",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 7.458133960723877,
+      "cov95_val": 0.8055555555555556,
+      "rel_std_pct_val": 1.4805256066245867,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed42",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 9.902012177318994,
+      "cov95_val": 0.25,
+      "rel_std_pct_val": 0.3009355107485986,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed43",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 30.709429714732696,
+      "cov95_val": 0.7777777777777778,
+      "rel_std_pct_val": 7.7538959667396385,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed43",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 9.898469309192233,
+      "cov95_val": 0.6388888888888888,
+      "rel_std_pct_val": 2.090780270104327,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed43",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 10.198437717522516,
+      "cov95_val": 0.19444444444444445,
+      "rel_std_pct_val": 0.26597725236124536,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed44",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 22.368356330458322,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 9.7488155040438,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed44",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 8.18405046350691,
+      "cov95_val": 0.7222222222222222,
+      "rel_std_pct_val": 2.0771687165341266,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed44",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 9.61795758188036,
+      "cov95_val": 0.16666666666666666,
+      "rel_std_pct_val": 0.2783108323012046,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed45",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 40.54925947798623,
+      "cov95_val": 0.75,
+      "rel_std_pct_val": 8.461131064502075,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed45",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 9.995842936812505,
+      "cov95_val": 0.75,
+      "rel_std_pct_val": 2.116044738790563,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed45",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 9.872783578194515,
+      "cov95_val": 0.19444444444444445,
+      "rel_std_pct_val": 0.28531137444329707,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed46",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 20.839684486982556,
+      "cov95_val": 0.9722222222222222,
+      "rel_std_pct_val": 6.552193683190747,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed46",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 9.526581521076626,
+      "cov95_val": 0.8055555555555556,
+      "rel_std_pct_val": 2.3208304666347157,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "SPY|seed46",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 9.847197213321259,
+      "cov95_val": 0.2222222222222222,
+      "rel_std_pct_val": 0.30281259438048774,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 6458.0683709689665,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 18.667947885588134,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3447.316240060764,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 3.87220216954848,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 4133.238162757703,
+      "cov95_val": 0.08333333333333333,
+      "rel_std_pct_val": 0.31499530966664724,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 4313.212173181152,
+      "cov95_val": 0.8611111111111112,
+      "rel_std_pct_val": 11.779083370225441,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3590.6495607503257,
+      "cov95_val": 0.4722222222222222,
+      "rel_std_pct_val": 3.236738249645619,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 4170.784609950087,
+      "cov95_val": 0.05555555555555555,
+      "rel_std_pct_val": 0.2785393680515402,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 3278.082754519314,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 18.614167083690194,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3470.350379014757,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 3.669012995886416,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 4151.539116796875,
+      "cov95_val": 0.05555555555555555,
+      "rel_std_pct_val": 0.3337204314743629,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 4037.2791797146265,
+      "cov95_val": 0.9166666666666666,
+      "rel_std_pct_val": 12.402414359204236,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3414.6627246771923,
+      "cov95_val": 0.5833333333333334,
+      "rel_std_pct_val": 3.526663360753461,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 4141.846064643012,
+      "cov95_val": 0.05555555555555555,
+      "rel_std_pct_val": 0.3047466742567054,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 3441.848264643013,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 13.254774495159051,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3386.115432299805,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 3.8109893087997295,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "BTC-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 4138.607804432509,
+      "cov95_val": 0.05555555555555555,
+      "rel_std_pct_val": 0.2897766633133151,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 1027.9202820000119,
+      "cov95_val": 0.75,
+      "rel_std_pct_val": 65.79456942416817,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 228.93415590489707,
+      "cov95_val": 0.6944444444444444,
+      "rel_std_pct_val": 10.264078966031647,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed42",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 210.13403740522597,
+      "cov95_val": 0.2777777777777778,
+      "rel_std_pct_val": 1.5123199077281768,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 281.8795242409176,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 21.762136750151612,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 170.6386735906813,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 8.418372006034481,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed43",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 209.4190340464274,
+      "cov95_val": 0.2222222222222222,
+      "rel_std_pct_val": 1.254396439712898,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 338.41314126484133,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 45.08399809808826,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 164.57109229486255,
+      "cov95_val": 0.8888888888888888,
+      "rel_std_pct_val": 9.806618423050118,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed44",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 213.34108086174854,
+      "cov95_val": 0.2222222222222222,
+      "rel_std_pct_val": 1.455356103217702,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 422.5665885274252,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 25.234893162348484,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 157.93127072474164,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 8.451596315814385,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed45",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 217.85153905080156,
+      "cov95_val": 0.19444444444444445,
+      "rel_std_pct_val": 1.3675885012103817,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 293.1246898300382,
+      "cov95_val": 0.9722222222222222,
+      "rel_std_pct_val": 22.172675174945052,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 163.2676775155809,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 9.171348543977459,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ETH-USD|seed46",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 212.1158838760376,
+      "cov95_val": 0.2222222222222222,
+      "rel_std_pct_val": 1.4129805291939133,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed42",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 2.7144058208147683,
+      "cov95_val": 0.6666666666666666,
+      "rel_std_pct_val": 2.414690548936562,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed42",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 1.0034154283947414,
+      "cov95_val": 0.6666666666666666,
+      "rel_std_pct_val": 0.6811425015347287,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed42",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.0689485678831734,
+      "cov95_val": 0.25,
+      "rel_std_pct_val": 0.11449166120021897,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed43",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 1.6270833048343656,
+      "cov95_val": 0.8055555555555556,
+      "rel_std_pct_val": 2.0689584693549263,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed43",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 1.0089728004773457,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 0.5532668265830935,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed43",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.1070593107329476,
+      "cov95_val": 0.1388888888888889,
+      "rel_std_pct_val": 0.09278480936539592,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed44",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 1.1158960319042204,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 3.163247269919957,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed44",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 0.8879927989694808,
+      "cov95_val": 0.6388888888888888,
+      "rel_std_pct_val": 0.6231071623939225,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed44",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.0860405172401004,
+      "cov95_val": 0.19444444444444445,
+      "rel_std_pct_val": 0.10256436982746517,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed45",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 2.3414053776529102,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 2.7999406364031696,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed45",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 0.9109284518347847,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 0.5872746366946218,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed45",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.0850874226305218,
+      "cov95_val": 0.16666666666666666,
+      "rel_std_pct_val": 0.08102344597860339,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed46",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 0.938054386446211,
+      "cov95_val": 0.9722222222222222,
+      "rel_std_pct_val": 1.9517487176215569,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed46",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 0.8730321251763238,
+      "cov95_val": 0.6111111111111112,
+      "rel_std_pct_val": 0.6107108894610772,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "ZN=F|seed46",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.085469728755951,
+      "cov95_val": 0.2222222222222222,
+      "rel_std_pct_val": 0.10135748459655727,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed42",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 11.10558629536332,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 11.046584015042903,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed42",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 3.046142316065258,
+      "cov95_val": 0.6666666666666666,
+      "rel_std_pct_val": 4.338193893225852,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed42",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.824789319130367,
+      "cov95_val": 0.4444444444444444,
+      "rel_std_pct_val": 1.0621662875547484,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed43",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 4.919917279181057,
+      "cov95_val": 0.8611111111111112,
+      "rel_std_pct_val": 9.388668728589371,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed43",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 2.0064272771044838,
+      "cov95_val": 0.8611111111111112,
+      "rel_std_pct_val": 3.574784370926479,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed43",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.7162377862637828,
+      "cov95_val": 0.4444444444444444,
+      "rel_std_pct_val": 0.9834989468165085,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed44",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 4.518306490071403,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 14.502648479028759,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed44",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 1.545707674137327,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 4.0802786547808,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed44",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.7245483787949871,
+      "cov95_val": 0.4722222222222222,
+      "rel_std_pct_val": 1.0774962010342066,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed45",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 9.5819553926185,
+      "cov95_val": 0.7777777777777778,
+      "rel_std_pct_val": 11.878585727383218,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed45",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 2.069618375231107,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 4.0123007122287015,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed45",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.6142382693915893,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 1.0580611574329832,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed46",
+      "model": "TSDiff-D",
+      "epochs": 10,
+      "crps_val": 3.3103582579625446,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 8.56150626410102,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed46",
+      "model": "TSDiff-D",
+      "epochs": 20,
+      "crps_val": 1.5051002552750903,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 3.341471250888609,
+      "n_val_origins": 12
+    },
+    {
+      "asset": "TLT|seed46",
+      "model": "TSDiff-D",
+      "epochs": 40,
+      "crps_val": 1.6813478515847518,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 1.0785614750825285,
+      "n_val_origins": 12
+    }
+  ],
+  "selected_epochs": {
+    "BTC-USD|seed42|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 3447.316240060764,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 3.87220216954848
+    },
+    "BTC-USD|seed43|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 3590.6495607503257,
+      "cov95_val": 0.4722222222222222,
+      "rel_std_pct_val": 3.236738249645619
+    },
+    "BTC-USD|seed44|TSDiff-D": {
+      "epochs": 10,
+      "crps_val": 3278.082754519314,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 18.614167083690194
+    },
+    "BTC-USD|seed45|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 3414.6627246771923,
+      "cov95_val": 0.5833333333333334,
+      "rel_std_pct_val": 3.526663360753461
+    },
+    "BTC-USD|seed46|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 3386.115432299805,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 3.8109893087997295
+    },
+    "ETH-USD|seed42|TSDiff-D": {
+      "epochs": 40,
+      "crps_val": 210.13403740522597,
+      "cov95_val": 0.2777777777777778,
+      "rel_std_pct_val": 1.5123199077281768
+    },
+    "ETH-USD|seed43|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 170.6386735906813,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 8.418372006034481
+    },
+    "ETH-USD|seed44|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 164.57109229486255,
+      "cov95_val": 0.8888888888888888,
+      "rel_std_pct_val": 9.806618423050118
+    },
+    "ETH-USD|seed45|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 157.93127072474164,
+      "cov95_val": 0.8333333333333334,
+      "rel_std_pct_val": 8.451596315814385
+    },
+    "ETH-USD|seed46|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 163.2676775155809,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 9.171348543977459
+    },
+    "SPY|seed42|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 7.458133960723877,
+      "cov95_val": 0.8055555555555556,
+      "rel_std_pct_val": 1.4805256066245867
+    },
+    "SPY|seed43|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 9.898469309192233,
+      "cov95_val": 0.6388888888888888,
+      "rel_std_pct_val": 2.090780270104327
+    },
+    "SPY|seed44|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 8.18405046350691,
+      "cov95_val": 0.7222222222222222,
+      "rel_std_pct_val": 2.0771687165341266
+    },
+    "SPY|seed45|TSDiff-D": {
+      "epochs": 40,
+      "crps_val": 9.872783578194515,
+      "cov95_val": 0.19444444444444445,
+      "rel_std_pct_val": 0.28531137444329707
+    },
+    "SPY|seed46|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 9.526581521076626,
+      "cov95_val": 0.8055555555555556,
+      "rel_std_pct_val": 2.3208304666347157
+    },
+    "TLT|seed42|TSDiff-D": {
+      "epochs": 40,
+      "crps_val": 1.824789319130367,
+      "cov95_val": 0.4444444444444444,
+      "rel_std_pct_val": 1.0621662875547484
+    },
+    "TLT|seed43|TSDiff-D": {
+      "epochs": 40,
+      "crps_val": 1.7162377862637828,
+      "cov95_val": 0.4444444444444444,
+      "rel_std_pct_val": 0.9834989468165085
+    },
+    "TLT|seed44|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 1.545707674137327,
+      "cov95_val": 1.0,
+      "rel_std_pct_val": 4.0802786547808
+    },
+    "TLT|seed45|TSDiff-D": {
+      "epochs": 40,
+      "crps_val": 1.6142382693915893,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 1.0580611574329832
+    },
+    "TLT|seed46|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 1.5051002552750903,
+      "cov95_val": 0.9444444444444444,
+      "rel_std_pct_val": 3.341471250888609
+    },
+    "ZN=F|seed42|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 1.0034154283947414,
+      "cov95_val": 0.6666666666666666,
+      "rel_std_pct_val": 0.6811425015347287
+    },
+    "ZN=F|seed43|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 1.0089728004773457,
+      "cov95_val": 0.5277777777777778,
+      "rel_std_pct_val": 0.5532668265830935
+    },
+    "ZN=F|seed44|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 0.8879927989694808,
+      "cov95_val": 0.6388888888888888,
+      "rel_std_pct_val": 0.6231071623939225
+    },
+    "ZN=F|seed45|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 0.9109284518347847,
+      "cov95_val": 0.5555555555555556,
+      "rel_std_pct_val": 0.5872746366946218
+    },
+    "ZN=F|seed46|TSDiff-D": {
+      "epochs": 20,
+      "crps_val": 0.8730321251763238,
+      "cov95_val": 0.6111111111111112,
+      "rel_std_pct_val": 0.6107108894610772
+    }
+  },
+  "elapsed_s": 2145.6
+}
