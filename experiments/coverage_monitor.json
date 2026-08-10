@@ -1,6 +1,7 @@
 {
   "scope": "chantier H3 -- monitoring de couverture en ligne sur la piste oos",
   "read_only": true,
+  "source": "oos",
   "declared": {
     "window": 26,
     "band": [
