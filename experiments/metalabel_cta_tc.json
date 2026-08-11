@@ -1,0 +1,397 @@
+{
+  "scope": "méta-labeling artisanal : CTA corrigé filtré par la taxonomie TC",
+  "grid": {
+    "source": "oos2020",
+    "horizon_unit": "W+1",
+    "n_origins": 340,
+    "assets": [
+      "BTC-USD",
+      "ETH-USD",
+      "GLD",
+      "SPY",
+      "TLT",
+      "USO",
+      "ZN=F"
+    ],
+    "instruments": {
+      "SPY": "SPY-ETF",
+      "TLT": "TLT-ETF",
+      "ZN=F": "ZN-FUT",
+      "BTC-USD": "BTC-SPOT",
+      "ETH-USD": "ETH-SPOT",
+      "GLD": "GLD-ETF",
+      "USO": "USO-ETF"
+    },
+    "effective_n": 113,
+    "cost_level": "central"
+  },
+  "signal": {
+    "dir": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/deita_cta_signal_own",
+    "retenu": "direction Hull, calendrier own (bug 2 évité ; bug 1 hors chemin car trend_direction est univariée)"
+  },
+  "precedence_etats": "Stress > Sideways > Calm (déclarée avant les runs)",
+  "etats_tc": {
+    "NsDiff": {
+      "Sideways": 2322,
+      "Bull-Calm": 43,
+      "Bear-Calm": 15
+    },
+    "ARIMA-GARCH": {
+      "Sideways": 2348,
+      "Bear-Calm": 18,
+      "Bull-Calm": 14
+    }
+  },
+  "bras": {
+    "C0": {
+      "pnl_moyen_bps": 7.410655461955753,
+      "trades_actifs": 2380,
+      "cellules": 2380,
+      "couverture_prise": 1.0,
+      "sharpe_annualise": 0.20758721846220388,
+      "max_drawdown": -0.4005269528961289,
+      "par_regime": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_moyen_bps": 23.05662376168897
+        },
+        "2022 (inflation/taux)": {
+          "n": 52,
+          "pnl_moyen_bps": -23.461654164001036
+        },
+        "2024-2026 (récent)": {
+          "n": 131,
+          "pnl_moyen_bps": 11.281047368831272
+        }
+      }
+    },
+    "F1": {
+      "pnl_moyen_bps": 8.056534499627087,
+      "trades_actifs": 2347,
+      "cellules": 2380,
+      "couverture_prise": 0.9861344537815127,
+      "sharpe_annualise": 0.22575463450138525,
+      "max_drawdown": -0.3955855319011837,
+      "par_regime": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_moyen_bps": 25.13248488554043
+        },
+        "2022 (inflation/taux)": {
+          "n": 52,
+          "pnl_moyen_bps": -23.322225414491054
+        },
+        "2024-2026 (récent)": {
+          "n": 131,
+          "pnl_moyen_bps": 12.313666508350941
+        }
+      }
+    },
+    "F2": {
+      "pnl_moyen_bps": -0.032534032027704045,
+      "trades_actifs": 25,
+      "cellules": 2380,
+      "couverture_prise": 0.01050420168067227,
+      "sharpe_annualise": -0.02511445442200164,
+      "max_drawdown": -0.01201548580143879,
+      "par_regime": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_moyen_bps": -0.7348779075426974
+        },
+        "2022 (inflation/taux)": {
+          "n": 52,
+          "pnl_moyen_bps": 0.06258201983862033
+        },
+        "2024-2026 (récent)": {
+          "n": 131,
+          "pnl_moyen_bps": -0.24006736846401067
+        }
+      }
+    },
+    "G1": {
+      "pnl_moyen_bps": 6.918352926193068,
+      "trades_actifs": 2367,
+      "cellules": 2380,
+      "couverture_prise": 0.9945378151260504,
+      "sharpe_annualise": 0.19404913519473369,
+      "max_drawdown": -0.40298794845601427,
+      "par_regime": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_moyen_bps": 21.06787107879134
+        },
+        "2022 (inflation/taux)": {
+          "n": 52,
+          "pnl_moyen_bps": -24.803517482186532
+        },
+        "2024-2026 (récent)": {
+          "n": 131,
+          "pnl_moyen_bps": 11.366903168936018
+        }
+      }
+    },
+    "G2": {
+      "pnl_moyen_bps": -0.17457066954167255,
+      "trades_actifs": 19,
+      "cellules": 2380,
+      "couverture_prise": 0.007983193277310924,
+      "sharpe_annualise": -0.03407135163148219,
+      "max_drawdown": -0.07998909032611684,
+      "par_regime": {
+        "2020 (COVID)": {
+          "n": 52,
+          "pnl_moyen_bps": -9.445560494916737
+        },
+        "2022 (inflation/taux)": {
+          "n": 52,
+          "pnl_moyen_bps": 1.859652502738234
+        },
+        "2024-2026 (récent)": {
+          "n": 131,
+          "pnl_moyen_bps": 0.0
+        }
+      }
+    }
+  },
+  "buy_and_hold": {
+    "pnl_moyen_bps": 33.185886591037814
+  },
+  "analyse_de_puissance": {
+    "effective_n": 113,
+    "n_origins": 340,
+    "F1": {
+      "origines_modifiees": 29,
+      "part_origines_modifiees": 0.08529411764705883,
+      "ecart_observe_bps": 0.6458790376713351,
+      "se_bps": 1.1592617691189404,
+      "mde_80_bps": 3.2459329535330332,
+      "detectable": false
+    },
+    "F2": {
+      "origines_modifiees": 340,
+      "part_origines_modifiees": 1.0,
+      "ecart_observe_bps": -7.443189493983456,
+      "se_bps": 24.14689304186839,
+      "mde_80_bps": 67.61130051723148,
+      "detectable": false
+    },
+    "G1": {
+      "origines_modifiees": 12,
+      "part_origines_modifiees": 0.03529411764705882,
+      "ecart_observe_bps": -0.4923025357626881,
+      "se_bps": 0.8923147630749714,
+      "mde_80_bps": 2.4984813366099194,
+      "detectable": false
+    },
+    "G2": {
+      "origines_modifiees": 340,
+      "part_origines_modifiees": 1.0,
+      "ecart_observe_bps": -7.585226131497424,
+      "se_bps": 24.066499124952024,
+      "mde_80_bps": 67.38619754986567,
+      "detectable": false
+    }
+  },
+  "hypothese_primaire": {
+    "famille_holm_m2": {
+      "family": {
+        "F1 vs C0": {
+          "p_value": 0.3082,
+          "holm_reject": false,
+          "holm_p_adjusted": 0.6164,
+          "holm_threshold": 0.025,
+          "holm_verdict": "indistinguishable"
+        },
+        "F2 vs C0": {
+          "p_value": 0.5628,
+          "holm_reject": false,
+          "holm_p_adjusted": 0.6164,
+          "holm_threshold": 0.05,
+          "holm_verdict": "indistinguishable"
+        }
+      },
+      "holm": {
+        "m": 2,
+        "alpha": 0.05,
+        "n_rejected": 0,
+        "smallest_threshold": 0.025
+      }
+    },
+    "placebo": {
+      "n_draws": 100,
+      "seed": 20260810,
+      "veto_par_actif": {
+        "BTC-USD": 340,
+        "ETH-USD": 340,
+        "GLD": 337,
+        "SPY": 332,
+        "TLT": 339,
+        "USO": 334,
+        "ZN=F": 333
+      },
+      "pnl_moyen_bps": {
+        "mediane": -0.21305657164545144,
+        "p05": -1.0991195412999435,
+        "p95": 1.256797194565408,
+        "min": -1.9478389624848547,
+        "max": 1.9326248879187202
+      },
+      "f2_pnl_bps": -0.032534032027704045,
+      "part_placebos_meilleurs_que_F2": 0.4,
+      "F2_bat_le_placebo": false
+    },
+    "conjonctive": "F2 bat C0 (Holm) ET F2 bat le placebo à couverture égale"
+  },
+  "exploratoire_non_decisionnel": {
+    "G1 vs C0": {
+      "mean_diff_bps": -0.4923025357626881,
+      "p_value": 0.3312,
+      "significant_at_05": false,
+      "ci95_bps": [
+        -1.552990056830849,
+        0.4696532547621537
+      ],
+      "effective_n": 113.0,
+      "n_origins_differing": 12
+    },
+    "G2 vs C0": {
+      "mean_diff_bps": -7.585226131497424,
+      "p_value": 0.5518,
+      "significant_at_05": false,
+      "ci95_bps": [
+        -34.129059884540396,
+        17.765935190056776
+      ],
+      "effective_n": 113.0,
+      "n_origins_differing": 340
+    },
+    "C0 vs B&H": {
+      "mean_diff_bps": -25.775231129082066,
+      "p_value": 0.1836,
+      "significant_at_05": false,
+      "ci95_bps": [
+        -59.64192422412455,
+        11.746097585189162
+      ],
+      "effective_n": 113.0,
+      "n_origins_differing": 313
+    },
+    "F2 vs B&H": {
+      "mean_diff_bps": -33.21842062306551,
+      "p_value": 0.0688,
+      "significant_at_05": false,
+      "ci95_bps": [
+        -66.42904762305665,
+        2.046767979169298
+      ],
+      "effective_n": 113.0,
+      "n_origins_differing": 340
+    }
+  },
+  "lecture_selective": {
+    "F1": {
+      "pris": {
+        "n": 2347,
+        "pnl_moyen_bps": 8.16981342527161,
+        "hit_rate": 0.4997869620792501
+      },
+      "vetoes": {
+        "n": 33,
+        "pnl_moyen_bps": -46.58157908053873,
+        "hit_rate": 0.42424242424242425
+      },
+      "couverture_prise": 0.9861344537815127,
+      "par_etat": {
+        "Bear-Calm": {
+          "pris": {
+            "n": 7,
+            "pnl_moyen_bps": -82.14467442281692,
+            "hit_rate": 0.2857142857142857
+          },
+          "vetoes": {
+            "n": 8,
+            "pnl_moyen_bps": -33.45187043299137,
+            "hit_rate": 0.625
+          }
+        },
+        "Bull-Calm": {
+          "pris": {
+            "n": 18,
+            "pnl_moyen_bps": 27.643429151876816,
+            "hit_rate": 0.7222222222222222
+          },
+          "vetoes": {
+            "n": 25,
+            "pnl_moyen_bps": -50.78308584775388,
+            "hit_rate": 0.36
+          }
+        },
+        "Sideways": {
+          "pris": {
+            "n": 2322,
+            "pnl_moyen_bps": 8.291121061730575,
+            "hit_rate": 0.49870801033591733
+          },
+          "vetoes": {
+            "n": 0,
+            "pnl_moyen_bps": null,
+            "hit_rate": null
+          }
+        }
+      }
+    },
+    "F2": {
+      "pris": {
+        "n": 25,
+        "pnl_moyen_bps": -3.097239849037429,
+        "hit_rate": 0.6
+      },
+      "vetoes": {
+        "n": 2355,
+        "pnl_moyen_bps": 7.5222042444503705,
+        "hit_rate": 0.49766454352441614
+      },
+      "couverture_prise": 0.01050420168067227,
+      "par_etat": {
+        "Bear-Calm": {
+          "pris": {
+            "n": 7,
+            "pnl_moyen_bps": -82.14467442281692,
+            "hit_rate": 0.2857142857142857
+          },
+          "vetoes": {
+            "n": 8,
+            "pnl_moyen_bps": -33.45187043299137,
+            "hit_rate": 0.625
+          }
+        },
+        "Bull-Calm": {
+          "pris": {
+            "n": 18,
+            "pnl_moyen_bps": 27.643429151876816,
+            "hit_rate": 0.7222222222222222
+          },
+          "vetoes": {
+            "n": 25,
+            "pnl_moyen_bps": -50.78308584775388,
+            "hit_rate": 0.36
+          }
+        },
+        "Sideways": {
+          "pris": {
+            "n": 0,
+            "pnl_moyen_bps": null,
+            "hit_rate": null
+          },
+          "vetoes": {
+            "n": 2322,
+            "pnl_moyen_bps": 8.291121061730575,
+            "hit_rate": 0.49870801033591733
+          }
+        }
+      }
+    }
+  },
+  "elapsed_s": 4.1
+}
