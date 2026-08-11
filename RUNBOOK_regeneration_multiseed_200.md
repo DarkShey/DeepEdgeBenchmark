@@ -14,12 +14,16 @@ sur la machine de l'étudiante — cf. `BRIEF_dashboard_multiseed_200.md`.*
 >   `20260808-oos-repoint-ensemble`) — voie équivalente à
 >   `oos_ensemble_nsdiff_daily_weekly.py`, même agrégation par concaténation des
 >   nuages. Ne pas rejouer l'étape 3 : elle réécrirait les mêmes lignes.
-> - **TSDiff : sans objet.** Le modèle a été RETIRÉ du benchmark (chantier A3, cf.
->   `benchmark_registry.RETIRED`). `MULTISEED_MODELS` est dérivé de
->   `reg.sampled_models()`, donc TSDiff ne conditionne plus le bandeau et son
->   artefact n'a pas à être régénéré — les ~1h30-2h annoncées plus bas sont
->   économisées. Les commandes TSDiff sont conservées ci-dessous au cas où le
->   modèle serait réactivé.
+> - **TSDiff : hors verdict, mais rien n'est supprimé.** Le modèle est en veille
+>   (`BRIEF_tsdiff_veille.md`) et retiré du registre (`benchmark_registry.RETIRED`).
+>   Il reste dans `MULTISEED_MODELS` — donc ses artefacts sont toujours chargés et
+>   ses badges toujours affichés partout où ils existent, notamment le dashboard
+>   MENSUEL. Seul `all_target_config` est désormais calculé sur
+>   `ACTIVE_MULTISEED_MODELS` (les modèles encore en course), sinon l'artefact
+>   weekly jamais généré d'un modèle en veille bloquait le bandeau indéfiniment.
+>   Conséquence pratique : les ~1h30-2h de régénération TSDiff annoncées plus bas
+>   ne sont plus un prérequis. Les commandes restent ci-dessous si le modèle est
+>   réactivé (la mise en veille est réversible par construction).
 > - **Hors périmètre, assumé :** les 1 200 lignes `oos` NsDiff à l'horizon MENSUEL
 >   (`run_id 20260805-nsdiff-monthly-oos`) restent en mono-graine 42 / n=50. Elles
 >   n'apparaissent pas dans le dashboard, borné à `horizon_unit = W+1`. Les aligner

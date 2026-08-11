@@ -455,6 +455,7 @@ MODEL_ADAPTERS = {
     "Prophet":     forecast_horizons_prophet,
     "LSTM":        forecast_horizons_lstm,
     "Naive":       forecast_horizons_naive,
-    "TSDiff":      forecast_horizons_tsdiff,
+    # TSDiff EN VEILLE (2026-08-07) — voir archives/tsdiff_reference/. Décommenter pour réactiver.
+    # "TSDiff":      forecast_horizons_tsdiff,
     "NsDiff":      forecast_horizons_nsdiff,
 }

@@ -46,11 +46,15 @@ Procédure complète pour le tuteur : `RUNBOOK_regeneration_multiseed_200.md`.
   (jamais un texte figé). Il affichait *« Données actuelles (NsDiff : 5 graine(s) x
   50 tirages ; TSDiff : artefact absent) — cible : ensemble 5 graines (42-46) x 200
   tirages, régénération en attente côté tuteur »*. **Depuis le 2026-08-10** il
-  affiche *« Données (modèles échantillonnés NsDiff) : ensemble 5 graines (42-46) x
-  200 tirages — config de production (tâche 6) »* (`all_target_config: true`) : le
-  JSON NsDiff a été régénéré à `n_samples=200`, et TSDiff est sorti du périmètre
-  (retiré du benchmark, `MULTISEED_MODELS` dérivé de `reg.sampled_models()`).
-  Le mécanisme reste dynamique — aucun texte figé n'a été introduit.
+  affiche *« Données (modèles échantillonnés NsDiff) (TSDiff en veille, hors
+  verdict) : ensemble 5 graines (42-46) x 200 tirages — config de production
+  (tâche 6) »* (`all_target_config: true`) : le JSON NsDiff a été régénéré à
+  `n_samples=200`, et TSDiff — en veille, cf. `BRIEF_tsdiff_veille.md` — ne
+  conditionne plus le verdict (`all_target_config` est calculé sur
+  `ACTIVE_MULTISEED_MODELS`). Il reste dans `MULTISEED_MODELS` : ses artefacts sont
+  toujours chargés et ses badges toujours affichés là où ils existent, notamment le
+  dashboard mensuel. Le mécanisme reste dynamique — aucun texte figé n'a été
+  introduit.
 - **Badge de robustesse par cellule** (colonne « Robustesse inter-graines », visible
   par défaut) : lu depuis `{model}_daily_weekly_multiseed.json` → `cv_table[asset]`
   (`verdict_stable`, `cv_winkler_daily/weekly`). Dégradation gracieuse vérifiée : les

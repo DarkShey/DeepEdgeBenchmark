@@ -43,14 +43,22 @@ EXPERIMENTS_DIR = Path(__file__).resolve().parent
 # un nuage relu en quantiles -- pas concerné. Prophet échantillonne en interne
 # (Facebook Prophet, MC non graine) mais ce dépôt n'expose ni seed ni n_samples
 # pour lui -- dette déclarée, non régénéré (cf. NOTE_dashboard_multiseed_200.md).
-# Derive du registre plutot que fige ici : un modele RETIRE du benchmark
-# (TSDiff, chantier A3) n'est plus une reference, donc ni badge, ni ligne dans
-# le bandeau, ni artefact a regenerer -- sinon son JSON manquant maintenait
-# `all_target_config=False` et le bandeau affichait "regeneration en attente"
-# alors que le seul modele echantillonne encore actif, NsDiff, est a la config
-# cible. `benchmark_registry` n'importe rien (stdlib pure) : la contrainte
-# d'environnement minimal rappelee dans le docstring tient toujours.
-MULTISEED_MODELS = reg.sampled_models()
+MULTISEED_MODELS = ["NsDiff", "TSDiff"]
+
+# Sous-ensemble ENCORE ACTIF du benchmark. TSDiff est en veille (BRIEF_tsdiff_
+# veille.md : plus aucun run courant, mais historique et artefacts CONSERVES,
+# mise en veille reversible) et retire du registre (`reg.RETIRED`, chantier A3).
+# Il garde donc ses badges partout ou son artefact existe -- notamment le
+# dashboard MENSUEL, qui l'affiche via MONTHLY_KPI_MODELS -- et c'est bien
+# MULTISEED_MODELS (les deux) qui pilote le chargement des artefacts.
+# La distinction ne sert QU'A une chose : decider si la config cible est
+# atteinte (`all_target_config`). Sans elle, l'artefact weekly manquant d'un
+# modele en veille (tsdiff_daily_weekly_multiseed.json, jamais genere) maintenait
+# indefiniment le bandeau sur "regeneration en attente cote tuteur", alors que le
+# seul modele echantillonne encore en course, NsDiff, est a 5 graines x 200
+# tirages depuis le 2026-08-10. `benchmark_registry` n'importe rien (stdlib
+# pure) : la contrainte d'environnement minimal du docstring tient toujours.
+ACTIVE_MULTISEED_MODELS = [m for m in MULTISEED_MODELS if m not in reg.retired_models()]
 TARGET_ENSEMBLE_LABEL = "ensemble 5 graines (42-46) x 200 tirages"
 DEFAULT_MULTISEED_JSON = {m: EXPERIMENTS_DIR / f"{m.lower()}_daily_weekly_multiseed.json"
                           for m in MULTISEED_MODELS}
@@ -135,19 +143,27 @@ def build_data_config(multiseed_artifacts: dict, models_in_df: list) -> dict:
             "status_label": "config cible atteinte" if is_target else "pas encore la config cible",
         }
     analytic_models = sorted(m for m in models_in_df if m not in MULTISEED_MODELS)
-    all_target = bool(per_model) and all(v["is_target_config"] for v in per_model.values())
+    # Verdict porte par les seuls modeles encore en course : un modele en veille
+    # n'a pas d'artefact a regenerer, donc il ne doit pas bloquer le verdict. Son
+    # etat reel reste expose par-modele dans `multiseed_artifacts` ci-dessous et
+    # rappele dans le titre -- rien n'est masque.
+    judged = {m: v for m, v in per_model.items() if m in ACTIVE_MULTISEED_MODELS}
+    dormant = [m for m in per_model if m not in ACTIVE_MULTISEED_MODELS]
+    all_target = bool(judged) and all(v["is_target_config"] for v in judged.values())
+    dormant_note = f" ({', '.join(dormant)} en veille, hors verdict)" if dormant else ""
     if all_target:
-        headline = (f"Données (modèles échantillonnés {', '.join(MULTISEED_MODELS)}) : "
+        headline = (f"Données (modèles échantillonnés {', '.join(judged)}){dormant_note} : "
                    f"{TARGET_ENSEMBLE_LABEL} -- config de production (tâche 6).")
     else:
         parts = []
-        for m, v in per_model.items():
+        for m, v in judged.items():
             if v["artifact_found"]:
                 parts.append(f"{m} : {v['n_seeds']} graine(s) x {v['n_samples']} tirages")
             else:
                 parts.append(f"{m} : artefact absent")
-        headline = ("Données actuelles (" + "; ".join(parts) + f") -- cible : {TARGET_ENSEMBLE_LABEL}, "
-                   "régénération en attente côté tuteur (voir RUNBOOK_regeneration_multiseed_200.md).")
+        headline = ("Données actuelles (" + "; ".join(parts) + f"){dormant_note} -- cible : "
+                   f"{TARGET_ENSEMBLE_LABEL}, régénération en attente côté tuteur "
+                   "(voir RUNBOOK_regeneration_multiseed_200.md).")
     return {
         "target": TARGET_ENSEMBLE_LABEL,
         "sampled_models": MULTISEED_MODELS,

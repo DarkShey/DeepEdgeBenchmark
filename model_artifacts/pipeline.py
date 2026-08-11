@@ -106,7 +106,8 @@ from honest_eval import metrics as hm
 RUN_ROOT = REPO_ROOT / "Run"
 DEFAULT_DB_PATH = "validation/tracking.db"
 
-MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff", "NsDiff"]
+# TSDiff EN VEILLE (2026-08-07) — voir archives/tsdiff_reference/. Décommenter pour réactiver.
+MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "NsDiff"]  # , "TSDiff"
 MODEL_FOLDER_NAME = {
     "ARIMA-GARCH": "ARIMA", "SARIMA": "SARIMA", "Prophet": "Prophet",
     "LSTM": "LSTM", "Naive": "Naive", "TSDiff": "TSDiff", "NsDiff": "NsDiff",

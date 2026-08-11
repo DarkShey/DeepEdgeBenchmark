@@ -22,7 +22,8 @@ import sqlite3
 from itertools import product
 from pathlib import Path
 
-MODELS = ("ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive", "TSDiff")
+# TSDiff EN VEILLE (2026-08-07) — voir archives/tsdiff_reference/. Décommenter pour réactiver.
+MODELS = ("ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive")  # , "TSDiff"
 ASSETS = ("BTC-USD", "ETH-USD", "SPY", "ZN=F", "TLT")
 # (frequence, horizon_type, horizon_unit) -- the only combinations that make sense
 # (brief §2): regime A (daily native), B (daily->weekly), C (weekly native).
