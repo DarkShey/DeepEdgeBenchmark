@@ -1,0 +1,169 @@
+{
+  "run_id": "20260810-NsDiff-oos-D1-simtrades",
+  "applied": true,
+  "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
+  "grid_model": "ARIMA-GARCH",
+  "n_rows": 666,
+  "config": {
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "n_samples_per_seed": 200,
+    "n_samples_total": 1000,
+    "epochs": 40,
+    "k_denoise": 20,
+    "seq_len": 30,
+    "fit_horizon": 15,
+    "point": "médiane du nuage concaténé",
+    "interval": "quantiles empiriques 0.025 / 0.975 du nuage concaténé",
+    "aggregation": "concaténation des nuages, PAS moyenne des bornes",
+    "refit": "aucun -- train-once-forward, fit sur l'avant-grille",
+    "fee_bps": 0.0
+  },
+  "per_asset": {
+    "SPY": {
+      "n_rows": 112,
+      "price_source": "live/yfinance",
+      "d_date_min": "2026-01-22",
+      "d_date_max": "2026-07-02",
+      "price_audit": {
+        "n_missing": 0,
+        "missing": [],
+        "n_mismatched": 0,
+        "mismatched": [],
+        "max_abs_rel_pct": 8.857638353432348e-06
+      }
+    },
+    "BTC-USD": {
+      "n_rows": 164,
+      "price_source": "live/yfinance",
+      "d_date_min": "2026-01-24",
+      "d_date_max": "2026-07-09",
+      "price_audit": {
+        "n_missing": 0,
+        "missing": [],
+        "n_mismatched": 0,
+        "mismatched": [],
+        "max_abs_rel_pct": 0.0
+      }
+    },
+    "ETH-USD": {
+      "n_rows": 165,
+      "price_source": "live/yfinance",
+      "d_date_min": "2026-01-23",
+      "d_date_max": "2026-07-09",
+      "price_audit": {
+        "n_missing": 0,
+        "missing": [],
+        "n_mismatched": 0,
+        "mismatched": [],
+        "max_abs_rel_pct": 0.0
+      }
+    },
+    "ZN=F": {
+      "n_rows": 113,
+      "price_source": "live/yfinance",
+      "d_date_min": "2026-01-21",
+      "d_date_max": "2026-07-02",
+      "price_audit": {
+        "n_missing": 0,
+        "missing": [],
+        "n_mismatched": 0,
+        "mismatched": [],
+        "max_abs_rel_pct": 0.0
+      }
+    },
+    "TLT": {
+      "n_rows": 112,
+      "price_source": "offline/DONNEE~1.XLS",
+      "d_date_min": "2026-01-22",
+      "d_date_max": "2026-07-02",
+      "price_audit": {
+        "n_missing": 0,
+        "missing": [],
+        "n_mismatched": 3,
+        "mismatched": [
+          {
+            "d_date": "2026-01-22",
+            "serie": 85.7456,
+            "base": 86.08287048339844,
+            "ecart_rel_pct": 0.39179744065747196
+          },
+          {
+            "d_date": "2026-01-26",
+            "serie": 86.391,
+            "base": 86.73077392578125,
+            "ecart_rel_pct": 0.39175705508174274
+          },
+          {
+            "d_date": "2026-01-27",
+            "serie": 85.8532,
+            "base": 86.19086456298828,
+            "ecart_rel_pct": 0.39176374978988043
+          }
+        ],
+        "max_abs_rel_pct": 0.39179744065747196
+      }
+    }
+  },
+  "lookahead_checked": {
+    "SPY": [
+      "2026-01-22",
+      "2026-03-04",
+      "2026-04-14",
+      "2026-05-21",
+      "2026-07-02"
+    ],
+    "BTC-USD": [
+      "2026-01-24",
+      "2026-03-06",
+      "2026-04-16",
+      "2026-05-26",
+      "2026-07-09"
+    ],
+    "ETH-USD": [
+      "2026-01-23",
+      "2026-03-05",
+      "2026-04-15",
+      "2026-05-26",
+      "2026-07-09"
+    ],
+    "ZN=F": [
+      "2026-01-21",
+      "2026-03-03",
+      "2026-04-13",
+      "2026-05-21",
+      "2026-07-02"
+    ],
+    "TLT": [
+      "2026-01-22",
+      "2026-03-04",
+      "2026-04-14",
+      "2026-05-21",
+      "2026-07-02"
+    ]
+  },
+  "rule_versions": [
+    "bull_calm_d1",
+    "pi95_conf",
+    "bear_calm_d1",
+    "bear_stress_d1",
+    "sideways_d1",
+    "sideways_gated_d1"
+  ],
+  "n_predictions_inserted": 666,
+  "n_sim_trades_by_rule": {
+    "bull_calm_d1": 342,
+    "pi95_conf": 0,
+    "bear_calm_d1": 323,
+    "bear_stress_d1": 0,
+    "sideways_d1": 664,
+    "sideways_gated_d1": 664
+  },
+  "backup": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db.bak_nsdiff_d1_simtrades_2026-08-11T143114",
+  "untouched_fingerprint_stable": true
+}

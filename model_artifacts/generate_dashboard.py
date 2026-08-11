@@ -48,7 +48,13 @@ import prob_kpi_common as pkc   # noqa: E402 -- réutilisé pour les KPI weekly 
 # actifs de calibration.regime.assets.ASSETS (source unique de vérité, cf. docstring de ce
 # module) -- fallback sur la liste connue si l'import échoue (même logique défensive que
 # _load_assets_order, pour ne jamais faire échouer la génération du reste du dashboard).
-SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff"]
+# NsDiff ajouté le 2026-08-11 (BRIEF_retest_nsdiff_tc_sim_trades.md) : il n'était pas
+# listé parce qu'il n'avait AUCUNE ligne oos à horizon 1 -- sa piste oos était en
+# horizons hebdomadaires. Le re-test D+1 (run_id 20260810-NsDiff-oos-D1-simtrades) a
+# comblé ce trou sur la grille exacte d'ARIMA-GARCH, donc il a désormais sa place ici :
+# sans cette ligne, le re-test resterait invisible dans le taux d'utilisation, où le
+# brief dit pourtant que le verdict se lit.
+SIM_TRADES_MODELS = ["ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "TSDiff", "NsDiff"]
 try:
     sys.path.insert(0, str(REPO_ROOT / "models"))
     from calibration.regime.assets import ASSETS as _SIM_TRADES_ASSETS_REGISTRY

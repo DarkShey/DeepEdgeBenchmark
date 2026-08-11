@@ -117,3 +117,9 @@ experiments/monthly_d3.log
 experiments/monthly_feasibility.log
 experiments/nsdiff_refit_cadence.log
 experiments/nsdiff_vs_garch_econ.log
+
+# Nuages bruts par (graine, actif) du re-test D+1 des test cases
+# (BRIEF_retest_nsdiff_tc_sim_trades.md) -- régénérables en ~8 min via
+# experiments/oos_nsdiff_d1_simtrades.py ; le résultat exploitable est en base
+# (run_id 20260810-NsDiff-oos-D1-simtrades) et dans oos_nsdiff_d1_simtrades.json.
+experiments/checkpoints_nsdiff_d1_simtrades/
