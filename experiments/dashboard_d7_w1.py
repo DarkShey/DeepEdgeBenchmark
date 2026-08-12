@@ -81,6 +81,23 @@ from multiseed_badge_common import (                                    # noqa: 
     load_multiseed_artifacts, cell_robustness_badge, build_data_config,
 )
 
+# ── Marquage des cellules à défaut permanent de couverture ───────────────────
+# (option 2 de DECISION_derive_couverture_daily.md). La bande n'est PAS
+# redéclarée ici : c'est celle du suivi H3, importée -- une cellule marquée
+# « non fiable » et une cellule en alerte dans le job quotidien doivent répondre
+# au même seuil, sinon le dashboard et le job se contredisent en silence.
+from coverage_monitor import (                                          # noqa: E402
+    BAND as COVERAGE_BAND, WINDOW as COVERAGE_WINDOW, permanent_defect_cells,
+)
+
+COVERAGE_SOURCE = "oos"        # la piste affichée par ce dashboard (mpt.load_predictions)
+# Comptes de la note de décision, cités pour RAPPROCHEMENT uniquement : le
+# marquage est dérivé de la piste, jamais de cette table. Un écart n'est pas une
+# erreur -- c'est le signe que la piste a bougé depuis le 2026-08-08, et il est
+# tracé tel quel dans le JSON d'artefact.
+DECISION_EXPECTED_DEFECTS = {"daily": 35, "weekly": 6}
+DECISION_DOC = "DECISION_derive_couverture_daily.md"
+
 
 # ── Winkler / interval score @ (1 - alpha) ───────────────────────────────────
 def winkler_score(y_true, lower, upper, alpha: float = ALPHA):
@@ -645,6 +662,87 @@ def build_cell_plain(row: dict) -> dict:
     }
 
 
+# ── Marquage « non fiable » : couche d'AFFICHAGE, tracking.db en lecture seule ──
+# Aucune ligne modifiée, aucune colonne ajoutée en base : on relit la piste et on
+# étiquette. Comme le reste de la page, les libellés sont construits ICI à partir
+# des chiffres (le template n'écrit aucun texte indépendant des valeurs).
+def _defect_display(defect: dict) -> dict:
+    """Libellés factuels d'une cellule marquée. Pas de verdict statistique : la
+    bande est un déclencheur d'investigation, le test formel reste Kupiec (même
+    règle que les alertes H3, cf. coverage_monitor.declared.rule)."""
+    pct = defect["coverage_full_sample"] * 100
+    under = defect["side"] == "sous_couverture"
+    lo, hi = COVERAGE_BAND
+    return {
+        **defect,
+        "label": (f"⚠ non fiable — couvre {pct:.1f} % sur tout l'échantillon" if under
+                  else f"◇ sur-couvert — {pct:.1f} % sur tout l'échantillon"),
+        "short_label": "⚠ non fiable" if under else "◇ sur-couvert",
+        "title": (f"Couverture observée {pct:.1f} % sur {defect['n_origins']} origines "
+                  f"(cible 95 %), hors de la bande [{lo:.2f} ; {hi:.2f}] sur le plein "
+                  f"échantillon comme sur la fenêtre glissante de {COVERAGE_WINDOW} origines "
+                  f"→ défaut permanent au sens de {DECISION_DOC}. "
+                  + ("Intervalle trop étroit : le risque est sous-estimé." if under
+                     else "Intervalle inutilement large : coûteux en Winkler, pas dangereux.")
+                  + " Déclencheur d'investigation, pas un verdict statistique."),
+    }
+
+
+def build_coverage_defects(db_path: str, source: str = COVERAGE_SOURCE) -> dict:
+    cells = [_defect_display(d) for d in permanent_defect_cells(source=source, db_path=db_path)]
+    by_regime: dict = {}
+    for c in cells:
+        b = by_regime.setdefault(c["regime"], {"sous_couverture": 0, "sur_couverture": 0, "total": 0})
+        b[c["side"]] += 1
+        b["total"] += 1
+    reconciliation = {
+        regime: {"attendu_note_decision": expected,
+                 "observe": by_regime.get(regime, {}).get("total", 0),
+                 "ecart": by_regime.get(regime, {}).get("total", 0) - expected}
+        for regime, expected in DECISION_EXPECTED_DEFECTS.items()
+    }
+    return {
+        "source": source,
+        "band": list(COVERAGE_BAND),
+        "window": COVERAGE_WINDOW,
+        "criterion": (f"Cellule (modèle, actif, régime, horizon) dont la couverture 95 % est hors "
+                      f"de la bande [{COVERAGE_BAND[0]:.2f} ; {COVERAGE_BAND[1]:.2f}] sur le PLEIN "
+                      f"échantillon de la piste, en plus de l'être sur la fenêtre glissante de "
+                      f"{COVERAGE_WINDOW} origines — elle n'a jamais couvert. Une cellule dont "
+                      f"seule la fenêtre sort de la bande est une dérive et n'est PAS marquée."),
+        "read_only": True,
+        "decision_doc": DECISION_DOC,
+        "n_marked": len(cells),
+        "by_regime": by_regime,
+        "reconciliation_note_decision": reconciliation,
+        "cells": cells,
+        "index": {c["key"]: c for c in cells},
+    }
+
+
+def attach_coverage_defects(cells: list, defects: dict, horizon_unit: str = HORIZON_UNIT) -> int:
+    """Accroche à chaque ligne (modèle, actif) le marquage de ses DEUX côtés à
+    l'horizon affiché — le côté daily et le côté weekly sont deux cellules
+    distinctes du suivi de couverture, et rien ne garantit qu'elles soient
+    marquées ensemble. Renvoie le nombre de marquages visibles sur cette page."""
+    index = defects["index"]
+    n_displayed = 0
+    for row in cells:
+        row["coverage_defect"] = {}
+        for side in ("daily", "weekly"):
+            hit = index.get(f"{row['model']}|{row['asset']}|{side}|{horizon_unit}")
+            row["coverage_defect"][side] = hit
+            n_displayed += hit is not None
+    return n_displayed
+
+
+def coverage_defects_banner(defects: dict, n_displayed: int) -> str:
+    per_regime = ", ".join(f"{regime} {b['total']}" for regime, b in sorted(defects["by_regime"].items()))
+    return (f"{n_displayed} cellule(s) marquée(s) non fiables sur cette page "
+            f"(horizon {HORIZON_UNIT}, les deux côtés) — {defects['n_marked']} sur toute la piste "
+            f"{defects['source']} ({per_regime}). Critère {defects['decision_doc']}.")
+
+
 # ── Panneau 2 : verdict par cellule (model x asset) ──────────────────────────
 def build_cell_table(df: pd.DataFrame, pairs: pd.DataFrame, multiseed_artifacts: dict = None) -> list:
     all_tests = mpt.comparison_3_daily_vs_weekly(df)
@@ -826,6 +924,18 @@ def main() -> None:
     print(f"  {len(pairs)} paires (model, asset, origine).")
 
     cells = build_cell_table(df, pairs, multiseed_artifacts)
+
+    print(f"Marquage des cellules à défaut permanent de couverture (piste {COVERAGE_SOURCE}, "
+          f"{DECISION_DOC}, lecture seule) ...")
+    coverage_defects = build_coverage_defects(args.db_path, COVERAGE_SOURCE)
+    n_defects_displayed = attach_coverage_defects(cells, coverage_defects)
+    coverage_defects["n_marked_displayed"] = n_defects_displayed
+    coverage_defects["banner"] = coverage_defects_banner(coverage_defects, n_defects_displayed)
+    print(f"  {coverage_defects['banner']}")
+    for regime, rec in sorted(coverage_defects["reconciliation_note_decision"].items()):
+        print(f"  rapprochement {regime} : {rec['observe']} marquées / {rec['attendu_note_decision']} "
+              f"attendues par la note (écart {rec['ecart']:+d})")
+
     trajectories = build_trajectories(pairs)
     aggregate = build_aggregate(pairs, args.seed)
     data_config = build_data_config(multiseed_artifacts, sorted(df["model"].unique()))
@@ -865,6 +975,7 @@ def main() -> None:
                     "les cinq graines ? » et non à « qu'obtient-on en en tirant une au hasard ? ».",
         },
         "asset_class_label": ASSET_CLASS_LABEL,
+        "coverage_defects": coverage_defects,
         "cells": cells,
         "trajectories": trajectories,
         "aggregate": aggregate,

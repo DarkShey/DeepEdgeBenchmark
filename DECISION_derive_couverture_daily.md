@@ -77,6 +77,14 @@ recalculer ni rien effacer.
 **Contre** : traite le symptôme. Les intervalles restent faux, ils sont juste
 étiquetés.
 
+**Option 2 : implémentée le 2026-08-12, 41 cellules marquées sur la piste `oos`
+(35 daily, 6 weekly — rapprochement exact avec les comptes du §1), dont 9
+visibles sur le dashboard D7/W1 (horizon W+1).** Marquage dérivé de tracking.db
+en lecture seule à chaque génération (`coverage_monitor.permanent_defect_cells`,
+bande partagée avec le suivi H3), jamais une liste codée en dur ; pastilles
+« ⚠ non fiable » / « ◇ sur-couvert », légende et compteur dans le bandeau de
+configuration.
+
 ### Option 3 — Diagnostiquer les 35 défauts permanents
 Coût : moyen — une journée d'analyse, pas de compute lourd. L'hypothèse la plus
 probable est identifiable sans run : la piste daily du dashboard est le **régime B**

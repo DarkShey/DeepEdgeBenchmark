@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T15:13:25.675672+00:00",
+  "generated_at": "2026-08-12T07:34:02.712346+00:00",
   "db_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/validation/tracking.db",
   "horizon_unit": "W+1",
   "seed_pooled": 42,
@@ -37,6 +37,1360 @@
     "crypto": "Crypto",
     "index": "Actions",
     "bond": "Obligations (taux)"
+  },
+  "coverage_defects": {
+    "source": "oos",
+    "band": [
+      0.88,
+      0.99
+    ],
+    "window": 26,
+    "criterion": "Cellule (mod\u00e8le, actif, r\u00e9gime, horizon) dont la couverture 95 % est hors de la bande [0.88 ; 0.99] sur le PLEIN \u00e9chantillon de la piste, en plus de l'\u00eatre sur la fen\u00eatre glissante de 26 origines \u2014 elle n'a jamais couvert. Une cellule dont seule la fen\u00eatre sort de la bande est une d\u00e9rive et n'est PAS marqu\u00e9e.",
+    "read_only": true,
+    "decision_doc": "DECISION_derive_couverture_daily.md",
+    "n_marked": 41,
+    "by_regime": {
+      "weekly": {
+        "sous_couverture": 4,
+        "sur_couverture": 2,
+        "total": 6
+      },
+      "daily": {
+        "sous_couverture": 22,
+        "sur_couverture": 13,
+        "total": 35
+      }
+    },
+    "reconciliation_note_decision": {
+      "daily": {
+        "attendu_note_decision": 35,
+        "observe": 35,
+        "ecart": 0
+      },
+      "weekly": {
+        "attendu_note_decision": 6,
+        "observe": 6,
+        "ecart": 0
+      }
+    },
+    "cells": [
+      {
+        "key": "ARIMA-GARCH|ETH-USD|weekly|W+3",
+        "model": "ARIMA-GARCH",
+        "asset": "ETH-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8333333333333334,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 83.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 83.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|SPY|weekly|W+3",
+        "model": "LSTM",
+        "asset": "SPY",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8777777777777778,
+        "coverage_current_window": 0.8076923076923077,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 87.8 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 87.8 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|TLT|daily|W+1",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|TLT|daily|W+2",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|TLT|daily|W+3",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|TLT|weekly|W+2",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "weekly",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|TLT|weekly|W+3",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|ZN=F|daily|W+1",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|ZN=F|daily|W+2",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "LSTM|ZN=F|daily|W+3",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|BTC-USD|daily|W+1",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7555555555555555,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 75.6 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 75.6 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|BTC-USD|daily|W+2",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|BTC-USD|daily|W+3",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 70.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 70.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|SPY|daily|W+1",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.8333333333333334,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 83.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 83.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|SPY|daily|W+2",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8444444444444444,
+        "coverage_current_window": 0.8076923076923077,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 84.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 84.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|SPY|daily|W+3",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 80.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 80.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|TLT|daily|W+2",
+        "model": "Naive",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|TLT|daily|W+3",
+        "model": "Naive",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|ZN=F|daily|W+2",
+        "model": "Naive",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Naive|ZN=F|daily|W+3",
+        "model": "Naive",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "NsDiff|ETH-USD|daily|W+3",
+        "model": "NsDiff",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8444444444444444,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 84.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 84.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|BTC-USD|daily|W+1",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.3333333333333333,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 33.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 33.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|BTC-USD|daily|W+2",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.3,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 30.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 30.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|BTC-USD|daily|W+3",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.28888888888888886,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 28.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 28.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|BTC-USD|weekly|W+2",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8777777777777778,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 87.8 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 87.8 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|BTC-USD|weekly|W+3",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8666666666666667,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 86.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 86.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|ETH-USD|daily|W+1",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.5666666666666667,
+        "coverage_current_window": 0.5769230769230769,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 56.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 56.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|ETH-USD|daily|W+2",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.5666666666666667,
+        "coverage_current_window": 0.5769230769230769,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 56.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 56.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|ETH-USD|daily|W+3",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.5555555555555556,
+        "coverage_current_window": 0.5384615384615384,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 55.6 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 55.6 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|SPY|daily|W+1",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7,
+        "coverage_current_window": 0.6153846153846154,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 70.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 70.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|SPY|daily|W+2",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.6888888888888889,
+        "coverage_current_window": 0.6153846153846154,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 68.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 68.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "Prophet|SPY|daily|W+3",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.6666666666666666,
+        "coverage_current_window": 0.5384615384615384,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 66.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 66.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|BTC-USD|daily|W+1",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|BTC-USD|daily|W+2",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|BTC-USD|daily|W+3",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7222222222222222,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 72.2 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 72.2 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|SPY|daily|W+1",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.8111111111111111,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 81.1 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 81.1 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|SPY|daily|W+2",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 80.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 80.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|SPY|daily|W+3",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7888888888888889,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 78.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 78.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|TLT|daily|W+2",
+        "model": "SARIMA",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|TLT|daily|W+3",
+        "model": "SARIMA",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      {
+        "key": "SARIMA|ZN=F|daily|W+2",
+        "model": "SARIMA",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      }
+    ],
+    "index": {
+      "ARIMA-GARCH|ETH-USD|weekly|W+3": {
+        "key": "ARIMA-GARCH|ETH-USD|weekly|W+3",
+        "model": "ARIMA-GARCH",
+        "asset": "ETH-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8333333333333334,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 83.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 83.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|SPY|weekly|W+3": {
+        "key": "LSTM|SPY|weekly|W+3",
+        "model": "LSTM",
+        "asset": "SPY",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8777777777777778,
+        "coverage_current_window": 0.8076923076923077,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 87.8 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 87.8 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|TLT|daily|W+1": {
+        "key": "LSTM|TLT|daily|W+1",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|TLT|daily|W+2": {
+        "key": "LSTM|TLT|daily|W+2",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|TLT|daily|W+3": {
+        "key": "LSTM|TLT|daily|W+3",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|TLT|weekly|W+2": {
+        "key": "LSTM|TLT|weekly|W+2",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "weekly",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|TLT|weekly|W+3": {
+        "key": "LSTM|TLT|weekly|W+3",
+        "model": "LSTM",
+        "asset": "TLT",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|ZN=F|daily|W+1": {
+        "key": "LSTM|ZN=F|daily|W+1",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|ZN=F|daily|W+2": {
+        "key": "LSTM|ZN=F|daily|W+2",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "LSTM|ZN=F|daily|W+3": {
+        "key": "LSTM|ZN=F|daily|W+3",
+        "model": "LSTM",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|BTC-USD|daily|W+1": {
+        "key": "Naive|BTC-USD|daily|W+1",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7555555555555555,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 75.6 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 75.6 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|BTC-USD|daily|W+2": {
+        "key": "Naive|BTC-USD|daily|W+2",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|BTC-USD|daily|W+3": {
+        "key": "Naive|BTC-USD|daily|W+3",
+        "model": "Naive",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 70.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 70.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|SPY|daily|W+1": {
+        "key": "Naive|SPY|daily|W+1",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.8333333333333334,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 83.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 83.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|SPY|daily|W+2": {
+        "key": "Naive|SPY|daily|W+2",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8444444444444444,
+        "coverage_current_window": 0.8076923076923077,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 84.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 84.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|SPY|daily|W+3": {
+        "key": "Naive|SPY|daily|W+3",
+        "model": "Naive",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 80.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 80.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|TLT|daily|W+2": {
+        "key": "Naive|TLT|daily|W+2",
+        "model": "Naive",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|TLT|daily|W+3": {
+        "key": "Naive|TLT|daily|W+3",
+        "model": "Naive",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|ZN=F|daily|W+2": {
+        "key": "Naive|ZN=F|daily|W+2",
+        "model": "Naive",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Naive|ZN=F|daily|W+3": {
+        "key": "Naive|ZN=F|daily|W+3",
+        "model": "Naive",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "NsDiff|ETH-USD|daily|W+3": {
+        "key": "NsDiff|ETH-USD|daily|W+3",
+        "model": "NsDiff",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8444444444444444,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 84.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 84.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|BTC-USD|daily|W+1": {
+        "key": "Prophet|BTC-USD|daily|W+1",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.3333333333333333,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 33.3 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 33.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|BTC-USD|daily|W+2": {
+        "key": "Prophet|BTC-USD|daily|W+2",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.3,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 30.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 30.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|BTC-USD|daily|W+3": {
+        "key": "Prophet|BTC-USD|daily|W+3",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.28888888888888886,
+        "coverage_current_window": 0.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 28.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 28.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|BTC-USD|weekly|W+2": {
+        "key": "Prophet|BTC-USD|weekly|W+2",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8777777777777778,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 87.8 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 87.8 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|BTC-USD|weekly|W+3": {
+        "key": "Prophet|BTC-USD|weekly|W+3",
+        "model": "Prophet",
+        "asset": "BTC-USD",
+        "regime": "weekly",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.8666666666666667,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 86.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 86.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|ETH-USD|daily|W+1": {
+        "key": "Prophet|ETH-USD|daily|W+1",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.5666666666666667,
+        "coverage_current_window": 0.5769230769230769,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 56.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 56.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|ETH-USD|daily|W+2": {
+        "key": "Prophet|ETH-USD|daily|W+2",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.5666666666666667,
+        "coverage_current_window": 0.5769230769230769,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 56.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 56.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|ETH-USD|daily|W+3": {
+        "key": "Prophet|ETH-USD|daily|W+3",
+        "model": "Prophet",
+        "asset": "ETH-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.5555555555555556,
+        "coverage_current_window": 0.5384615384615384,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 55.6 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 55.6 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|SPY|daily|W+1": {
+        "key": "Prophet|SPY|daily|W+1",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7,
+        "coverage_current_window": 0.6153846153846154,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 70.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 70.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|SPY|daily|W+2": {
+        "key": "Prophet|SPY|daily|W+2",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.6888888888888889,
+        "coverage_current_window": 0.6153846153846154,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 68.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 68.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "Prophet|SPY|daily|W+3": {
+        "key": "Prophet|SPY|daily|W+3",
+        "model": "Prophet",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.6666666666666666,
+        "coverage_current_window": 0.5384615384615384,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 66.7 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 66.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|BTC-USD|daily|W+1": {
+        "key": "SARIMA|BTC-USD|daily|W+1",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.8461538461538461,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|BTC-USD|daily|W+2": {
+        "key": "SARIMA|BTC-USD|daily|W+2",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.7444444444444445,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|BTC-USD|daily|W+3": {
+        "key": "SARIMA|BTC-USD|daily|W+3",
+        "model": "SARIMA",
+        "asset": "BTC-USD",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7222222222222222,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-03",
+        "label": "\u26a0 non fiable \u2014 couvre 72.2 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 72.2 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|SPY|daily|W+1": {
+        "key": "SARIMA|SPY|daily|W+1",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+1",
+        "coverage_full_sample": 0.8111111111111111,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 81.1 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 81.1 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|SPY|daily|W+2": {
+        "key": "SARIMA|SPY|daily|W+2",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 0.8,
+        "coverage_current_window": 0.7307692307692307,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 80.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 80.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|SPY|daily|W+3": {
+        "key": "SARIMA|SPY|daily|W+3",
+        "model": "SARIMA",
+        "asset": "SPY",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 0.7888888888888889,
+        "coverage_current_window": 0.7692307692307693,
+        "n_origins": 90,
+        "side": "sous_couverture",
+        "status_current_window": "sous_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u26a0 non fiable \u2014 couvre 78.9 % sur tout l'\u00e9chantillon",
+        "short_label": "\u26a0 non fiable",
+        "title": "Couverture observ\u00e9e 78.9 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|TLT|daily|W+2": {
+        "key": "SARIMA|TLT|daily|W+2",
+        "model": "SARIMA",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|TLT|daily|W+3": {
+        "key": "SARIMA|TLT|daily|W+3",
+        "model": "SARIMA",
+        "asset": "TLT",
+        "regime": "daily",
+        "horizon_unit": "W+3",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      },
+      "SARIMA|ZN=F|daily|W+2": {
+        "key": "SARIMA|ZN=F|daily|W+2",
+        "model": "SARIMA",
+        "asset": "ZN=F",
+        "regime": "daily",
+        "horizon_unit": "W+2",
+        "coverage_full_sample": 1.0,
+        "coverage_current_window": 1.0,
+        "n_origins": 90,
+        "side": "sur_couverture",
+        "status_current_window": "sur_couverture",
+        "last_cutoff": "2026-07-02",
+        "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+        "short_label": "\u25c7 sur-couvert",
+        "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+      }
+    },
+    "n_marked_displayed": 9,
+    "banner": "9 cellule(s) marqu\u00e9e(s) non fiables sur cette page (horizon W+1, les deux c\u00f4t\u00e9s) \u2014 41 sur toute la piste oos (daily 35, weekly 6). Crit\u00e8re DECISION_derive_couverture_daily.md."
   },
   "cells": [
     {
@@ -135,7 +1489,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "ARIMA-GARCH",
@@ -233,7 +1591,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "ARIMA-GARCH",
@@ -331,7 +1693,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "ARIMA-GARCH",
@@ -429,7 +1795,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "ARIMA-GARCH",
@@ -527,7 +1897,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "LSTM",
@@ -625,7 +1999,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "LSTM",
@@ -723,7 +2101,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "LSTM",
@@ -821,7 +2203,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "LSTM",
@@ -919,7 +2305,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "LSTM|TLT|daily|W+1",
+          "model": "LSTM",
+          "asset": "TLT",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 1.0,
+          "coverage_current_window": 1.0,
+          "n_origins": 90,
+          "side": "sur_couverture",
+          "status_current_window": "sur_couverture",
+          "last_cutoff": "2026-07-02",
+          "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+          "short_label": "\u25c7 sur-couvert",
+          "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "LSTM",
@@ -1017,7 +2422,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "LSTM|ZN=F|daily|W+1",
+          "model": "LSTM",
+          "asset": "ZN=F",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 1.0,
+          "coverage_current_window": 1.0,
+          "n_origins": 90,
+          "side": "sur_couverture",
+          "status_current_window": "sur_couverture",
+          "last_cutoff": "2026-07-02",
+          "label": "\u25c7 sur-couvert \u2014 100.0 % sur tout l'\u00e9chantillon",
+          "short_label": "\u25c7 sur-couvert",
+          "title": "Couverture observ\u00e9e 100.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle inutilement large : co\u00fbteux en Winkler, pas dangereux. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Naive",
@@ -1115,7 +2539,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "Naive|BTC-USD|daily|W+1",
+          "model": "Naive",
+          "asset": "BTC-USD",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.7555555555555555,
+          "coverage_current_window": 0.8461538461538461,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-03",
+          "label": "\u26a0 non fiable \u2014 couvre 75.6 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 75.6 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Naive",
@@ -1213,7 +2656,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "Naive",
@@ -1311,7 +2758,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "Naive|SPY|daily|W+1",
+          "model": "Naive",
+          "asset": "SPY",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.8333333333333334,
+          "coverage_current_window": 0.7692307692307693,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-02",
+          "label": "\u26a0 non fiable \u2014 couvre 83.3 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 83.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Naive",
@@ -1409,7 +2875,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "Naive",
@@ -1507,7 +2977,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "NsDiff",
@@ -1614,6 +3088,10 @@
         "cv_winkler_weekly": 0.03768988382280826,
         "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
+      },
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
       }
     },
     {
@@ -1721,6 +3199,10 @@
         "cv_winkler_weekly": 0.02223064167470471,
         "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
+      },
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
       }
     },
     {
@@ -1828,6 +3310,10 @@
         "cv_winkler_weekly": 0.02628544895985471,
         "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
+      },
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
       }
     },
     {
@@ -1935,6 +3421,10 @@
         "cv_winkler_weekly": 0.030128156394299138,
         "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
+      },
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
       }
     },
     {
@@ -2042,6 +3532,10 @@
         "cv_winkler_weekly": 0.05477025382938365,
         "n_samples": 200,
         "source_path": "/Users/mikamoto/Documents/GitLocal/Projects/DeepEdgeBenchmark/experiments/nsdiff_daily_weekly_multiseed.json"
+      },
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
       }
     },
     {
@@ -2140,7 +3634,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "Prophet|BTC-USD|daily|W+1",
+          "model": "Prophet",
+          "asset": "BTC-USD",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.3333333333333333,
+          "coverage_current_window": 0.0,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-03",
+          "label": "\u26a0 non fiable \u2014 couvre 33.3 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 33.3 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Prophet",
@@ -2238,7 +3751,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "Prophet|ETH-USD|daily|W+1",
+          "model": "Prophet",
+          "asset": "ETH-USD",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.5666666666666667,
+          "coverage_current_window": 0.5769230769230769,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-03",
+          "label": "\u26a0 non fiable \u2014 couvre 56.7 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 56.7 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Prophet",
@@ -2336,7 +3868,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "Prophet|SPY|daily|W+1",
+          "model": "Prophet",
+          "asset": "SPY",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.7,
+          "coverage_current_window": 0.6153846153846154,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-02",
+          "label": "\u26a0 non fiable \u2014 couvre 70.0 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 70.0 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "Prophet",
@@ -2434,7 +3985,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "Prophet",
@@ -2532,7 +4087,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "SARIMA",
@@ -2630,7 +4189,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "SARIMA|BTC-USD|daily|W+1",
+          "model": "SARIMA",
+          "asset": "BTC-USD",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.7444444444444445,
+          "coverage_current_window": 0.8461538461538461,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-03",
+          "label": "\u26a0 non fiable \u2014 couvre 74.4 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 74.4 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "SARIMA",
@@ -2728,7 +4306,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "SARIMA",
@@ -2826,7 +4408,26 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": {
+          "key": "SARIMA|SPY|daily|W+1",
+          "model": "SARIMA",
+          "asset": "SPY",
+          "regime": "daily",
+          "horizon_unit": "W+1",
+          "coverage_full_sample": 0.8111111111111111,
+          "coverage_current_window": 0.7307692307692307,
+          "n_origins": 90,
+          "side": "sous_couverture",
+          "status_current_window": "sous_couverture",
+          "last_cutoff": "2026-07-02",
+          "label": "\u26a0 non fiable \u2014 couvre 81.1 % sur tout l'\u00e9chantillon",
+          "short_label": "\u26a0 non fiable",
+          "title": "Couverture observ\u00e9e 81.1 % sur 90 origines (cible 95 %), hors de la bande [0.88 ; 0.99] sur le plein \u00e9chantillon comme sur la fen\u00eatre glissante de 26 origines \u2192 d\u00e9faut permanent au sens de DECISION_derive_couverture_daily.md. Intervalle trop \u00e9troit : le risque est sous-estim\u00e9. D\u00e9clencheur d'investigation, pas un verdict statistique."
+        },
+        "weekly": null
+      }
     },
     {
       "model": "SARIMA",
@@ -2924,7 +4525,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     },
     {
       "model": "SARIMA",
@@ -3022,7 +4627,11 @@
           "On a 30 semaines de recul r\u00e9ellement exploitables pour ce verdict : raisonnablement fiable."
         ]
       },
-      "robustness": null
+      "robustness": null,
+      "coverage_defect": {
+        "daily": null,
+        "weekly": null
+      }
     }
   ],
   "trajectories": {

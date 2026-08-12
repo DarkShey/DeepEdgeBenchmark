@@ -111,6 +111,11 @@ tbody tr:hover { background:rgba(128,128,128,0.06); }
 .robustness-pill.stable { background:rgba(27,175,122,0.14); color:var(--pos-color); }
 .robustness-pill.unstable { background:rgba(214,69,80,0.14); color:var(--neg-color); }
 .robustness-pill.na { background:transparent; color:var(--text-muted); border-style:dashed; }
+.defect-pill { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10.5px;
+               font-weight:600; white-space:nowrap; border:1px solid var(--border-ring); margin-right:4px; }
+.defect-pill.under { background:rgba(214,69,80,0.14); color:var(--neg-color); }
+.defect-pill.over { background:rgba(201,138,44,0.16); color:var(--d7-color); }
+.defect-pill.none { background:transparent; color:var(--text-muted); border-style:dashed; }
 .config-banner { background:var(--surface-1); border:1px solid var(--border-ring); border-radius:10px;
                  box-shadow:var(--card-shadow); padding:12px 16px; margin:0 0 20px; font-size:12.5px;
                  line-height:1.55; color:var(--text-secondary); max-width:900px; }
@@ -210,7 +215,10 @@ dfn { font-style:normal; border-bottom:1px dotted var(--text-muted); }
       <span class="legend-item"><span class="legend-swatch" style="background:var(--d7-color)"></span>Le quotidien est meilleur</span>
       <span class="legend-item"><span class="legend-swatch" style="background:var(--w1-color)"></span>L'hebdomadaire est meilleur</span>
       <span class="legend-item"><span class="legend-swatch" style="background:var(--tie-color)"></span>Match nul</span>
+      <span class="legend-item"><span class="defect-pill under">⚠ non fiable</span>fourchette qui n'a jamais couvert (trop étroite : risque sous-estimé)</span>
+      <span class="legend-item"><span class="defect-pill over">◇ sur-couvert</span>fourchette systématiquement trop large (coûteux, pas dangereux)</span>
     </div>
+    <p class="note" id="defect-criterion"></p>
     <div class="table-wrap" id="cell-table-wrap">
       <button class="toggle-btn" id="toggle-extra-cols" type="button">Tout afficher (colonnes techniques)</button>
       <table id="cell-table"><thead></thead><tbody></tbody></table>
@@ -291,6 +299,13 @@ dfn { font-style:normal; border-bottom:1px dotted var(--text-muted); }
        (test bootstrap par blocs, qui tient compte du chevauchement entre semaines), exclut clairement le
        "zéro différence". Sinon c'est un <b>match nul</b> assumé -- même si un chiffre penche légèrement d'un
        côté, ce n'est pas un manque de rigueur, c'est le résultat honnête.</p>
+    <p><b>Cellules marquées « non fiables ».</b> Certaines lignes portent une pastille
+       <span class="defect-pill under">⚠ non fiable</span> ou <span class="defect-pill over">◇ sur-couvert</span> :
+       leur fourchette n'a <i>jamais</i> couvert à la fréquence annoncée, ni sur les dernières semaines ni sur tout
+       l'échantillon disponible (par exemple 33% de réussite pour une cible de 95%). Ce n'est pas une dérive
+       passagère, c'est un défaut de construction de l'intervalle : les chiffres de fiabilité de ces lignes
+       (Winkler, Cov95, largeur) ne sont pas comparables aux autres, et le verdict de précision (RMSE) reste
+       lisible tel quel. Le marquage est recalculé à chaque génération depuis la base, en lecture seule.</p>
     <p><b>Limites.</b> Sur les groupes Crypto/Actions/Obligations, un seul modèle très divergent d'un côté peut
        influencer le verdict du groupe entier (moyenne par semaine sur tous les modèles) -- croiser avec le
        tableau détaillé par modèle si un verdict de groupe surprend. La corrélation entre BTC-USD et ETH-USD
@@ -379,9 +394,12 @@ function renderCellDetailHTML(r) {
     if (!s || !s.artifact_found) return `<li>${m} : artefact multiseed absent (pas de badge)</li>`;
     return `<li>${m} : ${s.n_seeds} graine(s) × ${s.n_samples} tirages -- ${s.status_label}</li>`;
   }).join("");
+  const cd = DATA.coverage_defects;
+  const defectLine = cd ? `<p style="margin:6px 0 0;"><b>${cd.banner}</b></p>` : "";
   document.getElementById("config-banner-wrap").innerHTML = `
     <div class="config-banner ${cls}">
       <p class="cb-headline">${dc.headline}</p>
+      ${defectLine}
       <details>
         <summary>Détail par modèle échantillonné + modèles non concernés</summary>
         <div class="cb-extra">
@@ -391,6 +409,17 @@ function renderCellDetailHTML(r) {
         </div>
       </details>
     </div>`;
+})();
+
+// ---- Marquage « non fiable » : le critère, écrit une seule fois, côté Python ----
+(function renderDefectCriterion() {
+  const cd = DATA.coverage_defects;
+  const el = document.getElementById("defect-criterion");
+  if (!cd || !el) return;
+  el.textContent = `Marquage « fiabilité de la fourchette » : ${cd.criterion} `
+    + `Piste ${cd.source}, relue en lecture seule à chaque génération (aucune liste figée). `
+    + `Le marquage n'est pas un verdict statistique : la bande est un déclencheur d'investigation, `
+    + `le test formel reste Kupiec.`;
 })();
 
 // ---- Niveau 1 : grille de 3 cartes (crypto / actions / obligations) ----
@@ -436,6 +465,7 @@ const CELL_COLUMNS = [
   {key:"__verdict", label:"Verdict", extra:false},
   {key:"__fiabilite", label:"Fiabilité", extra:false},
   {key:"__robustesse", label:"Robustesse inter-graines", extra:false},
+  {key:"__couverture", label:"Fiabilité de la fourchette", extra:false},
   {key:"asset_class", label:"Classe", extra:true},
   {key:"rmse_daily", label:"Précision Daily (RMSE)", extra:true},
   {key:"rmse_weekly", label:"Précision Weekly (RMSE)", extra:true},
@@ -459,7 +489,28 @@ function sortValue(row, key) {
   if (key === "__verdict") return row.p_value ?? 2;
   if (key === "__fiabilite") return row.effective_n ?? -1;
   if (key === "__robustesse") return row.robustness ? (row.robustness.cv_winkler_weekly ?? -1) : -2;
+  // Trie sur la PIRE couverture plein échantillon des côtés marqués (les cellules
+  // fausses remontent en tête) ; 2 = aucun marquage, donc toujours après.
+  if (key === "__couverture") {
+    const d = row.coverage_defect || {};
+    const marked = ["daily","weekly"].map(s => d[s]).filter(Boolean);
+    return marked.length ? Math.min(...marked.map(m => m.coverage_full_sample)) : 2;
+  }
   return row[key];
+}
+
+// Pastille de marquage « défaut permanent de couverture » (option 2,
+// DECISION_derive_couverture_daily) : libellés et infobulle calculés côté Python
+// à partir de la couverture observée -- rien d'écrit en dur ici.
+function defectPillsHTML(r) {
+  const d = r.coverage_defect || {};
+  const parts = ["daily","weekly"].filter(s => d[s]).map(s => {
+    const m = d[s];
+    const cls = m.side === "sous_couverture" ? "under" : "over";
+    return `<span class="defect-pill ${cls}" title="${m.title}">${s === "daily" ? "Daily" : "Weekly"} ${m.short_label} · ${fmtPct(m.coverage_full_sample)}</span>`;
+  });
+  if (!parts.length) return `<span class="defect-pill none" title="Couverture plein échantillon dans la bande des deux côtés">—</span>`;
+  return parts.join("");
 }
 
 // pill "5/5 stable" / "3/5 instable" · CV(Winkler) daily/weekly, ou "—" si pas
@@ -508,6 +559,7 @@ function renderCellTable() {
       <td><button class="verdict-toggle" data-key="${key}" title="Déplier l'explication"><span class="badge ${outcomeCls}">${plain.headline}</span><span class="expand-arrow">${expanded ? "▲" : "▼"}</span></button></td>
       <td>${plain.gauge.emoji} ${plain.gauge.label.split(" -- ")[0]}</td>
       <td>${robustnessPillHTML(r.robustness)}</td>
+      <td>${defectPillsHTML(r)}</td>
       <td class="extra-col">${DATA.asset_class_label[r.asset_class] || r.asset_class}</td>
       <td class="extra-col">${fmtNum(r.rmse_daily,2)}</td><td class="extra-col">${fmtNum(r.rmse_weekly,2)}</td>
       <td class="extra-col">${fmtNum(r.winkler_daily,2)}</td><td class="extra-col">${fmtNum(r.winkler_weekly,2)}</td>
@@ -642,7 +694,7 @@ if (cellKeys.length) {
   const rows = DATA.cells.slice().sort((a,b) => a.model.localeCompare(b.model) || a.asset.localeCompare(b.asset));
   el.innerHTML = rows.map(r => `
     <div class="origin-row" style="grid-template-columns:170px 1fr 1fr;">
-      <span class="origin-label">${r.model} — ${r.asset}</span>
+      <span class="origin-label">${r.model} — ${r.asset}<br>${defectPillsHTML(r)}</span>
       <div class="cal-track"><div class="cal-fill" style="width:${Math.min(100,r.cov95_daily*100)}%; background:var(--d7-color);"></div><div class="cal-target" style="left:95%;"></div></div>
       <div class="cal-track"><div class="cal-fill" style="width:${Math.min(100,r.cov95_weekly*100)}%; background:var(--w1-color);"></div><div class="cal-target" style="left:95%;"></div></div>
     </div>`).join("");

@@ -36,6 +36,12 @@ Les fonctions de ce module ne font AUCUNE entree-sortie et sont testables a la
 main (`test_coverage_monitor.py`) ; le runner en bas lit la piste `oos` de
 `tracking.db` en LECTURE SEULE.
 
+DEUXIEME CONSOMMATEUR : `permanent_defect_cells` (option 2 de
+DECISION_derive_couverture_daily.md) distingue le DEFAUT PERMANENT -- une cellule
+dont le plein echantillon est hors bande, elle n'a jamais couvert -- de la DERIVE
+que ce module suit. Le dashboard D7/W1 s'en sert pour marquer ses cellules non
+fiables ; la bande est partagee, pas recopiee (`test_permanent_defect_cells.py`).
+
 Sortie : experiments/coverage_monitor.json
 Usage   : python coverage_monitor.py [--window 26] [--models NsDiff ARIMA-GARCH]
 """
@@ -64,6 +70,7 @@ OUT_PATH = Path(__file__).resolve().parent / "coverage_monitor.json"
 WINDOW = 26
 BAND = (0.88, 0.99)
 TARGET = 0.95
+MODELS = ["NsDiff", "ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive"]
 
 
 def rolling_coverage(in_interval, window: int = WINDOW) -> np.ndarray:
@@ -132,6 +139,54 @@ def monitor_series(in_interval, window: int = WINDOW, band: tuple = BAND) -> dic
     }
 
 
+# ── defaut permanent vs derive (DECISION_derive_couverture_daily, option 2) ──
+
+def permanent_defect(result: dict, band: tuple = BAND) -> dict | None:
+    """Traduit un resultat de `monitor_series` en DEFAUT PERMANENT, ou None.
+
+    Le critere est repris tel quel de la note de decision : la cellule est en
+    alerte (fenetre glissante hors bande) ET son plein echantillon est LUI AUSSI
+    hors bande -- autrement dit elle n'a jamais couvert, pas une seule fenetre.
+    Une cellule dont seule la fenetre courante sort de la bande est une DERIVE :
+    elle n'est PAS marquee ici, elle reste du ressort du resume de job quotidien.
+    Confondre les deux ramenerait le comptage « 51 cellules en alerte » que la
+    note a precisement separe en 35 defauts + 16 derives.
+
+    Le `side` est lu sur le PLEIN echantillon (c'est ce que le marquage annonce),
+    pas sur la fenetre courante : sous-couverture = intervalle trop etroit, le cas
+    dangereux ; sur-couverture = intervalle inutilement large, couteux en Winkler
+    mais sans risque de sous-estimation."""
+    lo, hi = band
+    full = result.get("coverage_full_sample")
+    if full is None or result.get("status") in ("OK", "fenetre_incomplete"):
+        return None
+    if lo <= full <= hi:
+        return None
+    return {
+        "coverage_full_sample": float(full),
+        "coverage_current_window": result.get("coverage_current_window"),
+        "n_origins": int(result["n"]),
+        "side": "sous_couverture" if full < lo else "sur_couverture",
+        "status_current_window": result["status"],
+    }
+
+
+def permanent_defect_cells(source: str = "oos", band: tuple = BAND,
+                           db_path: str = DB_PATH, models: list = None,
+                           window: int = WINDOW) -> list:
+    """Les cellules a defaut permanent d'une piste, relues depuis tracking.db en
+    LECTURE SEULE. Aucune liste codee en dur : le marquage est DERIVE de la piste
+    a chaque appel, donc il suit la piste si elle evolue. `band` par defaut =
+    `BAND`, la constante du suivi H3 -- il n'existe pas de seconde bande."""
+    df = load_oos(db_path, list(models or MODELS), source)
+    out = []
+    for ident, r in monitor_cells(df, window, tuple(band)):
+        defect = permanent_defect(r, tuple(band))
+        if defect is not None:
+            out.append({**ident, **defect, "last_cutoff": r["last_cutoff"]})
+    return out
+
+
 # ── runner : la piste `oos` du dashboard, en lecture seule ──────────────────
 
 def load_oos(db_path: str, models: list, source: str = "oos") -> pd.DataFrame:
@@ -146,12 +201,26 @@ def load_oos(db_path: str, models: list, source: str = "oos") -> pd.DataFrame:
         con.close()
 
 
+def monitor_cells(df: pd.DataFrame, window: int = WINDOW, band: tuple = BAND):
+    """Le suivi de chaque cellule (modele, actif, regime, horizon) d'une piste
+    deja chargee -- yield (identite, resultat de monitor_series). Extrait du
+    runner pour que le marquage des defauts permanents lise EXACTEMENT la meme
+    chose que H3, sans machinerie parallele qui pourrait en diverger."""
+    for (model, asset, regime, hu), g in df.groupby(["model", "asset", "frequence",
+                                                     "horizon_unit"], sort=True):
+        g = g.sort_values("cutoff_date")
+        inside = ((g["y_true"] >= g["y_lower"]) & (g["y_true"] <= g["y_upper"])).astype(float)
+        r = monitor_series(inside.to_numpy(), window, tuple(band))
+        r["last_cutoff"] = str(g["cutoff_date"].iloc[-1])
+        yield {"key": f"{model}|{asset}|{regime}|{hu}", "model": model, "asset": asset,
+               "regime": regime, "horizon_unit": hu}, r
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--db-path", default=DB_PATH)
-    p.add_argument("--models", nargs="+",
-                   default=["NsDiff", "ARIMA-GARCH", "SARIMA", "Prophet", "LSTM", "Naive"])
+    p.add_argument("--models", nargs="+", default=list(MODELS))
     p.add_argument("--source", default="oos",
                    help="piste a suivre (defaut : oos ; 'oos2020' = grille regeneree)")
     p.add_argument("--window", type=int, default=WINDOW)
@@ -164,16 +233,10 @@ def main() -> None:
           f"(LECTURE SEULE)")
 
     per_cell, flagged = {}, []
-    for (model, asset, regime, hu), g in df.groupby(["model", "asset", "frequence",
-                                                     "horizon_unit"], sort=True):
-        g = g.sort_values("cutoff_date")
-        inside = ((g["y_true"] >= g["y_lower"]) & (g["y_true"] <= g["y_upper"])).astype(float)
-        r = monitor_series(inside.to_numpy(), args.window, tuple(args.band))
-        r["last_cutoff"] = str(g["cutoff_date"].iloc[-1])
-        key = f"{model}|{asset}|{regime}|{hu}"
-        per_cell[key] = r
+    for ident, r in monitor_cells(df, args.window, tuple(args.band)):
+        per_cell[ident["key"]] = r
         if r["status"] not in ("OK", "fenetre_incomplete"):
-            flagged.append((key, r))
+            flagged.append((ident["key"], r))
 
     payload = {
         "scope": f"chantier H3 -- monitoring de couverture en ligne sur la piste {args.source}",
