@@ -828,6 +828,10 @@ h2 { font-size: 15px; margin: 0 0 12px; color: var(--text-primary); }
 .stat-tile .value.pos { color: var(--pos-color); }
 .stat-tile .value.neg { color: var(--neg-color); }
 .stat-tile .value .frac { font-size: 14px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
+tfoot .sim-foot td { border-top: 2px solid var(--border-ring); background: rgba(127,127,127,0.06); }
+.sim-foot td.pos { color: var(--pos-color); }
+.sim-foot td.neg { color: var(--neg-color); }
+.sim-foot .frac { font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-left: 3px; }
 .panel-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
 }
@@ -1154,7 +1158,7 @@ const KPI_DEFINITIONS = {
   tcsignal: "Test case(s) déclenché(s) — identifiant(s) TC1.1–TC1.5 dont les conditions étaient réunies ce jour pour ce modèle. '(ouvert)' : signal pas encore résolu, en attente du prix réalisé.",
   tccounter: "Counter — score de résolution du signal : +1/+2 si la trajectoire réalisée valide la branche gagnante du test case, -1/-2 si elle l'invalide. Vide si aucun signal ou signal encore ouvert.",
   tcusage: "Utilisation brute — nombre de lignes (jour × modèle) où au moins un test case s'est déclenché ET dont le counter résolu est positif (+1/+2), sur le nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Une prédiction sans signal, ou dont le signal a été résolu négativement, n'est pas comptée.",
-  tcperf: "Performance simulation (Σ counter) — somme de tous les counters résolus (positifs et négatifs) des signaux déclenchés sur la sélection courante. Positif : les signaux ont globalement été gagnants.",
+  tcperf: "Somme Count (Σ counter) / Max somme count — au numérateur, la somme de tous les counters résolus (positifs et négatifs) des signaux de la sélection courante ; au dénominateur, le maximum atteignable si chaque signal résolu avait obtenu son meilleur score (+2), soit Max = 2 × (nombre de counters résolus). Un ratio proche de 1 = les signaux ont presque toujours touché le meilleur cas. Placée sous la colonne Counter car elle en additionne les valeurs. Positif : les signaux ont globalement été gagnants.",
   tcrate: "Taux d'utilisation — Utilisation brute rapportée au nombre total de lignes de la sélection (modèle(s) + pipeline choisis). Les signaux encore ouverts comptent comme non utilisables pour l'instant.",
   tcsourcefilter: "Vraies vs fausses prédictions — lit real_flag (calculé et stocké côté base, validation/tracking_db.py::compute_real_flag) : vraie ('live') à partir du 06/07/2026 (08/07/2026 pour TSDiff, arrivé plus tard dans la grille), indépendamment de la colonne technique source (des jours ont été rejoués en source='oos' faute d'avoir tourné le jour même : backfills des 8, 11, 13, 14, 17-20/07, mais restent real_flag='live'). Fausse ('oos') : tout ce qui précède, reconstruction de backtest sur la période de validation.",
   tcvalidated: "Validation modèle × horizon (D+1) × actif — le modèle est considéré validé sur la sélection courante (pipeline, source(s), modèle) si son taux d'utilisation atteint le seuil choisi ci-dessous. Fond vert : validé ; fond rouge : non validé ; pas de couleur : aucune ligne pour ce modèle.",
@@ -2033,7 +2037,19 @@ function renderSimTradesTable(ticker) {
     }
     html += '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody>';
+  // Pied de tableau : "Somme Count / Max somme count" placée SOUS la colonne Counter.
+  // Σ counter et Max sont calculés sur `base` (indépendant du filtre "jours avec signal" :
+  // les lignes sans signal n'ont aucun counter résolu, donc n'y changent rien).
+  const foot = computeUsage(base);
+  const footCls = foot.counterSum > 0 ? 'pos' : (foot.counterSum < 0 ? 'neg' : '');
+  html += `<tfoot><tr class="sim-foot">`
+    + `<td colspan="8" style="text-align:right;font-weight:600;">Somme Count ${infoDot('tcperf')}</td>`
+    + `<td class="${footCls}" style="font-weight:700;">${fmt(foot.counterSum, 0)}`
+    + `<span class="frac">/ ${foot.counterMax}</span></td>`
+    + (showGated ? '<td></td>' : '')
+    + `</tr></tfoot>`;
+  html += '</table>';
   wrap.innerHTML = html;
 }
 
@@ -2062,26 +2078,31 @@ function computeUsage(rows) {
   const total = rows.length;
   let usableCount = 0;
   let counterSum = 0;
+  let resolvedCount = 0;   // nb de counters résolus (chaque signal résolu, +/-)
   rows.forEach(r => {
     let rowUsable = false;
     r.signals.forEach(sig => {
       if (sig.counter === null || sig.counter === undefined) return;
       counterSum += sig.counter;
+      resolvedCount += 1;
       if (sig.counter > 0) rowUsable = true;
     });
     if (rowUsable) usableCount++;
   });
-  return { total, usableCount, counterSum, taux: total ? usableCount / total : null };
+  // Max somme count : si chaque signal résolu avait obtenu son meilleur score (+2).
+  const counterMax = resolvedCount * 2;
+  return { total, usableCount, counterSum, counterMax, resolvedCount,
+           taux: total ? usableCount / total : null };
 }
 
 function renderUsageStats(s, rows) {
   const el = document.getElementById(`simtrades-usage-${s}`);
   const { total, usableCount, counterSum, taux } = computeUsage(rows);
 
+  // "Performance simulation (Σ counter)" a été déplacée sous la colonne Counter du
+  // tableau (pied de tableau), cf. renderSimTradesTable -- elle y est plus lisible.
   const tiles = [
     { label: 'Utilisation brute', def: 'tcusage', value: `${usableCount}<span class="frac">/ ${total}</span>`, cls: '' },
-    { label: 'Performance simulation (Σ counter)', def: 'tcperf', value: fmt(counterSum, 0),
-      cls: counterSum > 0 ? 'pos' : (counterSum < 0 ? 'neg' : '') },
     { label: "Taux d'utilisation", def: 'tcrate', value: fmtPct(taux), cls: '' },
   ];
   el.innerHTML = tiles.map(t =>
